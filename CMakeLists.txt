@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.3)
-project(pmdk-convert C)
+project(vmemcache C)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 5)
@@ -129,22 +129,22 @@ configure_file(
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-# add_executable(check_license EXCLUDE_FROM_ALL utils/check_license/check-license.c)
+add_executable(check_license EXCLUDE_FROM_ALL utils/check_license/check-license.c)
 
-# function(add_cstyle name)
-# 	if(${ARGC} EQUAL 1)
-# 		add_custom_target(cstyle-${name}
-# 			COMMAND ${PERL_EXECUTABLE}
-# 			${CMAKE_SOURCE_DIR}/utils/cstyle
-# 			${CMAKE_CURRENT_SOURCE_DIR}/*.c
-# 			${CMAKE_CURRENT_SOURCE_DIR}/*.h)
-# 	else()
-# 		add_custom_target(cstyle-${name}
-# 			COMMAND ${PERL_EXECUTABLE}
-# 			${CMAKE_SOURCE_DIR}/utils/cstyle ${ARGN})
-# 	endif()
-# 	add_dependencies(cstyle cstyle-${name})
-# endfunction()
+function(add_cstyle name)
+	if(${ARGC} EQUAL 1)
+		add_custom_target(cstyle-${name}
+			COMMAND ${PERL_EXECUTABLE}
+			${CMAKE_SOURCE_DIR}/utils/cstyle
+			${CMAKE_CURRENT_SOURCE_DIR}/*.c
+			${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+	else()
+		add_custom_target(cstyle-${name}
+			COMMAND ${PERL_EXECUTABLE}
+			${CMAKE_SOURCE_DIR}/utils/cstyle ${ARGN})
+	endif()
+	add_dependencies(cstyle cstyle-${name})
+endfunction()
 
 # Generates check-whitespace-$name target and attaches it as a dependency
 # of global "check-whitespace" target. This target verifies C files in current
@@ -153,65 +153,53 @@ add_custom_target(uninstall
 # instead.
 # ${name} must be unique.
 
-# function(add_check_whitespace name)
-# 	if(${ARGC} EQUAL 1)
-# 		add_custom_target(check-whitespace-${name}
-# 			COMMAND ${PERL_EXECUTABLE}
-# 			${CMAKE_SOURCE_DIR}/utils/check_whitespace
-# 			${CMAKE_CURRENT_SOURCE_DIR}/*.c
-# 			${CMAKE_CURRENT_SOURCE_DIR}/*.h)
-# 	else()
-# 		add_custom_target(check-whitespace-${name}
-# 			COMMAND ${PERL_EXECUTABLE}
-# 			${CMAKE_SOURCE_DIR}/utils/check_whitespace ${ARGN})
-# 	endif()
-# 	add_dependencies(check-whitespace check-whitespace-${name})
-# endfunction()
+function(add_check_whitespace name)
+	if(${ARGC} EQUAL 1)
+		add_custom_target(check-whitespace-${name}
+			COMMAND ${PERL_EXECUTABLE}
+			${CMAKE_SOURCE_DIR}/utils/check_whitespace
+			${CMAKE_CURRENT_SOURCE_DIR}/*.c
+			${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+	else()
+		add_custom_target(check-whitespace-${name}
+			COMMAND ${PERL_EXECUTABLE}
+			${CMAKE_SOURCE_DIR}/utils/check_whitespace ${ARGN})
+	endif()
+	add_dependencies(check-whitespace check-whitespace-${name})
+endfunction()
 
-# add_custom_target(checkers ALL)
-# add_custom_target(cstyle)
-# add_custom_target(check-whitespace)
-# add_custom_target(check-license
-#	COMMAND ${CMAKE_SOURCE_DIR}/utils/check_license/check-headers.sh
-#	${CMAKE_SOURCE_DIR}
-#	${CMAKE_BINARY_DIR}/check_license
-#	${CMAKE_SOURCE_DIR}/LICENSE
-#	-a)
+add_custom_target(checkers ALL)
+add_custom_target(cstyle)
+add_custom_target(check-whitespace)
+add_custom_target(check-license
+	COMMAND ${CMAKE_SOURCE_DIR}/utils/check_license/check-headers.sh
+	${CMAKE_SOURCE_DIR}
+	${CMAKE_BINARY_DIR}/check_license
+	${CMAKE_SOURCE_DIR}/LICENSE
+	-a)
 
-#add_custom_target(md2man
-#	COMMAND ${CMAKE_SOURCE_DIR}/utils/md2man/md2man.sh
-#	${CMAKE_SOURCE_DIR}/doc/pmdk-convert/pmdk-convert.1.md
-#	${CMAKE_SOURCE_DIR}/utils/md2man/default.man
-#	${CMAKE_SOURCE_DIR}/doc/generated/pmdk-convert.1
-#	)
+add_dependencies(check-license check_license)
 
-#if (NOT WIN32)
-#	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/doc/generated/pmdk-convert.1
-#		DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-#endif()
+add_cstyle(main)
+add_cstyle(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
 
-# add_dependencies(check-license check_license)
-
-#add_cstyle(main)
-#add_cstyle(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
-
-#add_check_whitespace(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
-#add_check_whitespace(src)
-#add_check_whitespace(other
-#	${CMAKE_SOURCE_DIR}/utils/check_license/*.sh
-#	${CMAKE_SOURCE_DIR}/README.md
-	#			${CMAKE_SOURCE_DIR}/utils/*.sh
-	#			${CMAKE_SOURCE_DIR}/*.spec
-	#			${CMAKE_SOURCE_DIR}/debian/*
-	#			${CMAKE_SOURCE_DIR}/debian/*/*
-	#			${CMAKE_SOURCE_DIR}/doc/*.md
-#	)
+add_check_whitespace(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
+add_check_whitespace(src)
+add_check_whitespace(other
+	${CMAKE_SOURCE_DIR}/utils/check_license/*.sh
+	${CMAKE_SOURCE_DIR}/README.md
+#				${CMAKE_SOURCE_DIR}/utils/*.sh
+#				${CMAKE_SOURCE_DIR}/*.spec
+#				${CMAKE_SOURCE_DIR}/debian/*
+#				${CMAKE_SOURCE_DIR}/debian/*/*
+#				${CMAKE_SOURCE_DIR}/doc/*.md
+	)
 
 option(DEVELOPER_MODE "enable developer checks" OFF)
 if(DEVELOPER_MODE)
-#	add_dependencies(checkers cstyle)
-#	add_dependencies(checkers check-whitespace)
-#	add_dependencies(checkers check-license)
+	add_dependencies(checkers cstyle)
+	add_dependencies(checkers check-whitespace)
+	add_dependencies(checkers check-license)
 endif(DEVELOPER_MODE)
 
 set(SOURCES main.c)
@@ -224,12 +212,10 @@ target_compile_definitions(vmemcache PRIVATE SRCVERSION="${NVML15}")
 install(TARGETS vmemcache
 	DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
 
-
-
- option(TRACE_TESTS
+option(TRACE_TESTS
  	"more verbose test outputs" OFF)
- enable_testing()
- add_subdirectory(tests)
+enable_testing()
+add_subdirectory(tests)
 
 if(NOT "${CPACK_GENERATOR}" STREQUAL "")
 	include(${CMAKE_SOURCE_DIR}/packages.cmake)

@@ -34,7 +34,8 @@
 #include <stdio.h>
 #include "main.h"
 
-int function()
+int
+function()
 {
 	printf("hello world\n)");
 	return 0;
