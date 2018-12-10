@@ -32,15 +32,12 @@
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test
 	CACHE STRING "working directory for tests")
 
-option(TESTS_USE_FORCED_PMEM "let tests force enable or force disable use of optimized flush in libpmemobj (to speed them up)" OFF)
-
 set(DEVICE_DAX_PATHS "" CACHE STRING
 	"for tests that require raw dax devices without a file system. Some tests might require two DAX devices.
 	Example: '/dev/dax1.0 /dev/dax2.0'")
 
 set(GLOBAL_TEST_ARGS
 	-DPARENT_DIR=${TEST_DIR}/
-	-DTESTS_USE_FORCED_PMEM=${TESTS_USE_FORCED_PMEM}
 	-DDEVICE_DAX_PATHS=${DEVICE_DAX_PATHS})
 
 # convert the DEVICE_DAX_PATHS list to the array
@@ -62,23 +59,12 @@ function(test name file)
 		-DTEST_NAME=${name}
 		-DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
 		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
-		-DVERSIONS=${VERSIONS}
 		-DCONFIG=$<CONFIG>
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
 
 	set_tests_properties(${name} PROPERTIES
 		ENVIRONMENT "LC_ALL=C;PATH=$ENV{PATH}")
 endfunction()
-
-macro(require_libpmempool ver)
-	if(PKG_CONFIG_FOUND)
-		pkg_check_modules(LIBPMEMPOOL REQUIRED libpmempool>=${ver})
-	else()
-		find_package(LIBPMEMPOOL REQUIRED)
-	endif()
-	link_directories(${LIBPMEMPOOL_LIBRARY_DIRS})
-endmacro()
-
 
 add_executable(example_test test.c)
 target_include_directories(example_test PRIVATE ${CMAKE_SOURCE_DIR})

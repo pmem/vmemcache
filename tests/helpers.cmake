@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.3)
-set(DIR ${PARENT_DIR}/😘⠝⠧⠍⠇ɗPMDKӜ⥺🙋${TEST_NAME})
+set(DIR ${PARENT_DIR}/😘⠝⠧⠍⠇ɗVMEMCACHEӜ⥺🙋${TEST_NAME})
 
 if (WIN32)
 	set(EXE_DIR ${CMAKE_CURRENT_BINARY_DIR}/../${CONFIG})
@@ -55,10 +55,6 @@ endfunction()
 # Optional function arguments are passed as consecutive arguments to
 # the command.
 function(execute_arg input expectation name)
-	if(TESTS_USE_FORCED_PMEM)
-		set(ENV{PMEM_IS_PMEM_FORCE} 1)
-	endif()
-
 	message(STATUS "Executing: ${name} ${ARGN}")
 	if("${input}" STREQUAL "")
 		execute_process(COMMAND ${name} ${ARGN}
@@ -72,10 +68,6 @@ function(execute_arg input expectation name)
 			OUTPUT_FILE ${BIN_DIR}/out
 			ERROR_FILE ${BIN_DIR}/err)
 	endif()
-	if(TESTS_USE_FORCED_PMEM)
-		unset(ENV{PMEM_IS_PMEM_FORCE})
-	endif()
-
 	message(STATUS "Test ${name}:")
 	file(READ ${BIN_DIR}/out OUT)
 	message(STATUS "Stdout:\n${OUT}")

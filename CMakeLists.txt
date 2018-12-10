@@ -32,8 +32,8 @@
 cmake_minimum_required(VERSION 3.3)
 project(vmemcache C)
 
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 5)
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 1)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -41,14 +41,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 
 include(FindThreads)
-
-set(MAX_VERSION 1.5)
-
-STRING(REGEX REPLACE "^([0-9]+)\\.[0-9]+" "\\1" MIN_VERSION_MAJOR "${MIN_VERSION}")
-STRING(REGEX REPLACE "^[0-9]+\\.([0-9]+)" "\\1" MIN_VERSION_MINOR "${MIN_VERSION}")
-
-STRING(REGEX REPLACE "^([0-9]+)\\.[0-9]+" "\\1" MAX_VERSION_MAJOR "${MAX_VERSION}")
-STRING(REGEX REPLACE "^[0-9]+\\.([0-9]+)" "\\1" MAX_VERSION_MINOR "${MAX_VERSION}")
 
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "RelWithDebInfo")
@@ -187,13 +179,7 @@ add_check_whitespace(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
 add_check_whitespace(src)
 add_check_whitespace(other
 	${CMAKE_SOURCE_DIR}/utils/check_license/*.sh
-	${CMAKE_SOURCE_DIR}/README.md
-#				${CMAKE_SOURCE_DIR}/utils/*.sh
-#				${CMAKE_SOURCE_DIR}/*.spec
-#				${CMAKE_SOURCE_DIR}/debian/*
-#				${CMAKE_SOURCE_DIR}/debian/*/*
-#				${CMAKE_SOURCE_DIR}/doc/*.md
-	)
+	${CMAKE_SOURCE_DIR}/README.md)
 
 option(DEVELOPER_MODE "enable developer checks" OFF)
 if(DEVELOPER_MODE)
@@ -207,8 +193,6 @@ set(SOURCES main.c)
 add_library(vmemcache SHARED ${SOURCES})
 target_link_libraries(vmemcache PRIVATE -Wl,--version-script=${CMAKE_SOURCE_DIR}/libvmemcache.map)
 
-target_compile_definitions(vmemcache PRIVATE SRCVERSION="${NVML15}")
-
 install(TARGETS vmemcache
 	DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
 
@@ -216,7 +200,3 @@ option(TRACE_TESTS
  	"more verbose test outputs" OFF)
 enable_testing()
 add_subdirectory(tests)
-
-if(NOT "${CPACK_GENERATOR}" STREQUAL "")
-	include(${CMAKE_SOURCE_DIR}/packages.cmake)
-endif()
