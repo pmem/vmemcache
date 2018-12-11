@@ -1,3 +1,10 @@
-build/.project
-/.cproject
+.*
+!.gitignore
+!.gitattributes
+!.clang-format
+!.travis.yml
+!.mailmap
+!.cstyleignore
+!.codecov.yml
+
 /build
