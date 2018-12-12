@@ -30,12 +30,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* an example test */
+/*
+ * vmemcache_tests.h -- unit tests header
+ */
 
-#include "test.h"
-
-int
-main()
-{
-	return 0;
-}
+#define FATAL(...) do {\
+	fprintf(stderr, "FATAL ERROR at %s:%i in %s(): ",\
+			__FILE__, __LINE__, __func__);\
+	fprintf(stderr, __VA_ARGS__);\
+	fprintf(stderr, "\n");\
+	abort();\
+} while (/*CONSTCOND*/0)

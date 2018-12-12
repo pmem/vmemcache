@@ -29,53 +29,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test
-	CACHE STRING "working directory for tests")
+include(${SRC_DIR}/helpers.cmake)
 
-set(DEVICE_DAX_PATHS "" CACHE STRING
-	"for tests that require raw dax devices without a file system. Some tests might require two DAX devices.
-	Example: '/dev/dax1.0 /dev/dax2.0'")
+setup()
 
-set(GLOBAL_TEST_ARGS
-	-DPARENT_DIR=${TEST_DIR}/
-	-DDEVICE_DAX_PATHS=${DEVICE_DAX_PATHS})
+execute(0 ${SRC_DIR}/valgrind-leak-check.sh "${TEST_DIR}/vmemcache_test_basic /tmp/")
 
-# convert the DEVICE_DAX_PATHS list to the array
-if(DEVICE_DAX_PATHS)
-	string(REPLACE " " ";" DEVICE_DAX_PATHS ${DEVICE_DAX_PATHS})
-endif()
-
-list(LENGTH DEVICE_DAX_PATHS devdax_num)
-
-if(TRACE_TESTS)
-	set(GLOBAL_TEST_ARGS ${GLOBAL_TEST_ARGS} --trace-expand)
-endif()
-
-add_cstyle(tests)
-add_check_whitespace(tests)
-
-# Configures test ${name}
-function(test name file)
-	add_test(NAME ${name}
-		COMMAND ${CMAKE_COMMAND}
-		${GLOBAL_TEST_ARGS}
-		-DTEST_NAME=${name}
-		-DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
-		-DCONFIG=$<CONFIG>
-		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
-
-	set_tests_properties(${name} PROPERTIES
-		ENVIRONMENT "LC_ALL=C;PATH=$ENV{PATH}")
-endfunction()
-
-add_executable(vmemcache_test_basic vmemcache_basic.c)
-target_include_directories(vmemcache_test_basic PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(vmemcache_test_basic PRIVATE vmemcache)
-
-test("test-basic" test-basic)
-if (VALGRIND_FOUND)
-	test("test-basic-valgrind" test-basic-valgrind)
-else()
-	message(STATUS "WARNING: valgrind not found, SKIPPING valgrind tests!")
-endif()
+cleanup()

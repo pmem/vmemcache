@@ -33,6 +33,6 @@ include(${SRC_DIR}/helpers.cmake)
 
 setup()
 
-execute(0 ${TEST_DIR}/example_test)
+execute(0 ${TEST_DIR}/vmemcache_test_basic /tmp/)
 
 cleanup()
