@@ -172,11 +172,10 @@ add_custom_target(check-license
 
 add_dependencies(check-license check_license)
 
-add_cstyle(main)
-add_cstyle(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
-
-add_check_whitespace(check_license ${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
-add_check_whitespace(src)
+add_cstyle(check_license
+	${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
+add_check_whitespace(check_license
+	${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
 add_check_whitespace(other
 	${CMAKE_SOURCE_DIR}/utils/check_license/*.sh
 	${CMAKE_SOURCE_DIR}/README.md)
@@ -188,15 +187,9 @@ if(DEVELOPER_MODE)
 	add_dependencies(checkers check-license)
 endif(DEVELOPER_MODE)
 
-set(SOURCES main.c)
-
-add_library(vmemcache SHARED ${SOURCES})
-target_link_libraries(vmemcache PRIVATE -Wl,--version-script=${CMAKE_SOURCE_DIR}/libvmemcache.map)
-
-install(TARGETS vmemcache
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
-
 option(TRACE_TESTS
  	"more verbose test outputs" OFF)
+
 enable_testing()
+add_subdirectory(src)
 add_subdirectory(tests)
