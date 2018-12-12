@@ -51,6 +51,9 @@ if(TRACE_TESTS)
 	set(GLOBAL_TEST_ARGS ${GLOBAL_TEST_ARGS} --trace-expand)
 endif()
 
+add_cstyle(tests)
+add_check_whitespace(tests)
+
 # Configures test ${name}
 function(test name file)
 	add_test(NAME ${name}

@@ -30,12 +30,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* an example test */
-
-#include "main.h"
-
-int
-main()
-{
-	return function();
-}
+/* an example header file */

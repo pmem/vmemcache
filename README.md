@@ -14,7 +14,7 @@ $ git clone https://github.com/pmem/vmemcache.git
 $ cd vmemcache
 $ mkdir build
 $ cd build
-$ cmake .. -DCMAKE_INSTALL_PREFIX=/home/user/vmemcache-bin
+$ cmake .. -DCMAKE_INSTALL_PREFIX=~/vmemcache-bin
 $ make
 $ make install
 ```

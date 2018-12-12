@@ -37,15 +37,15 @@
 
 set -e
 
-cd $WORKDIR
+[ "$WORKDIR" != "" ] && cd $WORKDIR
 INSTALL_DIR=/tmp/vmemcache
 
-mkdir $INSTALL_DIR
+mkdir -p $INSTALL_DIR
 
 # -----------------------------------------
 # gcc & Debug
 
-mkdir build
+mkdir -p build
 cd build
 
 CC=gcc \
