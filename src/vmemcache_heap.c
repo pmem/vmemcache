@@ -31,12 +31,18 @@
  */
 
 /*
- * vmemcache_heap.c -- implementation of simply vmemcache linear allocator
+ * vmemcache_heap.c -- implementation of simple vmemcache linear allocator
  */
 
 #include "vmemcache_heap.h"
 #include "vecq.h"
 #include "sys_util.h"
+
+struct heap {
+	os_mutex_t lock;
+	size_t fragment_size;
+	VECQ(, struct heap_entry) entries;
+};
 
 /*
  * vmcache_heap_create -- create vmemcache heap
@@ -46,7 +52,21 @@ vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
 {
 	LOG(3, "addr %p size %zu", addr, size);
 
-	return NULL;
+	struct heap_entry whole_heap = {addr, size};
+	struct heap *heap;
+
+	heap = Zalloc(sizeof(struct heap));
+	if (heap == NULL) {
+		ERR("!Zalloc");
+		return NULL;
+	}
+
+	util_mutex_init(&heap->lock);
+	heap->fragment_size = fragment_size;
+	VECQ_INIT(&heap->entries);
+	VECQ_ENQUEUE(&heap->entries, whole_heap);
+
+	return heap;
 }
 
 /*
@@ -56,6 +76,10 @@ void
 vmcache_heap_destroy(struct heap *heap)
 {
 	LOG(3, "heap %p", heap);
+
+	VECQ_DELETE(&heap->entries);
+	util_mutex_destroy(&heap->lock);
+	Free(heap);
 }
 
 /*
@@ -68,6 +92,26 @@ vmcache_alloc(struct heap *heap, size_t size)
 
 	struct heap_entry he = {NULL, 0};
 
+	size = ALIGN_UP(size, heap->fragment_size);
+
+	util_mutex_lock(&heap->lock);
+
+	if (VECQ_SIZE(&heap->entries) == 0)
+		goto error_no_mem;
+
+	he = VECQ_DEQUEUE(&heap->entries);
+	if (he.size > size) {
+		struct heap_entry f;
+		f.ptr = (void *)((uintptr_t)he.ptr + size);
+		f.size = he.size - size;
+		VECQ_ENQUEUE(&heap->entries, f);
+
+		he.size = size;
+	}
+
+error_no_mem:
+	util_mutex_unlock(&heap->lock);
+
 	return he;
 }
 
@@ -78,4 +122,10 @@ void
 vmcache_free(struct heap *heap, struct heap_entry he)
 {
 	LOG(3, "heap %p he.ptr %p he.size %zu", heap, he.ptr, he.size);
+
+	util_mutex_lock(&heap->lock);
+
+	VECQ_ENQUEUE(&heap->entries, he);
+
+	util_mutex_unlock(&heap->lock);
 }
