@@ -30,13 +30,52 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* an example library */
-#include <stdio.h>
-#include "main.h"
+/*
+ * vmemcache_heap.c -- implementation of simply vmemcache linear allocator
+ */
 
-int
-function()
+#include "vmemcache_heap.h"
+#include "vecq.h"
+#include "sys_util.h"
+
+/*
+ * vmcache_heap_create -- create vmemcache heap
+ */
+struct heap *
+vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
 {
-	printf("hello world\n)");
-	return 0;
+	LOG(3, "addr %p size %zu", addr, size);
+
+	return NULL;
+}
+
+/*
+ * vmcache_heap_destroy -- destroy vmemcache heap
+ */
+void
+vmcache_heap_destroy(struct heap *heap)
+{
+	LOG(3, "heap %p", heap);
+}
+
+/*
+ * vmcache_alloc -- allocate memory (take it from the queue)
+ */
+struct heap_entry
+vmcache_alloc(struct heap *heap, size_t size)
+{
+	LOG(3, "heap %p size %zu", heap, size);
+
+	struct heap_entry he = {NULL, 0};
+
+	return he;
+}
+
+/*
+ * vmcache_free -- free memory (give it back to the queue)
+ */
+void
+vmcache_free(struct heap *heap, struct heap_entry he)
+{
+	LOG(3, "heap %p he.ptr %p he.size %zu", heap, he.ptr, he.size);
 }

@@ -33,4 +33,4 @@
 
 # file-exceptions.sh - filter out files not checked for copyright and license
 
-grep -v -E -e 'XXX'
+grep -v -E -e '/queue.h$'

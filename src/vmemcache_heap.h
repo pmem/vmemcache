@@ -30,12 +30,36 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* an example test */
+/*
+ * vmemcache_heap.h -- internal definitions for vmemcache allocator module
+ */
 
-#include "test.h"
+#ifndef VMEMCACHE_HEAP_H
+#define VMEMCACHE_HEAP_H 1
 
-int
-main()
-{
-	return 0;
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define HEAP_ENTRY_IS_NULL(he) ((he.ptr) == NULL)
+
+struct heap_entry {
+	void *ptr;
+	size_t size;
+};
+
+struct heap;
+
+struct heap *vmcache_heap_create(void *addr, size_t size, size_t fragment_size);
+void vmcache_heap_destroy(struct heap *heap);
+
+struct heap_entry vmcache_alloc(struct heap *heap, size_t size);
+void vmcache_free(struct heap *heap, struct heap_entry he);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif
