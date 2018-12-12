@@ -54,8 +54,15 @@ endif()
 add_cstyle(tests)
 add_check_whitespace(tests)
 
+set(vg_tracers memcheck)
+
 # Configures test ${name}
-function(test name file)
+function(test name file tracer)
+	if ((${tracer} IN_LIST vg_tracers) AND (NOT VALGRIND_FOUND))
+		message(WARNING "Valgrind not found, test skipped: ${name}")
+		return()
+	endif()
+
 	add_test(NAME ${name}
 		COMMAND ${CMAKE_COMMAND}
 		${GLOBAL_TEST_ARGS}
@@ -63,14 +70,16 @@ function(test name file)
 		-DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
 		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
 		-DCONFIG=$<CONFIG>
+		-DTRACER=${tracer}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
 
 	set_tests_properties(${name} PROPERTIES
 		ENVIRONMENT "LC_ALL=C;PATH=$ENV{PATH}")
 endfunction()
 
-add_executable(example_test test.c)
-target_include_directories(example_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(example_test PRIVATE vmemcache)
+add_executable(vmemcache_test_basic vmemcache_test_basic.c)
+target_include_directories(vmemcache_test_basic PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(vmemcache_test_basic PRIVATE vmemcache)
 
-test("example" example)
+test("test-basic" test-basic none)
+test("test-basic-valgrind" test-basic memcheck)
