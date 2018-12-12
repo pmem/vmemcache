@@ -82,6 +82,15 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 }
 
 /*
+ * vmemcache_entry_acquire -- (internal) acquire pointer to the vmemcache entry
+ */
+struct cache_entry *
+vmemcache_entry_acquire(struct cache_entry *entry)
+{
+	return NULL;
+}
+
+/*
  * vmemcache_get - get an element from the vmemcache,
  *                 returns the number of bytes read
  */
