@@ -49,6 +49,7 @@ set(SOURCES
 	ravl.c
 	vmemcache.c
 	vmemcache_heap.c
+	vmemcache_index.c
 	vmemcache_repl.c)
 
 add_library(vmemcache SHARED ${SOURCES})
