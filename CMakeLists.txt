@@ -190,6 +190,8 @@ endif(DEVELOPER_MODE)
 option(TRACE_TESTS
  	"more verbose test outputs" OFF)
 
+find_package(valgrind)
+
 enable_testing()
 add_subdirectory(src)
 add_subdirectory(tests)

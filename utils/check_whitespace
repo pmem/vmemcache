@@ -127,7 +127,7 @@ sub check_whitespace_with_exc {
 	$_ = $full;
 
 	return 0 if /^[.\/]*src\/jemalloc.*/;
-	return 0 if /^[.\/]*src\/common\/queue\.h/;
+	return 0 if /^[.\/]*src\/sys\/queue\.h/;
 	return 0 if /^[.\/]*src\/common\/valgrind\/.*\.h/;
 
 	$_ = basename($full);

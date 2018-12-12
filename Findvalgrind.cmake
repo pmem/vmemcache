@@ -28,35 +28,17 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 
-cmake_minimum_required(VERSION 3.3)
-project(vmemcache C)
+execute_process(
+	COMMAND valgrind --version
+	OUTPUT_VARIABLE valgrind_out
+	RESULT_VARIABLE valgrind_error
+	ERROR_VARIABLE valgrind_suppress)
 
-include(FindThreads)
-
-add_cstyle(src)
-add_check_whitespace(src)
-
-set(SOURCES
-	out.c
-	os_posix.c
-	os_thread_posix.c
-	util.c
-	util_posix.c
-	file.c
-	file_posix.c
-	mmap.c
-	mmap_posix.c
-	libvmemcache.c
-	ravl.c
-	vmemcache.c
-	vmemcache_heap.c
-	vmemcache_repl.c)
-
-add_library(vmemcache SHARED ${SOURCES})
-target_link_libraries(vmemcache ${CMAKE_THREAD_LIBS_INIT} -Wl,--version-script=${CMAKE_SOURCE_DIR}/src/libvmemcache.map)
-target_compile_definitions(vmemcache PRIVATE SRCVERSION="${VERSION}")
-target_compile_definitions(vmemcache PRIVATE VALGRIND_ENABLED=${VALGRIND_FOUND})
-
-install(TARGETS vmemcache
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
+if (NOT valgrind_error)
+	set(VALGRIND_FOUND 1
+		CACHE INTERNAL "Valgrind found")
+else()
+	set(VALGRIND_FOUND 0)
+endif()
