@@ -48,8 +48,15 @@ endif (NOT CMAKE_BUILD_TYPE)
 
 include(CheckCCompilerFlag)
 include(GNUInstallDirs)
+
 if(NOT MSVC)
 	find_package(PkgConfig QUIET)
+endif()
+
+if(PKG_CONFIG_FOUND)
+	pkg_check_modules(VALGRIND QUIET valgrind)
+else()
+	find_package(VALGRIND QUIET)
 endif()
 
 set(CMAKE_C_STANDARD 99)

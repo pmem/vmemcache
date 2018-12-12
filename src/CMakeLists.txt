@@ -32,16 +32,35 @@
 cmake_minimum_required(VERSION 3.3)
 project(vmemcache C)
 
-include(FindThreads)
-
 add_cstyle(src)
 add_check_whitespace(src)
 
-set(SOURCES main.c)
+set(SOURCES
+	out.c
+	os_posix.c
+	os_thread_posix.c
+	util.c
+	util_posix.c
+	file.c
+	file_posix.c
+	mmap.c
+	mmap_posix.c
+	libvmemcache.c
+	ravl.c
+	vmemcache.c
+	vmemcache_heap.c
+	vmemcache_repl.c)
 
 add_library(vmemcache SHARED ${SOURCES})
-target_link_libraries(vmemcache PRIVATE -Wl,--version-script=${CMAKE_SOURCE_DIR}/src/libvmemcache.map)
+target_link_libraries(vmemcache PRIVATE
+	${CMAKE_THREAD_LIBS_INIT}
+	-Wl,--version-script=${CMAKE_SOURCE_DIR}/src/libvmemcache.map)
+
 target_compile_definitions(vmemcache PRIVATE SRCVERSION="${VERSION}")
+
+if(VALGRIND_FOUND)
+	target_compile_definitions(vmemcache PRIVATE VALGRIND_ENABLED=1)
+endif()
 
 install(TARGETS vmemcache
 	DESTINATION ${CMAKE_INSTALL_LIBDIR}/)

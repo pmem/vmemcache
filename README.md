@@ -1,6 +1,11 @@
 libvmemcache: buffer based LRU cache
 =======================================
 
+### WARNING ###
+
+This library is in a '**Work-In-Progress**' state,
+**API is not stable** and it **may change at any time**.
+
 # Building The Source #
 
 Requirements:
