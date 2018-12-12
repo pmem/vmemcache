@@ -82,3 +82,23 @@ endfunction()
 function(execute expectation name)
 	execute_arg("" ${expectation} ${name} ${ARGN})
 endfunction()
+
+function(run_under_valgrind name)
+	message(STATUS "Executing: ${name} ${ARGN}")
+	execute_process(COMMAND valgrind --leak-check=full ${name} ${ARGN}
+			RESULT_VARIABLE RET
+			OUTPUT_FILE ${BIN_DIR}/out
+			ERROR_FILE ${BIN_DIR}/err)
+	file(READ ${BIN_DIR}/err ERR)
+	if(NOT RET EQUAL 0)
+		message(FATAL_ERROR
+			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
+	endif()
+
+	set(TEXT_OK "All heap blocks were freed -- no leaks are possible")
+	string(FIND "${ERR}" "${TEXT_OK}" RET)
+	if(RET EQUAL -1)
+		message(FATAL_ERROR
+			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
+	endif()
+endfunction()
