@@ -30,5 +30,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* an example library */
-int function(void);
+/*
+ * vmemcache.h -- internal definitions for vmemcache
+ */
+
+#ifndef VMEMCACHE_H
+#define VMEMCACHE_H 1
+
+#include <stdint.h>
+#include <stddef.h>
+
+#include "vmemcache_repl.h"
+#include "sys_util.h"
+#include "vec.h"
+#include "vecq.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define VMEMCACHE_PREFIX "libvmemcache"
+#define VMEMCACHE_LEVEL_VAR "VMEMCACHE_LEVEL"
+#define VMEMCACHE_FILE_VAR "VMEMCACHE_FILE"
+
+struct vmemcache {
+	void *addr;			/* mapping address */
+	size_t size;			/* mapping size */
+	struct heap *heap;		/* heap address */
+	struct ravl *index;		/* indexing structure */
+	struct repl_p repl;		/* replacement policy abstraction */
+	vmemcache_on_evict *on_evict;	/* callback on evict */
+	void *arg_evict;		/* argument for callback on evict */
+	vmemcache_on_miss *on_miss;	/* callback on miss */
+	void *arg_miss;			/* argument for callback on miss */
+};
+
+struct cache_entry {
+	struct value {
+		uint64_t refcount;
+		struct repl_p_entry *p_entry;
+		size_t vsize;
+		VEC(, struct heap_entry) fragments;
+	} value;
+
+	struct key {
+		size_t ksize;
+		char key[];
+	} key;
+};
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
