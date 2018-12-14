@@ -174,6 +174,14 @@ repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry *entry)
 static int
 repl_p_lru_new(struct repl_p_head **head)
 {
+	struct repl_p_head *h = Zalloc(sizeof(struct repl_p_head));
+	if (h == NULL)
+		return -1;
+
+	util_mutex_init(&h->lock);
+	STAILQ_INIT(&h->first);
+	*head = h;
+
 	return 0;
 }
 
@@ -183,6 +191,14 @@ repl_p_lru_new(struct repl_p_head **head)
 static void
 repl_p_lru_delete(struct repl_p_head *head)
 {
+	while (!STAILQ_EMPTY(&head->first)) {
+		struct repl_p_entry *entry = STAILQ_FIRST(&head->first);
+		STAILQ_REMOVE_HEAD(&head->first, node);
+		Free(entry);
+	}
+
+	util_mutex_destroy(&head->lock);
+	Free(head);
 }
 
 /*
@@ -191,7 +207,19 @@ repl_p_lru_delete(struct repl_p_head *head)
 static struct repl_p_entry *
 repl_p_lru_insert(struct repl_p_head *head, void *element)
 {
-	return NULL;
+	struct repl_p_entry *entry = Zalloc(sizeof(struct repl_p_entry));
+	if (entry == NULL)
+		return NULL;
+
+	entry->data = element;
+
+	util_mutex_lock(&head->lock);
+
+	STAILQ_INSERT_TAIL(&head->first, entry, node);
+
+	util_mutex_unlock(&head->lock);
+
+	return entry;
 }
 
 /*
@@ -200,6 +228,16 @@ repl_p_lru_insert(struct repl_p_head *head, void *element)
 static int
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 {
+	if (entry == NULL)
+		return -1;
+
+	util_mutex_lock(&head->lock);
+
+	STAILQ_REMOVE(&head->first, entry, repl_p_entry, node);
+	STAILQ_INSERT_TAIL(&head->first, entry, node);
+
+	util_mutex_unlock(&head->lock);
+
 	return 0;
 }
 
@@ -209,5 +247,19 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 static void *
 repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry)
 {
-	return NULL;
+	void *data = NULL;
+
+	util_mutex_lock(&head->lock);
+
+	if (entry == NULL && (entry = STAILQ_FIRST(&head->first)) == NULL)
+		goto exit_unlock;
+
+	data = entry->data;
+	STAILQ_REMOVE(&head->first, entry, repl_p_entry, node);
+	Free(entry);
+
+exit_unlock:
+	util_mutex_unlock(&head->lock);
+
+	return data;
 }
