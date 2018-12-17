@@ -35,13 +35,13 @@
  */
 
 #include "vmemcache_heap.h"
-#include "vecq.h"
+#include "vec.h"
 #include "sys_util.h"
 
 struct heap {
 	os_mutex_t lock;
 	size_t fragment_size;
-	VECQ(, struct heap_entry) entries;
+	VEC(, struct heap_entry) entries;
 };
 
 /*
@@ -63,8 +63,8 @@ vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
 
 	util_mutex_init(&heap->lock);
 	heap->fragment_size = fragment_size;
-	VECQ_INIT(&heap->entries);
-	VECQ_ENQUEUE(&heap->entries, whole_heap);
+	VEC_INIT(&heap->entries);
+	VEC_PUSH_BACK(&heap->entries, whole_heap);
 
 	return heap;
 }
@@ -77,7 +77,7 @@ vmcache_heap_destroy(struct heap *heap)
 {
 	LOG(3, "heap %p", heap);
 
-	VECQ_DELETE(&heap->entries);
+	VEC_DELETE(&heap->entries);
 	util_mutex_destroy(&heap->lock);
 	Free(heap);
 }
@@ -96,15 +96,14 @@ vmcache_alloc(struct heap *heap, size_t size)
 
 	util_mutex_lock(&heap->lock);
 
-	if (VECQ_SIZE(&heap->entries) == 0)
+	if (VEC_POP_BACK(&heap->entries, &he) != 0)
 		goto error_no_mem;
 
-	he = VECQ_DEQUEUE(&heap->entries);
 	if (he.size > size) {
 		struct heap_entry f;
 		f.ptr = (void *)((uintptr_t)he.ptr + size);
 		f.size = he.size - size;
-		VECQ_ENQUEUE(&heap->entries, f);
+		VEC_PUSH_BACK(&heap->entries, f);
 
 		he.size = size;
 	}
@@ -125,7 +124,7 @@ vmcache_free(struct heap *heap, struct heap_entry he)
 
 	util_mutex_lock(&heap->lock);
 
-	VECQ_ENQUEUE(&heap->entries, he);
+	VEC_PUSH_BACK(&heap->entries, he);
 
 	util_mutex_unlock(&heap->lock);
 }

@@ -43,7 +43,6 @@
 #include "vmemcache_repl.h"
 #include "sys_util.h"
 #include "vec.h"
-#include "vecq.h"
 
 #ifdef __cplusplus
 extern "C" {
