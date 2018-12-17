@@ -101,9 +101,12 @@ vec_reserve(void *vec, size_t ncapacity, size_t s)
 	vec_reserve((void *)vec, ncapacity, sizeof(*(vec)->buffer)) :\
 	0)
 
-#define VEC_POP_BACK(vec) do {\
+#define VEC_DEC_BACK(vec) do {\
 	(vec)->size -= 1;\
 } while (0)
+
+#define VEC_POP_BACK(vec, dst)\
+((vec)->size == 0 ? -1 : ((*dst = (vec)->buffer[--((vec)->size)]), 0))
 
 #define VEC_FRONT(vec)\
 (vec)->buffer[0]
