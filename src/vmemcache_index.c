@@ -92,6 +92,9 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 		return -1;
 	}
 
+	/* this is the first and the only one reference now (in the index) */
+	entry->value.refcount = 1;
+
 	util_mutex_unlock(&lock_ravl);
 
 	return 0;
@@ -153,11 +156,12 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
  * vmcache_index_remove -- remove data from the vmemcache indexing structure
  */
 int
-vmcache_index_remove(vmemcache_index_t *index, const struct cache_entry *entry)
+vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 {
 	util_mutex_lock(&lock_ravl);
 
-	struct ravl_node *node = ravl_find(index, entry, RAVL_PREDICATE_EQUAL);
+	struct ravl_node *node = ravl_find(cache->index, entry,
+						RAVL_PREDICATE_EQUAL);
 	if (node == NULL) {
 		util_mutex_unlock(&lock_ravl);
 		ERR(
@@ -166,7 +170,9 @@ vmcache_index_remove(vmemcache_index_t *index, const struct cache_entry *entry)
 		return -1;
 	}
 
-	ravl_remove(index, node);
+	ravl_remove(cache->index, node);
+
+	vmemcache_entry_release(cache, entry);
 
 	util_mutex_unlock(&lock_ravl);
 

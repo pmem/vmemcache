@@ -37,6 +37,7 @@
 #ifndef VMEMCACHE_INDEX_H
 #define VMEMCACHE_INDEX_H 1
 
+#include "libvmemcache.h"
 #include "ravl.h"
 
 #ifdef __cplusplus
@@ -52,8 +53,7 @@ int vmcache_index_insert(vmemcache_index_t *index,
 			struct cache_entry *entry);
 int vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 			struct cache_entry **entry);
-int vmcache_index_remove(vmemcache_index_t *index,
-			const struct cache_entry *entry);
+int vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry);
 
 #ifdef __cplusplus
 }
