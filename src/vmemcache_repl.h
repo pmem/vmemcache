@@ -57,7 +57,8 @@ struct repl_p_ops {
 
 	/* insert a new element */
 	struct repl_p_entry *
-		(*repl_p_insert)(struct repl_p_head *head, void *element);
+		(*repl_p_insert)(struct repl_p_head *head, void *element,
+					struct repl_p_entry **ptr_entry);
 
 	/* evict an/the element */
 	void *
