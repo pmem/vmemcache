@@ -46,6 +46,7 @@
 struct repl_p_entry {
 	STAILQ_ENTRY(repl_p_entry) node;
 	void *data;
+	struct repl_p_entry **ptr_entry; /* pointer to be zeroed when evicted */
 };
 
 struct repl_p_head {
@@ -62,7 +63,8 @@ static void
 repl_p_none_delete(struct repl_p_head *head);
 
 static struct repl_p_entry *
-repl_p_none_insert(struct repl_p_head *head, void *element);
+repl_p_none_insert(struct repl_p_head *head, void *element,
+			struct repl_p_entry **ptr_entry);
 
 static int
 repl_p_none_use(struct repl_p_head *head, struct repl_p_entry *entry);
@@ -77,7 +79,8 @@ static void
 repl_p_lru_delete(struct repl_p_head *head);
 
 static struct repl_p_entry *
-repl_p_lru_insert(struct repl_p_head *head, void *element);
+repl_p_lru_insert(struct repl_p_head *head, void *element,
+			struct repl_p_entry **ptr_entry);
 
 static int
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry);
@@ -145,7 +148,8 @@ repl_p_none_delete(struct repl_p_head *head)
  * repl_p_none_insert -- (internal) insert a new element
  */
 static struct repl_p_entry *
-repl_p_none_insert(struct repl_p_head *head, void *element)
+repl_p_none_insert(struct repl_p_head *head, void *element,
+			struct repl_p_entry **ptr_entry)
 {
 	return NULL;
 }
@@ -206,13 +210,16 @@ repl_p_lru_delete(struct repl_p_head *head)
  * repl_p_lru_insert -- (internal) insert a new element
  */
 static struct repl_p_entry *
-repl_p_lru_insert(struct repl_p_head *head, void *element)
+repl_p_lru_insert(struct repl_p_head *head, void *element,
+			struct repl_p_entry **ptr_entry)
 {
 	struct repl_p_entry *entry = Zalloc(sizeof(struct repl_p_entry));
 	if (entry == NULL)
 		return NULL;
 
 	entry->data = element;
+	ASSERTne(ptr_entry, NULL);
+	entry->ptr_entry = ptr_entry;
 
 	util_mutex_lock(&head->lock);
 
@@ -255,19 +262,31 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 static void *
 repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry)
 {
-	void *data = NULL;
+	void *data;
 
 	util_mutex_lock(&head->lock);
 
-	if (entry == NULL && (entry = STAILQ_FIRST(&head->first)) == NULL)
-		goto exit_unlock;
+	if (entry == NULL) {
+		entry = STAILQ_FIRST(&head->first);
+		if (entry == NULL) {
+			util_mutex_unlock(&head->lock);
+			return NULL;
+		}
+
+		STAILQ_REMOVE_HEAD(&head->first, node);
+
+	} else {
+		STAILQ_REMOVE(&head->first, entry, repl_p_entry, node);
+	}
+
+	ASSERTne(entry->ptr_entry, NULL);
+	*(entry->ptr_entry) = NULL;
+
+	util_mutex_unlock(&head->lock);
 
 	data = entry->data;
-	STAILQ_REMOVE(&head->first, entry, repl_p_entry, node);
-	Free(entry);
 
-exit_unlock:
-	util_mutex_unlock(&head->lock);
+	Free(entry);
 
 	return data;
 }
