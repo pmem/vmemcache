@@ -38,6 +38,8 @@
 #include "vmemcache_index.h"
 #include "ravl.h"
 
+static os_mutex_t lock_ravl;
+
 /*
  * ravl_cmp -- (internal) ravl compare function
  */
@@ -62,6 +64,7 @@ ravl_cmp(const void *lhs, const void *rhs)
 vmemcache_index_t *
 vmcache_index_new(void)
 {
+	util_mutex_init(&lock_ravl);
 	return ravl_new(ravl_cmp);
 }
 
@@ -72,6 +75,7 @@ void
 vmcache_index_delete(vmemcache_index_t *index)
 {
 	ravl_delete(index);
+	util_mutex_destroy(&lock_ravl);
 }
 
 /*
@@ -80,10 +84,15 @@ vmcache_index_delete(vmemcache_index_t *index)
 int
 vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 {
+	util_mutex_lock(&lock_ravl);
+
 	if (ravl_insert(index, entry)) {
+		util_mutex_unlock(&lock_ravl);
 		ERR("inserting to the index failed");
 		return -1;
 	}
+
+	util_mutex_unlock(&lock_ravl);
 
 	return 0;
 }
@@ -121,16 +130,21 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	e->key.ksize = ksize;
 	memcpy(e->key.key, key, ksize);
 
+	util_mutex_lock(&lock_ravl);
+
 	node = ravl_find(index, e, RAVL_PREDICATE_EQUAL);
 	if (ksize > SIZE_1K)
 		Free(e);
 	if (node == NULL) {
+		util_mutex_unlock(&lock_ravl);
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
 	}
 
 	*entry = ravl_data(node);
+
+	util_mutex_unlock(&lock_ravl);
 
 	return 0;
 }
@@ -141,8 +155,11 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 int
 vmcache_index_remove(vmemcache_index_t *index, const struct cache_entry *entry)
 {
+	util_mutex_lock(&lock_ravl);
+
 	struct ravl_node *node = ravl_find(index, entry, RAVL_PREDICATE_EQUAL);
 	if (node == NULL) {
+		util_mutex_unlock(&lock_ravl);
 		ERR(
 			"vmcache_index_remove: cannot find an element with the given key in the index");
 		errno = EINVAL;
@@ -150,6 +167,8 @@ vmcache_index_remove(vmemcache_index_t *index, const struct cache_entry *entry)
 	}
 
 	ravl_remove(index, node);
+
+	util_mutex_unlock(&lock_ravl);
 
 	return 0;
 }
