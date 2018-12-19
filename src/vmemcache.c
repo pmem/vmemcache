@@ -241,7 +241,8 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 	}
 
 	entry->value.p_entry =
-		cache->repl.ops->repl_p_insert(cache->repl.head, entry);
+		cache->repl.ops->repl_p_insert(cache->repl.head, entry,
+						&entry->value.p_entry);
 
 	return 0;
 
@@ -413,8 +414,6 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 			return -1;
 		}
 
-		entry->value.p_entry = NULL;
-
 		key = entry->key.key;
 		ksize = entry->key.ksize;
 
@@ -436,11 +435,9 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 			return -1;
 		}
 
-		if (entry->value.p_entry != NULL) {
+		if (entry->value.p_entry != NULL)
 			cache->repl.ops->repl_p_evict(cache->repl.head,
 							entry->value.p_entry);
-			entry->value.p_entry = NULL;
-		}
 	}
 
 	if (!__sync_bool_compare_and_swap(&entry->value.evicting, 0, 1)) {
