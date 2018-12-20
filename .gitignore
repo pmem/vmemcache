@@ -1,4 +1,13 @@
 .*
+*.cmake
+*~
+*.so
+core
+Makefile
+CMakeCache.txt
+CMakeFiles
+Testing
+
 !.gitignore
 !.gitattributes
 !.clang-format
