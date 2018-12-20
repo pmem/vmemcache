@@ -30,8 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "vmemcache.h"
-
+struct cache_entry;
 struct critnib;
 
 struct critnib *critnib_new(void);

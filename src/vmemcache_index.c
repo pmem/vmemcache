@@ -36,27 +36,7 @@
 
 #include "vmemcache.h"
 #include "vmemcache_index.h"
-#include "ravl.h"
-
-static os_mutex_t lock_ravl;
-
-/*
- * ravl_cmp -- (internal) ravl compare function
- */
-static int
-ravl_cmp(const void *lhs, const void *rhs)
-{
-	struct cache_entry *lce = (struct cache_entry *)lhs;
-	struct cache_entry *rce = (struct cache_entry *)rhs;
-
-	if (lce->key.ksize < rce->key.ksize)
-		return -1;
-
-	if (lce->key.ksize > rce->key.ksize)
-		return 1;
-
-	return memcmp(lce->key.key, rce->key.key, lce->key.ksize);
-}
+#include "critnib.h"
 
 /*
  * vmcache_index_new -- initialize vmemcache indexing structure
@@ -64,8 +44,7 @@ ravl_cmp(const void *lhs, const void *rhs)
 vmemcache_index_t *
 vmcache_index_new(void)
 {
-	util_mutex_init(&lock_ravl);
-	return ravl_new(ravl_cmp);
+	return critnib_new();
 }
 
 /*
@@ -74,8 +53,7 @@ vmcache_index_new(void)
 void
 vmcache_index_delete(vmemcache_index_t *index)
 {
-	ravl_delete(index);
-	util_mutex_destroy(&lock_ravl);
+	critnib_delete(index);
 }
 
 /*
@@ -84,15 +62,10 @@ vmcache_index_delete(vmemcache_index_t *index)
 int
 vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 {
-	util_mutex_lock(&lock_ravl);
-
-	if (ravl_insert(index, entry)) {
-		util_mutex_unlock(&lock_ravl);
+	if (critnib_set(index, entry)) {
 		ERR("inserting to the index failed");
 		return -1;
 	}
-
-	util_mutex_unlock(&lock_ravl);
 
 	return 0;
 }
@@ -107,7 +80,6 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 #define SIZE_1K 1024
 
 	struct cache_entry *e;
-	struct ravl_node *node;
 
 	struct static_buffer {
 		struct cache_entry entry;
@@ -129,22 +101,16 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	e->key.ksize = ksize;
 	memcpy(e->key.key, key, ksize);
 
-	util_mutex_lock(&lock_ravl);
-
-	node = ravl_find(index, e, RAVL_PREDICATE_EQUAL);
+	struct cache_entry *v = critnib_get(index, e);
 	if (ksize > SIZE_1K)
 		Free(e);
-	if (node == NULL) {
-		util_mutex_unlock(&lock_ravl);
+	if (v == NULL) {
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
 	}
 
-	*entry = ravl_data(node);
-	*entry = vmemcache_entry_acquire(*entry);
-
-	util_mutex_unlock(&lock_ravl);
+	*entry = vmemcache_entry_acquire(v);
 
 	return 0;
 }
@@ -155,20 +121,13 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 int
 vmcache_index_remove(vmemcache_index_t *index, const struct cache_entry *entry)
 {
-	util_mutex_lock(&lock_ravl);
-
-	struct ravl_node *node = ravl_find(index, entry, RAVL_PREDICATE_EQUAL);
-	if (node == NULL) {
-		util_mutex_unlock(&lock_ravl);
+	const struct cache_entry *v = critnib_remove(index, entry);
+	if (v == NULL) {
 		ERR(
 			"vmcache_index_remove: cannot find an element with the given key in the index");
 		errno = EINVAL;
 		return -1;
 	}
-
-	ravl_remove(index, node);
-
-	util_mutex_unlock(&lock_ravl);
 
 	return 0;
 }

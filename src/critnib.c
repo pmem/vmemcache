@@ -39,6 +39,7 @@
 #include "util.h"
 #include "out.h"
 #include "critnib.h"
+#include "vmemcache.h"
 
 /*
  * WARNING: this implementation fails badly if you try to store two keys

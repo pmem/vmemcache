@@ -37,13 +37,13 @@
 #ifndef VMEMCACHE_INDEX_H
 #define VMEMCACHE_INDEX_H 1
 
-#include "ravl.h"
+#include "critnib.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct ravl vmemcache_index_t;
+typedef struct critnib vmemcache_index_t;
 struct cache_entry;
 
 vmemcache_index_t *vmcache_index_new(void);
