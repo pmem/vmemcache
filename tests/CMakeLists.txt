@@ -77,9 +77,36 @@ function(test name file tracer)
 		ENVIRONMENT "LC_ALL=C;PATH=$ENV{PATH}")
 endfunction()
 
-add_executable(vmemcache_test_basic vmemcache_test_basic.c)
-target_include_directories(vmemcache_test_basic PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(vmemcache_test_basic PRIVATE vmemcache)
+# add and link an executable
+function(add_link_executable name sources libs)
+	add_executable(${name} ${sources})
+	target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+	target_link_libraries(${name} PRIVATE ${libs})
+endfunction()
+
+set(SOURCES_BASIC
+	vmemcache_test_basic.c)
+
+set(SOURCES_MT
+	vmemcache_test_mt.c
+	${CMAKE_SOURCE_DIR}/src/os_posix.c
+	${CMAKE_SOURCE_DIR}/src/os_thread_posix.c)
+
+set(LIBS_BASIC
+	vmemcache)
+
+set(LIBS_MT
+	vmemcache
+	${CMAKE_THREAD_LIBS_INIT})
+
+add_link_executable(vmemcache_test_basic
+		"${SOURCES_BASIC}"
+		"${LIBS_BASIC}")
+
+add_link_executable(vmemcache_test_mt
+		"${SOURCES_MT}"
+		"${LIBS_MT}")
 
 test("test-basic" test-basic none)
 test("test-basic-valgrind" test-basic memcheck)
+test("test-mt" test-mt none)
