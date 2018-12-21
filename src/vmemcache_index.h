@@ -31,55 +31,29 @@
  */
 
 /*
- * vmemcache.h -- internal definitions for vmemcache
+ * vmemcache_index.h -- internal definitions for vmemcache indexing API
  */
 
-#ifndef VMEMCACHE_H
-#define VMEMCACHE_H 1
+#ifndef VMEMCACHE_INDEX_H
+#define VMEMCACHE_INDEX_H 1
 
-#include <stdint.h>
-#include <stddef.h>
-
-#include "vmemcache_index.h"
-#include "vmemcache_repl.h"
-#include "sys_util.h"
-#include "vec.h"
+#include "ravl.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define VMEMCACHE_PREFIX "libvmemcache"
-#define VMEMCACHE_LEVEL_VAR "VMEMCACHE_LEVEL"
-#define VMEMCACHE_FILE_VAR "VMEMCACHE_FILE"
+typedef struct ravl vmemcache_index_t;
+struct cache_entry;
 
-struct vmemcache {
-	void *addr;			/* mapping address */
-	size_t size;			/* mapping size */
-	struct heap *heap;		/* heap address */
-	vmemcache_index_t *index;	/* indexing structure */
-	struct repl_p repl;		/* replacement policy abstraction */
-	vmemcache_on_evict *on_evict;	/* callback on evict */
-	void *arg_evict;		/* argument for callback on evict */
-	vmemcache_on_miss *on_miss;	/* callback on miss */
-	void *arg_miss;			/* argument for callback on miss */
-};
-
-struct cache_entry {
-	struct value {
-		uint64_t refcount;
-		struct repl_p_entry *p_entry;
-		size_t vsize;
-		VEC(, struct heap_entry) fragments;
-	} value;
-
-	struct key {
-		size_t ksize;
-		char key[];
-	} key;
-};
-
-struct cache_entry *vmemcache_entry_acquire(struct cache_entry *entry);
+vmemcache_index_t *vmcache_index_new(void);
+void vmcache_index_delete(vmemcache_index_t *index);
+int vmcache_index_insert(vmemcache_index_t *index,
+			struct cache_entry *entry);
+int vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
+			struct cache_entry **entry);
+int vmcache_index_remove(vmemcache_index_t *index,
+			const struct cache_entry *entry);
 
 #ifdef __cplusplus
 }
