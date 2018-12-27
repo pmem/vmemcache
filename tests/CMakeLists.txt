@@ -105,6 +105,10 @@ set(LIBS_MT
 	vmemcache
 	${CMAKE_THREAD_LIBS_INIT})
 
+set(LIBS_FRAGMENTATION
+	vmemcache
+	m)
+
 add_link_executable(vmemcache_test_basic
 		"${SOURCES_BASIC}"
 		"${LIBS_BASIC}")
@@ -113,9 +117,14 @@ add_link_executable(vmemcache_test_mt
 		"${SOURCES_MT}"
 		"${LIBS_MT}")
 
+add_link_executable(vmemcache_test_fragmentation
+	vmemcache_fragmentation.c
+	"${LIBS_FRAGMENTATION}")
+
 test("test-basic" test-basic none)
 test("test-basic-memcheck" test-basic memcheck)
 test("test-mt" test-mt none)
 test("test-mt-memcheck" test-mt memcheck)
 test("test-mt-helgrind" test-mt helgrind)
 test("test-bench-mt" test-bench-mt none)
+test("test-fragmentation" test-fragmentation none)
