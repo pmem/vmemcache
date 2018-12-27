@@ -68,6 +68,7 @@ struct vmemcache {
 struct cache_entry {
 	struct value {
 		uint64_t refcount;
+		int evicting;
 		struct repl_p_entry *p_entry;
 		size_t vsize;
 		VEC(, struct heap_entry) fragments;
