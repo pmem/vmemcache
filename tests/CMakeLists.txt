@@ -108,12 +108,19 @@ set(SOURCES_MT
 	${CMAKE_SOURCE_DIR}/src/os_posix.c
 	${CMAKE_SOURCE_DIR}/src/os_thread_posix.c)
 
+set(SOURCES_FRAGMENTATION
+	vmemcache_fragmentation.c)
+
 set(LIBS_BASIC
 	vmemcache)
 
 set(LIBS_MT
 	vmemcache
 	${CMAKE_THREAD_LIBS_INIT})
+
+set(LIBS_FRAGMENTATION
+	vmemcache
+	m)
 
 add_link_executable(vmemcache_test_basic
 		"${SOURCES_BASIC}"
@@ -123,6 +130,10 @@ add_link_executable(vmemcache_test_mt
 		"${SOURCES_MT}"
 		"${LIBS_MT}")
 
+add_link_executable(vmemcache_test_fragmentation
+		"${SOURCES_FRAGMENTATION}"
+		"${LIBS_FRAGMENTATION}")
+
 if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-basic" test-basic none fs)
 	test("FS-test-basic-memcheck" test-basic memcheck fs)
@@ -131,6 +142,8 @@ if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-mt-helgrind" test-mt helgrind fs)
 	test("FS-test-mt-drd" test-mt drd fs)
 	test("FS-test-bench-mt" test-bench-mt none fs)
+	test("FS-test-fragmentation" test-fragmentation none fs)
+	test("FS-test-fragmentation-memcheck" test-fragmentation memcheck fs)
 endif()
 
 if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
@@ -141,4 +154,6 @@ if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
 	test("DDAX-test-mt-helgrind" test-mt helgrind ddax)
 	test("DDAX-test-mt-drd" test-mt drd ddax)
 	test("DDAX-test-bench-mt" test-bench-mt none ddax)
+	test("DDAX-test-fragmentation" test-fragmentation none ddax)
+	test("DDAX-test-fragmentation-memcheck" test-fragmentation memcheck ddax)
 endif()
