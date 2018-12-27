@@ -84,4 +84,26 @@ str_to_unsigned(const char *str, unsigned *value)
 	return 0;
 }
 
+/*
+ * str_to_ull -- (internal) convert string argument to unsigned long long
+ */
+static inline int
+str_to_ull(const char *str, unsigned long long *value)
+{
+	char *endptr = NULL;
+
+	errno = 0;    /* to distinguish success/failure after call */
+
+	unsigned long long val = strtoull(str, &endptr, 10);
+	if ((errno == ERANGE && val == ULLONG_MAX) ||
+	    (errno != 0 && val == 0) ||
+	    (endptr == str) || (*endptr != '\0')) {
+		UT_ERR("strtoull() failed to convert the string %s", str);
+		return -1;
+	}
+
+	*value = (unsigned long long)val;
+
+	return 0;
+}
 #endif /* TEST_HELPERS_H */

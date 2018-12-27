@@ -108,12 +108,19 @@ set(SOURCES_MT
 	${CMAKE_SOURCE_DIR}/src/os_posix.c
 	${CMAKE_SOURCE_DIR}/src/os_thread_posix.c)
 
+set(SOURCES_UTLIIZATION
+	vmemcache_test_utilization.c)
+
 set(LIBS_BASIC
 	vmemcache)
 
 set(LIBS_MT
 	vmemcache
 	${CMAKE_THREAD_LIBS_INIT})
+
+set(LIBS_UTLIIZATION
+	vmemcache
+	m)
 
 add_link_executable(vmemcache_test_basic
 		"${SOURCES_BASIC}"
@@ -122,6 +129,10 @@ add_link_executable(vmemcache_test_basic
 add_link_executable(vmemcache_test_mt
 		"${SOURCES_MT}"
 		"${LIBS_MT}")
+
+add_link_executable(vmemcache_test_utilization
+		"${SOURCES_UTLIIZATION}"
+		"${LIBS_UTLIIZATION}")
 
 if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-basic" test-basic none fs)
@@ -135,6 +146,8 @@ if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-bench-simul-memcheck" test-bench-simul memcheck fs)
 	test("FS-test-bench-simul-helgrind" test-bench-simul helgrind fs)
 	test("FS-test-bench-simul-drd" test-bench-simul drd fs)
+	test("FS-test-utilization" test-utilization none fs)
+	test("FS-test-utilization-memcheck" test-utilization memcheck fs)
 endif()
 
 if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
@@ -149,4 +162,6 @@ if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
 	test("DDAX-test-bench-simul-memcheck" test-bench-simul memcheck ddax)
 	test("DDAX-test-bench-simul-helgrind" test-bench-simul helgrind ddax)
 	test("DDAX-test-bench-simul-drd" test-bench-simul drd ddax)
+	test("DDAX-test-utilization" test-utilization none ddax)
+	test("DDAX-test-utilization-memcheck" test-utilization memcheck ddax)
 endif()
