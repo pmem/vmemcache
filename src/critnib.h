@@ -33,6 +33,7 @@
 #include "vmemcache.h"
 
 struct critnib;
+struct cache_entry;
 
 struct critnib *critnib_new(void);
 void critnib_delete(struct critnib *c);
