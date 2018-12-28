@@ -72,7 +72,6 @@ struct critnib_leaf {
 
 struct critnib {
 	struct critnib_node *root;
-	os_mutex_t mutex;
 };
 
 /*
@@ -111,7 +110,6 @@ critnib_new(void)
 	struct critnib *c = Malloc(sizeof(struct critnib));
 	if (!c)
 		return NULL;
-	os_mutex_init(&c->mutex);
 	c->root = NULL;
 	return c;
 }
@@ -136,7 +134,6 @@ delete_node(struct critnib_node *n)
 void
 critnib_delete(struct critnib *c)
 {
-	os_mutex_destroy(&c->mutex);
 	delete_node(c->root);
 	Free(c);
 }
@@ -198,11 +195,9 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 	k->value = e;
 	k = (void *)((uint64_t)k | 1);
 
-	os_mutex_lock(&c->mutex);
 	struct critnib_node *n = c->root;
 	if (!n) {
 		c->root = (void *)k;
-		os_mutex_unlock(&c->mutex);
 		return 0;
 	}
 
@@ -264,13 +259,11 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 	 */
 	if (!n) {
 		*parent = (void *)k;
-		os_mutex_unlock(&c->mutex);
 		return 0;
 	}
 
 	/* If not, we need to insert a new node in the middle of an edge. */
 	if (!(n = alloc_node(c))) {
-		os_mutex_unlock(&c->mutex);
 		Free(k);
 		return ENOMEM;
 	}
@@ -280,7 +273,6 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 	n->byte = diff;
 	n->bit = sh;
 	*parent = n;
-	os_mutex_unlock(&c->mutex);
 	return 0;
 }
 
@@ -293,20 +285,15 @@ critnib_get(struct critnib *c, const struct cache_entry *e)
 	const char *key = (void *)&e->key;
 	byten_t key_len = (byten_t)(e->key.ksize + sizeof(e->key.ksize));
 
-	os_mutex_lock(&c->mutex);
 	struct critnib_node *n = c->root;
 	while (n && !is_leaf(n)) {
-		if (n->byte >= key_len) {
-			os_mutex_unlock(&c->mutex);
+		if (n->byte >= key_len)
 			return NULL;
-		}
 		n = n->child[slice_index(key[n->byte], n->bit)];
 	}
 
-	if (!n) {
-		os_mutex_unlock(&c->mutex);
+	if (!n)
 		return NULL;
-	}
 
 	struct critnib_leaf *k = to_leaf(n);
 
@@ -314,10 +301,8 @@ critnib_get(struct critnib *c, const struct cache_entry *e)
 	 * We checked only nibs at divergence points, have to re-check the
 	 * whole key.
 	 */
-	void *value = (key_len != k->key_len || memcmp(key, k->key, key_len)) ?
+	return (key_len != k->key_len || memcmp(key, k->key, key_len)) ?
 		NULL : k->value;
-	os_mutex_unlock(&c->mutex);
-	return value;
 }
 
 /*
@@ -331,32 +316,25 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	const char *key = (void *)&e->key;
 	byten_t key_len = (byten_t)(e->key.ksize + sizeof(e->key.ksize));
 
-	os_mutex_lock(&c->mutex);
 	struct critnib_node **pp = NULL;
 	struct critnib_node *n = c->root;
 	struct critnib_node **parent = &c->root;
 
 	/* First, do a get. */
 	while (n && !is_leaf(n)) {
-		if (n->byte >= key_len) {
-			os_mutex_unlock(&c->mutex);
+		if (n->byte >= key_len)
 			return NULL;
-		}
 		pp = parent;
 		parent = &n->child[slice_index(key[n->byte], n->bit)];
 		n = *parent;
 	}
 
-	if (!n) {
-		os_mutex_unlock(&c->mutex);
+	if (!n)
 		return NULL;
-	}
 
 	struct critnib_leaf *k = to_leaf(n);
-	if (key_len != k->key_len || memcmp(key, k->key, key_len)) {
-		os_mutex_unlock(&c->mutex);
+	if (key_len != k->key_len || memcmp(key, k->key, key_len))
 		return NULL;
-	}
 
 	void *value = k->value;
 
@@ -364,21 +342,16 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	*parent = NULL;
 	Free(k);
 
-	if (!pp) { /* was root */
-		os_mutex_unlock(&c->mutex);
+	if (!pp) /* was root */
 		return value;
-	}
 
 	/* Check if after deletion the node has just a single child left. */
 	n = *pp;
 	struct critnib_node *only_child = NULL;
 	for (int i = 0; i < SLNODES; i++) {
 		if (n->child[i]) {
-			if (only_child) {
-				/* Nope. */
-				os_mutex_unlock(&c->mutex);
+			if (only_child) /* Nope. */
 				return value;
-			}
 			only_child = n->child[i];
 		}
 	}
@@ -386,7 +359,6 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	/* Yes -- shorten the tree's edge. */
 	ASSERT(only_child);
 	*pp = only_child;
-	os_mutex_unlock(&c->mutex);
 	Free(n);
 	return value;
 }
