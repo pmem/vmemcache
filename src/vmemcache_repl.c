@@ -223,15 +223,9 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 
 	util_mutex_lock(&head->lock);
 
-	if (vmemcache_entry_acquire(element) == NULL) {
-		Free(entry);
-		entry = NULL;
-		goto exit_unlock;
-	}
-
+	vmemcache_entry_acquire(element);
 	TAILQ_INSERT_TAIL(&head->first, entry, node);
 
-exit_unlock:
 	util_mutex_unlock(&head->lock);
 
 	return entry;
