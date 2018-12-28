@@ -82,12 +82,20 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 }
 
 /*
- * vmemcache_entry_acquire -- (internal) acquire pointer to the vmemcache entry
+ * vmemcache_entry_acquire -- acquire pointer to the vmemcache entry
  */
 struct cache_entry *
 vmemcache_entry_acquire(struct cache_entry *entry)
 {
 	return entry;
+}
+
+/*
+ * vmemcache_entry_release -- release or delete the vmemcache entry
+ */
+void
+vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
+{
 }
 
 /*
