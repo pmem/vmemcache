@@ -306,15 +306,12 @@ vmemcache_populate_value(char *vbuf, size_t vbufsize, size_t offset,
 /*
  * vmemcache_entry_acquire -- acquire pointer to the vmemcache entry
  */
-struct cache_entry *
+void
 vmemcache_entry_acquire(struct cache_entry *entry)
 {
-	if (__sync_fetch_and_add(&entry->value.refcount, 1) == 0) {
-		entry->value.refcount--;
-		return NULL;
-	}
+	uint64_t ret = __sync_fetch_and_add(&entry->value.refcount, 1);
 
-	return entry;
+	ASSERTne(ret, 0);
 }
 
 /*

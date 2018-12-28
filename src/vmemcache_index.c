@@ -145,7 +145,7 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	}
 
 	*entry = ravl_data(node);
-	*entry = vmemcache_entry_acquire(*entry);
+	vmemcache_entry_acquire(*entry);
 
 	util_mutex_unlock(&lock_ravl);
 

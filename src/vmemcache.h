@@ -80,7 +80,7 @@ struct cache_entry {
 	} key;
 };
 
-struct cache_entry *vmemcache_entry_acquire(struct cache_entry *entry);
+void vmemcache_entry_acquire(struct cache_entry *entry);
 void vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry);
 
 #ifdef __cplusplus
