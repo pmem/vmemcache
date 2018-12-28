@@ -44,14 +44,14 @@
 #include "sys_util.h"
 
 struct repl_p_entry {
-	STAILQ_ENTRY(repl_p_entry) node;
+	TAILQ_ENTRY(repl_p_entry) node;
 	void *data;
 	struct repl_p_entry **ptr_entry; /* pointer to be zeroed when evicted */
 };
 
 struct repl_p_head {
 	os_mutex_t lock;
-	STAILQ_HEAD(head, repl_p_entry) first;
+	TAILQ_HEAD(head, repl_p_entry) first;
 };
 
 /* forward declarations of replacement policy operations */
@@ -184,7 +184,7 @@ repl_p_lru_new(struct repl_p_head **head)
 		return -1;
 
 	util_mutex_init(&h->lock);
-	STAILQ_INIT(&h->first);
+	TAILQ_INIT(&h->first);
 	*head = h;
 
 	return 0;
@@ -196,9 +196,9 @@ repl_p_lru_new(struct repl_p_head **head)
 static void
 repl_p_lru_delete(struct repl_p_head *head)
 {
-	while (!STAILQ_EMPTY(&head->first)) {
-		struct repl_p_entry *entry = STAILQ_FIRST(&head->first);
-		STAILQ_REMOVE_HEAD(&head->first, node);
+	while (!TAILQ_EMPTY(&head->first)) {
+		struct repl_p_entry *entry = TAILQ_FIRST(&head->first);
+		TAILQ_REMOVE(&head->first, entry, node);
 		Free(entry);
 	}
 
@@ -229,7 +229,7 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 		goto exit_unlock;
 	}
 
-	STAILQ_INSERT_TAIL(&head->first, entry, node);
+	TAILQ_INSERT_TAIL(&head->first, entry, node);
 
 exit_unlock:
 	util_mutex_unlock(&head->lock);
@@ -248,8 +248,8 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 
 	util_mutex_lock(&head->lock);
 
-	STAILQ_REMOVE(&head->first, entry, repl_p_entry, node);
-	STAILQ_INSERT_TAIL(&head->first, entry, node);
+	TAILQ_REMOVE(&head->first, entry, node);
+	TAILQ_INSERT_TAIL(&head->first, entry, node);
 
 	util_mutex_unlock(&head->lock);
 
@@ -267,17 +267,14 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry)
 	util_mutex_lock(&head->lock);
 
 	if (entry == NULL) {
-		entry = STAILQ_FIRST(&head->first);
+		entry = TAILQ_FIRST(&head->first);
 		if (entry == NULL) {
 			util_mutex_unlock(&head->lock);
 			return NULL;
 		}
-
-		STAILQ_REMOVE_HEAD(&head->first, node);
-
-	} else {
-		STAILQ_REMOVE(&head->first, entry, repl_p_entry, node);
 	}
+
+	TAILQ_REMOVE(&head->first, entry, node);
 
 	ASSERTne(entry->ptr_entry, NULL);
 	*(entry->ptr_entry) = NULL;
