@@ -35,6 +35,7 @@
  */
 
 #include <stddef.h>
+#include <pthread.h>
 
 #include "vmemcache.h"
 #include "vmemcache_repl.h"
@@ -50,7 +51,7 @@ struct repl_p_entry {
 };
 
 struct repl_p_head {
-	os_mutex_t lock;
+	os_spinlock_t lock;
 	TAILQ_HEAD(head, repl_p_entry) first;
 };
 
@@ -183,7 +184,7 @@ repl_p_lru_new(struct repl_p_head **head)
 	if (h == NULL)
 		return -1;
 
-	util_mutex_init(&h->lock);
+	util_spin_init(&h->lock, PTHREAD_PROCESS_PRIVATE);
 	TAILQ_INIT(&h->first);
 	*head = h;
 
@@ -202,7 +203,7 @@ repl_p_lru_delete(struct repl_p_head *head)
 		Free(entry);
 	}
 
-	util_mutex_destroy(&head->lock);
+	util_spin_destroy(&head->lock);
 	Free(head);
 }
 
@@ -221,12 +222,12 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 	ASSERTne(ptr_entry, NULL);
 	entry->ptr_entry = ptr_entry;
 
-	util_mutex_lock(&head->lock);
+	util_spin_lock(&head->lock);
 
 	vmemcache_entry_acquire(element);
 	TAILQ_INSERT_TAIL(&head->first, entry, node);
 
-	util_mutex_unlock(&head->lock);
+	util_spin_unlock(&head->lock);
 
 	return entry;
 }
@@ -240,12 +241,12 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 	if (entry == NULL)
 		return -1;
 
-	util_mutex_lock(&head->lock);
+	util_spin_lock(&head->lock);
 
 	TAILQ_REMOVE(&head->first, entry, node);
 	TAILQ_INSERT_TAIL(&head->first, entry, node);
 
-	util_mutex_unlock(&head->lock);
+	util_spin_unlock(&head->lock);
 
 	return 0;
 }
@@ -258,12 +259,12 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry)
 {
 	void *data;
 
-	util_mutex_lock(&head->lock);
+	util_spin_lock(&head->lock);
 
 	if (entry == NULL) {
 		entry = TAILQ_FIRST(&head->first);
 		if (entry == NULL) {
-			util_mutex_unlock(&head->lock);
+			util_spin_unlock(&head->lock);
 			return NULL;
 		}
 	}
@@ -273,7 +274,7 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry)
 	ASSERTne(entry->ptr_entry, NULL);
 	*(entry->ptr_entry) = NULL;
 
-	util_mutex_unlock(&head->lock);
+	util_spin_unlock(&head->lock);
 
 	data = entry->data;
 
