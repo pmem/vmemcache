@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@
 #include "vmemcache_index.h"
 #include "critnib.h"
 
-static os_mutex_t lock_index;
+static os_rwlock_t lock_index;
 
 /*
  * vmcache_index_new -- initialize vmemcache indexing structure
@@ -46,7 +46,7 @@ static os_mutex_t lock_index;
 vmemcache_index_t *
 vmcache_index_new(void)
 {
-	util_mutex_init(&lock_index);
+	util_rwlock_init(&lock_index);
 	return critnib_new();
 }
 
@@ -57,7 +57,7 @@ void
 vmcache_index_delete(vmemcache_index_t *index)
 {
 	critnib_delete(index);
-	util_mutex_destroy(&lock_index);
+	util_rwlock_destroy(&lock_index);
 }
 
 /*
@@ -66,10 +66,10 @@ vmcache_index_delete(vmemcache_index_t *index)
 int
 vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 {
-	util_mutex_lock(&lock_index);
+	util_rwlock_wrlock(&lock_index);
 
 	if (critnib_set(index, entry)) {
-		util_mutex_unlock(&lock_index);
+		util_rwlock_unlock(&lock_index);
 		ERR("inserting to the index failed");
 		return -1;
 	}
@@ -77,7 +77,7 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 	/* this is the first and the only one reference now (in the index) */
 	entry->value.refcount = 1;
 
-	util_mutex_unlock(&lock_index);
+	util_rwlock_unlock(&lock_index);
 
 	return 0;
 }
@@ -113,13 +113,13 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	e->key.ksize = ksize;
 	memcpy(e->key.key, key, ksize);
 
-	util_mutex_lock(&lock_index);
+	util_rwlock_rdlock(&lock_index);
 
 	struct cache_entry *v = critnib_get(index, e);
 	if (ksize > SIZE_1K)
 		Free(e);
 	if (v == NULL) {
-		util_mutex_unlock(&lock_index);
+		util_rwlock_unlock(&lock_index);
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
@@ -128,7 +128,7 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	vmemcache_entry_acquire(v);
 	*entry = v;
 
-	util_mutex_unlock(&lock_index);
+	util_rwlock_unlock(&lock_index);
 
 	return 0;
 }
@@ -139,11 +139,11 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 int
 vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 {
-	util_mutex_lock(&lock_index);
+	util_rwlock_wrlock(&lock_index);
 
 	struct cache_entry *v = critnib_remove(cache->index, entry);
 	if (v == NULL) {
-		util_mutex_unlock(&lock_index);
+		util_rwlock_unlock(&lock_index);
 		ERR(
 			"vmcache_index_remove: cannot find an element with the given key in the index");
 		errno = EINVAL;
@@ -152,7 +152,7 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 
 	vmemcache_entry_release(cache, entry);
 
-	util_mutex_unlock(&lock_index);
+	util_rwlock_unlock(&lock_index);
 
 	return 0;
 }
