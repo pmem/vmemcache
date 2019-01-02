@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,7 +66,7 @@ static struct repl_p_entry *
 repl_p_none_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry);
 
-static int
+static void
 repl_p_none_use(struct repl_p_head *head, struct repl_p_entry *entry);
 
 static void *
@@ -82,7 +82,7 @@ static struct repl_p_entry *
 repl_p_lru_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry);
 
-static int
+static void
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry);
 
 static void *
@@ -157,10 +157,9 @@ repl_p_none_insert(struct repl_p_head *head, void *element,
 /*
  * repl_p_none_use -- (internal) use the element
  */
-static int
+static void
 repl_p_none_use(struct repl_p_head *head, struct repl_p_entry *entry)
 {
-	return 0;
 }
 
 /*
@@ -234,20 +233,16 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 /*
  * repl_p_lru_use -- (internal) use the element
  */
-static int
+static void
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 {
-	if (entry == NULL)
-		return -1;
+	ASSERTne(entry, NULL);
 
 	util_mutex_lock(&head->lock);
 
-	TAILQ_REMOVE(&head->first, entry, node);
-	TAILQ_INSERT_TAIL(&head->first, entry, node);
+	TAILQ_MOVE_TO_TAIL(&head->first, entry, node);
 
 	util_mutex_unlock(&head->lock);
-
-	return 0;
 }
 
 /*
