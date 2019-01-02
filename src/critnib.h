@@ -30,33 +30,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * vmemcache_index.h -- internal definitions for vmemcache indexing API
- */
+#include "vmemcache.h"
 
-#ifndef VMEMCACHE_INDEX_H
-#define VMEMCACHE_INDEX_H 1
-
-#include "libvmemcache.h"
-#include "critnib.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct critnib vmemcache_index_t;
+struct critnib;
 struct cache_entry;
 
-vmemcache_index_t *vmcache_index_new(void);
-void vmcache_index_delete(vmemcache_index_t *index);
-int vmcache_index_insert(vmemcache_index_t *index,
-			struct cache_entry *entry);
-int vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
-			struct cache_entry **entry);
-int vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+struct critnib *critnib_new(void);
+void critnib_delete(struct critnib *c);
+int critnib_set(struct critnib *c, struct cache_entry *e);
+void *critnib_get(struct critnib *c, const struct cache_entry *e);
+void *critnib_remove(struct critnib *c, const struct cache_entry *e);
