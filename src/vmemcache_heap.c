@@ -34,12 +34,14 @@
  * vmemcache_heap.c -- implementation of simple vmemcache linear allocator
  */
 
+#include <pthread.h>
+
 #include "vmemcache_heap.h"
 #include "vec.h"
 #include "sys_util.h"
 
 struct heap {
-	os_mutex_t lock;
+	os_spinlock_t lock;
 	size_t fragment_size;
 	VEC(, struct heap_entry) entries;
 };
@@ -61,7 +63,7 @@ vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
 		return NULL;
 	}
 
-	util_mutex_init(&heap->lock);
+	util_spin_init(&heap->lock, PTHREAD_PROCESS_PRIVATE);
 	heap->fragment_size = fragment_size;
 	VEC_INIT(&heap->entries);
 	VEC_PUSH_BACK(&heap->entries, whole_heap);
@@ -78,7 +80,7 @@ vmcache_heap_destroy(struct heap *heap)
 	LOG(3, "heap %p", heap);
 
 	VEC_DELETE(&heap->entries);
-	util_mutex_destroy(&heap->lock);
+	util_spin_destroy(&heap->lock);
 	Free(heap);
 }
 
@@ -94,7 +96,7 @@ vmcache_alloc(struct heap *heap, size_t size)
 
 	size = ALIGN_UP(size, heap->fragment_size);
 
-	util_mutex_lock(&heap->lock);
+	util_spin_lock(&heap->lock);
 
 	if (VEC_POP_BACK(&heap->entries, &he) != 0)
 		goto error_no_mem;
@@ -109,7 +111,7 @@ vmcache_alloc(struct heap *heap, size_t size)
 	}
 
 error_no_mem:
-	util_mutex_unlock(&heap->lock);
+	util_spin_unlock(&heap->lock);
 
 	return he;
 }
@@ -122,9 +124,9 @@ vmcache_free(struct heap *heap, struct heap_entry he)
 {
 	LOG(3, "heap %p he.ptr %p he.size %zu", heap, he.ptr, he.size);
 
-	util_mutex_lock(&heap->lock);
+	util_spin_lock(&heap->lock);
 
 	VEC_PUSH_BACK(&heap->entries, he);
 
-	util_mutex_unlock(&heap->lock);
+	util_spin_unlock(&heap->lock);
 }
