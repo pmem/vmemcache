@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -242,8 +242,7 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
 
 	util_mutex_lock(&head->lock);
 
-	TAILQ_REMOVE(&head->first, entry, node);
-	TAILQ_INSERT_TAIL(&head->first, entry, node);
+	TAILQ_MOVE_TO_TAIL(&head->first, entry, node);
 
 	util_mutex_unlock(&head->lock);
 

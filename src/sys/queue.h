@@ -4,6 +4,7 @@
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2016, Microsoft Corporation. All rights reserved.
+ * Copyright 2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -457,6 +458,19 @@ struct {								\
 	else								\
 		(head)->tqh_last = (elm)->field.tqe_prev;		\
 	*(elm)->field.tqe_prev = (elm)->field.tqe_next;			\
+} while (/*CONSTCOND*/0)
+
+#define	TAILQ_MOVE_TO_TAIL(head, elm, field) do {			\
+	if (((elm)->field.tqe_next) != NULL) {				\
+	/* remove from the current position */				\
+	(elm)->field.tqe_next->field.tqe_prev = (elm)->field.tqe_prev;	\
+	*(elm)->field.tqe_prev = (elm)->field.tqe_next;			\
+	/* insert to the tail */					\
+	(elm)->field.tqe_next = NULL;					\
+	(elm)->field.tqe_prev = (head)->tqh_last;			\
+	*(head)->tqh_last = (elm);					\
+	(head)->tqh_last = &(elm)->field.tqe_next;			\
+	}								\
 } while (/*CONSTCOND*/0)
 
 #define	TAILQ_FOREACH(var, head, field)					\
