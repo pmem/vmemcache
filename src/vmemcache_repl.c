@@ -68,10 +68,10 @@ repl_p_none_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry);
 
 static void
-repl_p_none_use(struct repl_p_head *head, struct repl_p_entry *entry);
+repl_p_none_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
 
 static void *
-repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry *entry);
+repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
 
 static int
 repl_p_lru_new(struct repl_p_head **head);
@@ -84,10 +84,10 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry);
 
 static void
-repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry);
+repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
 
 static void *
-repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry);
+repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
 
 /* replacement policy operations */
 static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
@@ -159,7 +159,7 @@ repl_p_none_insert(struct repl_p_head *head, void *element,
  * repl_p_none_use -- (internal) use the element
  */
 static void
-repl_p_none_use(struct repl_p_head *head, struct repl_p_entry *entry)
+repl_p_none_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
 }
 
@@ -167,7 +167,7 @@ repl_p_none_use(struct repl_p_head *head, struct repl_p_entry *entry)
  * repl_p_none_evict -- (internal) evict the element
  */
 static void *
-repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry *entry)
+repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
 	return NULL;
 }
@@ -218,8 +218,10 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 		return NULL;
 
 	entry->data = element;
+
 	ASSERTne(ptr_entry, NULL);
 	entry->ptr_entry = ptr_entry;
+	*(entry->ptr_entry) = entry;
 
 	util_spin_lock(&head->lock);
 
@@ -235,13 +237,14 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
  * repl_p_lru_use -- (internal) use the element
  */
 static void
-repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
+repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
-	ASSERTne(entry, NULL);
+	ASSERTne(ptr_entry, NULL);
 
 	util_spin_lock(&head->lock);
 
-	TAILQ_MOVE_TO_TAIL(&head->first, entry, node);
+	if (*ptr_entry != NULL)
+		TAILQ_MOVE_TO_TAIL(&head->first, *ptr_entry, node);
 
 	util_spin_unlock(&head->lock);
 }
@@ -250,18 +253,21 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry *entry)
  * repl_p_lru_evict -- (internal) evict the element
  */
 static void *
-repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry *entry)
+repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
+	struct repl_p_entry *entry;
 	void *data;
 
 	util_spin_lock(&head->lock);
 
-	if (entry == NULL) {
+	if (ptr_entry != NULL)
+		entry = *ptr_entry;
+	else
 		entry = TAILQ_FIRST(&head->first);
-		if (entry == NULL) {
-			util_spin_unlock(&head->lock);
-			return NULL;
-		}
+
+	if (entry == NULL) {
+		util_spin_unlock(&head->lock);
+		return NULL;
 	}
 
 	TAILQ_REMOVE(&head->first, entry, node);
