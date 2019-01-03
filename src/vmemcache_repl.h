@@ -63,12 +63,12 @@ struct repl_p_ops {
 	/* evict an/the element */
 	void *
 		(*repl_p_evict)(struct repl_p_head *head,
-					struct repl_p_entry *entry);
+					struct repl_p_entry **ptr_entry);
 
 	/* use the element */
 	void
 		(*repl_p_use)(struct repl_p_head *head,
-					struct repl_p_entry *entry);
+					struct repl_p_entry **ptr_entry);
 };
 
 struct repl_p {

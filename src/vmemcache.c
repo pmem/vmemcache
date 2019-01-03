@@ -238,9 +238,8 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 		goto error_exit;
 	}
 
-	entry->value.p_entry =
-		cache->repl.ops->repl_p_insert(cache->repl.head, entry,
-						&entry->value.p_entry);
+	cache->repl.ops->repl_p_insert(cache->repl.head, entry,
+					&entry->value.p_entry);
 
 	return 0;
 
@@ -361,9 +360,7 @@ vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
 			return 0;
 	}
 
-	struct repl_p_entry *repl_entry = entry->value.p_entry;
-	if (repl_entry != NULL)
-		cache->repl.ops->repl_p_use(cache->repl.head, repl_entry);
+	cache->repl.ops->repl_p_use(cache->repl.head, &entry->value.p_entry);
 
 	size_t read = vmemcache_populate_value(vbuf, vbufsize, offset, entry);
 	*vsize = entry->value.vsize;
@@ -423,10 +420,8 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
 
 	if (!evicted_from_repl_p) {
-		struct repl_p_entry *repl_entry = entry->value.p_entry;
-		if (repl_entry != NULL) {
-			cache->repl.ops->repl_p_evict(cache->repl.head,
-							repl_entry);
+		if (cache->repl.ops->repl_p_evict(cache->repl.head,
+						&entry->value.p_entry)) {
 			/* release the reference from the replacement policy */
 			vmemcache_entry_release(cache, entry);
 		}
