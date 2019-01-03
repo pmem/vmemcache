@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -383,17 +383,21 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 	int evicted_from_repl_p = 0;
 
 	if (key == NULL) {
-		entry = cache->repl.ops->repl_p_evict(cache->repl.head, NULL);
-		if (entry == NULL) {
-			ERR("no element to evict");
-			errno = EINVAL;
-			return -1;
-		}
+		do {
+			entry = cache->repl.ops->repl_p_evict(cache->repl.head,
+								NULL);
+			if (entry == NULL) {
+				ERR("no element to evict");
+				errno = EINVAL;
+				return -1;
+			}
 
-		evicted_from_repl_p = 1;
-		key = entry->key.key;
-		ksize = entry->key.ksize;
+			evicted_from_repl_p = 1;
+			key = entry->key.key;
+			ksize = entry->key.ksize;
 
+		} while (!__sync_bool_compare_and_swap(&entry->value.evicting,
+							0, 1));
 	} else {
 		int ret = vmcache_index_get(cache->index, key, ksize, &entry);
 		if (ret < 0)
@@ -405,13 +409,14 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 			errno = EINVAL;
 			return -1;
 		}
-	}
 
-	if (!__sync_bool_compare_and_swap(&entry->value.evicting, 0, 1)) {
-		ERR(
-			"vmemcache_evict: the element with the given key is being evicted just now!");
-		errno = EINVAL;
-		goto exit_release;
+		if (!__sync_bool_compare_and_swap(&entry->value.evicting,
+							0, 1)) {
+			ERR(
+				"vmemcache_evict: the element with the given key is being evicted just now!");
+			errno = EBUSY;
+			goto exit_release;
+		}
 	}
 
 	if (cache->on_evict != NULL)
