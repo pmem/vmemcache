@@ -79,6 +79,32 @@ function(execute_arg input expectation name)
 	endif()
 endfunction()
 
+function(run_under_memcheck name)
+	message(STATUS "Executing: ${name} ${ARGN}")
+	execute_process(COMMAND valgrind --leak-check=full ${name} ${ARGN}
+			RESULT_VARIABLE RET
+			OUTPUT_FILE ${BIN_DIR}/out
+			ERROR_FILE ${BIN_DIR}/err)
+	file(READ ${BIN_DIR}/err ERR)
+	if(NOT RET EQUAL 0)
+		message(FATAL_ERROR
+			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
+	endif()
+
+	set(TEXT_OK "All heap blocks were freed -- no leaks are possible")
+	string(FIND "${ERR}" "${TEXT_OK}" RET)
+	if(RET EQUAL -1)
+		message(FATAL_ERROR
+			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
+	endif()
+endfunction()
+
 function(execute expectation name)
-	execute_arg("" ${expectation} ${name} ${ARGN})
+	if (${TRACER} STREQUAL "none")
+		execute_arg("" ${expectation} ${name} ${ARGN})
+	elseif (${TRACER} STREQUAL memcheck)
+		run_under_memcheck(${name} ${ARGN})
+	else ()
+		message(FATAL_ERROR "unknown tracer: ${TRACER}")
+	endif ()
 endfunction()
