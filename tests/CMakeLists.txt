@@ -111,3 +111,4 @@ add_link_executable(vmemcache_test_mt
 test("test-basic" test-basic none)
 test("test-basic-valgrind" test-basic memcheck)
 test("test-mt" test-mt none)
+test("test-bench-mt" test-bench-mt none)
