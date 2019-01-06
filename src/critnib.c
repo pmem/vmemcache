@@ -70,10 +70,6 @@ struct critnib_leaf {
 	void *value;
 };
 
-struct critnib {
-	struct critnib_node *root;
-};
-
 /*
  * is_leaf -- (internal) check tagged pointer for leafness
  */
