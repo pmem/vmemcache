@@ -78,6 +78,50 @@ shard(struct index *index, size_t key_size, const char *key)
 }
 
 /*
+ * The lock consist of two 32-bit fields, plus a mutex.
+ * Lower field is a count of fast readers, upper of writers.
+ * A slow reader (ie, one who noticed a writer) takes the mutex,
+ * so does any writer.
+ */
+
+#define ANY_READERS	0x00000000ffffffff
+#define ANY_WRITERS	0xffffffff00000000
+#define READER		0x0000000000000001
+#define WRITER		0x0000000100000000
+
+static inline int rwlock_read_enter(struct critnib *c)
+{
+	if (util_fetch_and_add64(&c->xlock, READER) & ANY_WRITERS) {
+		util_fetch_and_sub64(&c->xlock, READER);
+		util_mutex_lock(&c->wmutex);
+		return 1;
+	}
+	return 0;
+}
+
+static inline void rwlock_read_leave(struct critnib *c, int busy)
+{
+	if (busy)
+		util_mutex_unlock(&c->wmutex);
+	else
+		util_fetch_and_sub64(&c->xlock, READER);
+}
+
+static inline void rwlock_write_enter(struct critnib *c)
+{
+	util_fetch_and_add64(&c->xlock, WRITER); /* bare add would be enough */
+	while (c->xlock & ANY_READERS)
+		(void) 0; /* let fast readers go away */
+	util_mutex_lock(&c->wmutex);
+}
+
+static inline void rwlock_write_leave(struct critnib *c)
+{
+	util_fetch_and_sub64(&c->xlock, WRITER);
+	util_mutex_unlock(&c->wmutex);
+}
+
+/*
  * vmcache_index_new -- initialize vmemcache indexing structure
  */
 struct index *
@@ -93,7 +137,7 @@ vmcache_index_new(void)
 		struct critnib *c = critnib_new();
 		if (!c) {
 			for (i--; i >= 0; i--) {
-				util_mutex_destroy(&index->bucket[i]->lock);
+				util_mutex_destroy(&index->bucket[i]->wmutex);
 				critnib_delete(index->bucket[i], NULL);
 			}
 			Free(index);
@@ -101,7 +145,8 @@ vmcache_index_new(void)
 			return NULL;
 		}
 
-		util_mutex_init(&c->lock);
+		c->xlock = 0;
+		util_mutex_init(&c->wmutex);
 		index->bucket[i] = c;
 	}
 
@@ -115,7 +160,7 @@ void
 vmcache_index_delete(struct index *index, delete_entry_t del_entry)
 {
 	for (int i = 0; i < NSHARDS; i++) {
-		util_mutex_destroy(&index->bucket[i]->lock);
+		util_mutex_destroy(&index->bucket[i]->wmutex);
 		critnib_delete(index->bucket[i], del_entry);
 	}
 
@@ -130,12 +175,12 @@ vmcache_index_insert(struct index *index, struct cache_entry *entry)
 {
 	struct critnib *c = shard(index, entry->key.ksize, entry->key.key);
 
-	util_mutex_lock(&c->lock);
+	rwlock_write_enter(c);
 
 	int err = critnib_set(c, entry);
 	if (err) {
+		rwlock_write_leave(c);
 		errno = err;
-		util_mutex_unlock(&c->lock);
 		ERR("inserting to the index failed");
 		return -1;
 	}
@@ -143,7 +188,7 @@ vmcache_index_insert(struct index *index, struct cache_entry *entry)
 	/* this is the first and the only one reference now (in the index) */
 	entry->value.refcount = 1;
 
-	util_mutex_unlock(&c->lock);
+	rwlock_write_leave(c);
 
 	return 0;
 }
@@ -175,13 +220,13 @@ vmcache_index_get(struct index *index, const void *key, size_t ksize,
 	e->key.ksize = ksize;
 	memcpy(e->key.key, key, ksize);
 
-	util_mutex_lock(&c->lock);
+	int busy = rwlock_read_enter(c);
 
 	struct cache_entry *v = critnib_get(c, e);
 	if (ksize > SIZE_1K)
 		Free(e);
 	if (v == NULL) {
-		util_mutex_unlock(&c->lock);
+		rwlock_read_leave(c, busy);
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
@@ -190,7 +235,7 @@ vmcache_index_get(struct index *index, const void *key, size_t ksize,
 	vmemcache_entry_acquire(v);
 	*entry = v;
 
-	util_mutex_unlock(&c->lock);
+	rwlock_read_leave(c, busy);
 
 	return 0;
 }
@@ -204,11 +249,11 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 	struct critnib *c = shard(cache->index, entry->key.ksize,
 		entry->key.key);
 
-	util_mutex_lock(&c->lock);
+	rwlock_write_enter(c);
 
 	struct cache_entry *v = critnib_remove(c, entry);
 	if (v == NULL) {
-		util_mutex_unlock(&c->lock);
+		rwlock_write_leave(c);
 		ERR(
 			"vmcache_index_remove: cannot find an element with the given key in the index");
 		errno = EINVAL;
@@ -217,7 +262,7 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 
 	vmemcache_entry_release(cache, entry);
 
-	util_mutex_unlock(&c->lock);
+	rwlock_write_leave(c);
 
 	return 0;
 }

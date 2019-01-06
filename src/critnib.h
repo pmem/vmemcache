@@ -39,7 +39,8 @@
 struct critnib_node;
 struct critnib {
 	struct critnib_node *root;
-	os_mutex_t lock;
+	volatile uint64_t xlock;
+	os_mutex_t wmutex;
 };
 
 struct cache_entry;
