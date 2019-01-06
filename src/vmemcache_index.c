@@ -39,14 +39,60 @@
 #include "critnib.h"
 
 /*
+ * The lock consist of two 32-bit fields, plus a mutex.
+ * Lower field is a count of fast readers, upper of writers.
+ * A slow reader (ie, one who noticed a writer) takes the mutex,
+ * so does any writer.
+ */
+
+#define ANY_READERS	0x00000000ffffffff
+#define ANY_WRITERS	0xffffffff00000000
+#define READER		0x0000000000000001
+#define WRITER		0x0000000100000000
+
+static inline int rwlock_read_enter(vmemcache_index_t *c)
+{
+	if (util_fetch_and_add64(&c->xlock, READER) & ANY_WRITERS) {
+		util_fetch_and_sub64(&c->xlock, READER);
+		util_mutex_lock(&c->wmutex);
+		return 1;
+	}
+	return 0;
+}
+
+static inline void rwlock_read_leave(vmemcache_index_t *c, int busy)
+{
+	if (busy)
+		util_mutex_unlock(&c->wmutex);
+	else
+		util_fetch_and_sub64(&c->xlock, READER);
+}
+
+static inline void rwlock_write_enter(vmemcache_index_t *c)
+{
+	util_fetch_and_add64(&c->xlock, WRITER); /* bare add would be enough */
+	while (c->xlock & ANY_READERS)
+		(void) 0; /* let fast readers go away */
+	util_mutex_lock(&c->wmutex);
+}
+
+static inline void rwlock_write_leave(vmemcache_index_t *c)
+{
+	util_fetch_and_sub64(&c->xlock, WRITER);
+	util_mutex_unlock(&c->wmutex);
+}
+
+/*
  * vmcache_index_new -- initialize vmemcache indexing structure
  */
 vmemcache_index_t *
 vmcache_index_new(void)
 {
 	struct critnib *c = critnib_new();
-	if (c)
-		util_mutex_init(&c->lock_index);
+	if (c) {
+		c->xlock = 0;
+		util_mutex_init(&c->wmutex);
+	}
 	return c;
 }
 
@@ -56,7 +102,7 @@ vmcache_index_new(void)
 void
 vmcache_index_delete(vmemcache_index_t *index)
 {
-	util_mutex_destroy(&index->lock_index);
+	util_mutex_destroy(&index->wmutex);
 	critnib_delete(index);
 }
 
@@ -66,10 +112,10 @@ vmcache_index_delete(vmemcache_index_t *index)
 int
 vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 {
-	util_mutex_lock(&index->lock_index);
+	rwlock_write_enter(index);
 
 	if (critnib_set(index, entry)) {
-		util_mutex_unlock(&index->lock_index);
+		rwlock_write_leave(index);
 		ERR("inserting to the index failed");
 		return -1;
 	}
@@ -77,7 +123,7 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 	/* this is the first and the only one reference now (in the index) */
 	entry->value.refcount = 1;
 
-	util_mutex_unlock(&index->lock_index);
+	rwlock_write_leave(index);
 
 	return 0;
 }
@@ -113,13 +159,13 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	e->key.ksize = ksize;
 	memcpy(e->key.key, key, ksize);
 
-	util_mutex_lock(&index->lock_index);
+	int busy = rwlock_read_enter(index);
 
 	struct cache_entry *v = critnib_get(index, e);
 	if (ksize > SIZE_1K)
 		Free(e);
 	if (v == NULL) {
-		util_mutex_unlock(&index->lock_index);
+		rwlock_read_leave(index, busy);
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
@@ -128,7 +174,7 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	vmemcache_entry_acquire(v);
 	*entry = v;
 
-	util_mutex_unlock(&index->lock_index);
+	rwlock_read_leave(index, busy);
 
 	return 0;
 }
@@ -139,11 +185,11 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 int
 vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 {
-	util_mutex_lock(&cache->index->lock_index);
+	rwlock_write_enter(cache->index);
 
 	struct cache_entry *v = critnib_remove(cache->index, entry);
 	if (v == NULL) {
-		util_mutex_unlock(&cache->index->lock_index);
+		rwlock_write_leave(cache->index);
 		ERR(
 			"vmcache_index_remove: cannot find an element with the given key in the index");
 		errno = EINVAL;
@@ -152,7 +198,7 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 
 	vmemcache_entry_release(cache, entry);
 
-	util_mutex_unlock(&cache->index->lock_index);
+	rwlock_write_leave(cache->index);
 
 	return 0;
 }
