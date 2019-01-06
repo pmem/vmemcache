@@ -34,8 +34,14 @@
 #define CRITNIB_H
 
 #include "vmemcache.h"
+#include "os_thread.h"
 
-struct critnib;
+struct critnib_node;
+struct critnib {
+	struct critnib_node *root;
+	os_mutex_t lock_index;
+};
+
 struct cache_entry;
 
 struct critnib *critnib_new(void);
