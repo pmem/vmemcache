@@ -47,11 +47,10 @@ extern "C" {
 typedef struct critnib vmemcache_index_t;
 struct cache_entry;
 
-vmemcache_index_t *vmcache_index_new(void);
-void vmcache_index_delete(vmemcache_index_t *index);
-int vmcache_index_insert(vmemcache_index_t *index,
-			struct cache_entry *entry);
-int vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
+int vmcache_index_new(VMEMcache *cache);
+void vmcache_index_delete(VMEMcache *cache);
+int vmcache_index_insert(VMEMcache *cache, struct cache_entry *entry);
+int vmcache_index_get(VMEMcache *cache, const void *key, size_t ksize,
 			struct cache_entry **entry);
 int vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry);
 
