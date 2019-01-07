@@ -52,12 +52,13 @@ extern "C" {
 #define VMEMCACHE_PREFIX "libvmemcache"
 #define VMEMCACHE_LEVEL_VAR "VMEMCACHE_LEVEL"
 #define VMEMCACHE_FILE_VAR "VMEMCACHE_FILE"
+#define NSHARDS 256
 
 struct vmemcache {
 	void *addr;			/* mapping address */
 	size_t size;			/* mapping size */
 	struct heap *heap;		/* heap address */
-	vmemcache_index_t *index;	/* indexing structure */
+	vmemcache_index_t *index[NSHARDS]; /* indexing structure */
 	struct repl_p repl;		/* replacement policy abstraction */
 	vmemcache_on_evict *on_evict;	/* callback on evict */
 	void *arg_evict;		/* argument for callback on evict */

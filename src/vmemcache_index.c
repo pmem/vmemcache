@@ -39,17 +39,39 @@
 #include "critnib.h"
 
 /*
+ * shard -- (internal) hash the key and pick a shard bucket
+ */
+static int
+shard(size_t key_size, const char *key)
+{
+	/* Fowler–Noll–Vo hash */
+	uint64_t h = 0xcbf29ce484222325;
+	for (size_t i = 0; i < key_size; i++)
+		h = (h ^ (unsigned char)*key++) * 0x100000001b3;
+
+	return h & 0xff;
+}
+
+/*
  * vmcache_index_new -- initialize vmemcache indexing structure
  */
 int
 vmcache_index_new(VMEMcache *cache)
 {
-	struct critnib *c = critnib_new();
-	if (!c)
-		return ENOMEM;
+	for (int i = 0; i < NSHARDS; i++) {
+		struct critnib *c = critnib_new();
+		if (!c) {
+			for (i--; i >= 0; i--) {
+				critnib_delete(cache->index[i]);
+				util_mutex_destroy(&cache->index[i]->lock);
+			}
 
-	util_mutex_init(&c->lock);
-	cache->index = c;
+			return ENOMEM;
+		}
+
+		util_mutex_init(&c->lock);
+		cache->index[i] = c;
+	}
 
 	return 0;
 }
@@ -60,10 +82,10 @@ vmcache_index_new(VMEMcache *cache)
 void
 vmcache_index_delete(VMEMcache *cache)
 {
-	vmemcache_index_t *index = cache->index;
-
-	util_mutex_destroy(&index->lock);
-	critnib_delete(index);
+	for (int i = 0; i < NSHARDS; i++) {
+		util_mutex_destroy(&cache->index[i]->lock);
+		critnib_delete(cache->index[i]);
+	}
 }
 
 /*
@@ -72,7 +94,8 @@ vmcache_index_delete(VMEMcache *cache)
 int
 vmcache_index_insert(VMEMcache *cache, struct cache_entry *entry)
 {
-	vmemcache_index_t *index = cache->index;
+	vmemcache_index_t *index = cache->index[shard(entry->key.ksize,
+		entry->key.key)];
 
 	util_mutex_lock(&index->lock);
 
@@ -100,7 +123,8 @@ vmcache_index_get(VMEMcache *cache, const char *key, size_t ksize,
 #define SIZE_1K 1024
 	/* static buffer used for entries of size <= 1kB */
 	char static_buffer[sizeof(struct cache_entry) + SIZE_1K];
-	vmemcache_index_t *index = cache->index;
+	vmemcache_index_t *index = cache->index[shard(ksize, key)];
+
 	struct cache_entry *e;
 
 	*entry = NULL;
@@ -144,7 +168,8 @@ vmcache_index_get(VMEMcache *cache, const char *key, size_t ksize,
 int
 vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 {
-	vmemcache_index_t *index = cache->index;
+	vmemcache_index_t *index = cache->index[shard(entry->key.ksize,
+		entry->key.key)];
 
 	util_mutex_lock(&index->lock);
 
