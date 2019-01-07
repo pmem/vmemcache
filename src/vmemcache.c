@@ -131,8 +131,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 		goto error_unmap;
 	}
 
-	cache->index = vmcache_index_new();
-	if (cache->index == NULL) {
+	if (vmcache_index_new(cache)) {
 		LOG(1, "indexing structure initialization failed");
 		goto error_destroy_heap;
 	}
@@ -145,7 +144,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 	return cache;
 
 error_destroy_index:
-	vmcache_index_delete(cache->index);
+	vmcache_index_delete(cache);
 error_destroy_heap:
 	vmcache_heap_destroy(cache->heap);
 error_unmap:
@@ -162,7 +161,7 @@ void
 vmemcache_delete(VMEMcache *cache)
 {
 	repl_p_destroy(&cache->repl);
-	vmcache_index_delete(cache->index);
+	vmcache_index_delete(cache);
 	vmcache_heap_destroy(cache->heap);
 	util_unmap(cache->addr, cache->size);
 	Free(cache);
@@ -234,7 +233,7 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 
 	vmemcache_populate_fragments(entry, value, value_size);
 
-	if (vmcache_index_insert(cache->index, entry)) {
+	if (vmcache_index_insert(cache, entry)) {
 		LOG(1, "inserting to the index failed");
 		goto error_exit;
 	}
@@ -349,7 +348,7 @@ vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
 {
 	struct cache_entry *entry;
 
-	int ret = vmcache_index_get(cache->index, key, ksize, &entry);
+	int ret = vmcache_index_get(cache, key, ksize, &entry);
 	if (ret < 0)
 		return -1;
 
@@ -358,7 +357,7 @@ vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
 		    (*cache->on_miss)(cache, key, ksize, cache->arg_miss) == 0)
 			return 0;
 
-		ret = vmcache_index_get(cache->index, key, ksize, &entry);
+		ret = vmcache_index_get(cache, key, ksize, &entry);
 		if (ret < 0)
 			return -1;
 
@@ -402,7 +401,7 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 		} while (!__sync_bool_compare_and_swap(&entry->value.evicting,
 							0, 1));
 	} else {
-		int ret = vmcache_index_get(cache->index, key, ksize, &entry);
+		int ret = vmcache_index_get(cache, key, ksize, &entry);
 		if (ret < 0)
 			return -1;
 
