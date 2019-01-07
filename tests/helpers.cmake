@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2018, Intel Corporation
+# Copyright 2017-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -85,7 +85,12 @@ function(run_under_memcheck name)
 			RESULT_VARIABLE RET
 			OUTPUT_FILE ${BIN_DIR}/out
 			ERROR_FILE ${BIN_DIR}/err)
+	message(STATUS "Test ${name}:")
+	file(READ ${BIN_DIR}/out OUT)
+	message(STATUS "Stdout:\n${OUT}")
 	file(READ ${BIN_DIR}/err ERR)
+	message(STATUS "Stderr:\n${ERR}")
+
 	if(NOT RET EQUAL 0)
 		message(FATAL_ERROR
 			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
