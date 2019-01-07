@@ -54,7 +54,7 @@ endif()
 add_cstyle(tests)
 add_check_whitespace(tests)
 
-set(vg_tracers memcheck)
+set(vg_tracers memcheck helgrind)
 
 # Configures test ${name}
 function(test name file tracer)
@@ -109,5 +109,7 @@ add_link_executable(vmemcache_test_mt
 		"${LIBS_MT}")
 
 test("test-basic" test-basic none)
-test("test-basic-valgrind" test-basic memcheck)
+test("test-basic-memcheck" test-basic memcheck)
 test("test-mt" test-mt none)
+test("test-mt-memcheck" test-mt memcheck)
+test("test-mt-helgrind" test-mt helgrind)

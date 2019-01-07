@@ -212,7 +212,7 @@ main(int argc, char *argv[])
 
 	/* default values of parameters */
 	unsigned n_threads = 10;
-	unsigned ops_count = 100000;
+	unsigned ops_count = 10000;
 	unsigned nbuffs = 10;
 	size_t min_size = 8;
 	size_t max_size = 64;
