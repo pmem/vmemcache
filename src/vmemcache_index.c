@@ -40,38 +40,91 @@
 #include "vmemcache_index.h"
 #include "critnib.h"
 
+/* must be a power of 2 */
+#define NSHARDS 256
+
+struct index {
+	struct critnib *bucket[NSHARDS];
+};
+
+/*
+ * shard_id -- (internal) hash the key and pick a shard bucket id
+ */
+static int
+shard_id(size_t key_size, const char *key)
+{
+	/* Fowler–Noll–Vo hash */
+	uint64_t h = 0xcbf29ce484222325;
+	for (size_t i = 0; i < key_size; i++)
+		h = (h ^ (unsigned char)*key++) * 0x100000001b3;
+
+	return h & (NSHARDS - 1);
+}
+
+/*
+ * shard -- (internal) pick a shard bucket
+ */
+static struct critnib *
+shard(struct index *index, size_t key_size, const char *key)
+{
+	return index->bucket[shard_id(key_size, key)];
+}
+
 /*
  * vmcache_index_new -- initialize vmemcache indexing structure
  */
-vmemcache_index_t *
+struct index *
 vmcache_index_new(void)
 {
-	struct critnib *c = critnib_new();
-	if (c)
+	struct index *index = malloc(sizeof(struct index));
+	if (!index)
+		return 0;
+
+	for (int i = 0; i < NSHARDS; i++) {
+		struct critnib *c = critnib_new();
+		if (!c) {
+			for (i--; i >= 0; i--) {
+				critnib_delete(index->bucket[i]);
+				util_mutex_destroy(&index->bucket[i]->lock);
+			}
+			free(index);
+
+			return 0;
+		}
+
 		util_mutex_init(&c->lock);
-	return c;
+		index->bucket[i] = c;
+	}
+
+	return index;
 }
 
 /*
  * vmcache_index_delete -- destroy vmemcache indexing structure
  */
 void
-vmcache_index_delete(vmemcache_index_t *index)
+vmcache_index_delete(struct index *index)
 {
-	util_mutex_destroy(&index->lock);
-	critnib_delete(index);
+	for (int i = 0; i < NSHARDS; i++) {
+		util_mutex_destroy(&index->bucket[i]->lock);
+		critnib_delete(index->bucket[i]);
+	}
+
+	free(index);
 }
 
 /*
  * vmcache_index_insert -- insert data into the vmemcache indexing structure
  */
 int
-vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
+vmcache_index_insert(struct index *index, struct cache_entry *entry)
 {
-	util_mutex_lock(&index->lock);
+	struct critnib *c = shard(index, entry->key.ksize, entry->key.key);
 
-	if (critnib_set(index, entry)) {
-		util_mutex_unlock(&index->lock);
+	util_mutex_lock(&c->lock);
+
+	if (critnib_set(c, entry)) {
+		util_mutex_unlock(&c->lock);
 		ERR("inserting to the index failed");
 		return -1;
 	}
@@ -79,7 +132,7 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
 	/* this is the first and the only one reference now (in the index) */
 	entry->value.refcount = 1;
 
-	util_mutex_unlock(&index->lock);
+	util_mutex_unlock(&c->lock);
 
 	return 0;
 }
@@ -88,10 +141,12 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
  * vmcache_index_get -- get data from the vmemcache indexing structure
  */
 int
-vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
+vmcache_index_get(struct index *index, const void *key, size_t ksize,
 			struct cache_entry **entry)
 {
 #define SIZE_1K 1024
+	struct critnib *c = shard(index, ksize, key);
+
 	struct cache_entry *e;
 
 	*entry = NULL;
@@ -109,13 +164,13 @@ vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
 	e->key.ksize = ksize;
 	memcpy(e->key.key, key, ksize);
 
-	util_mutex_lock(&index->lock);
+	util_mutex_lock(&c->lock);
 
-	struct cache_entry *v = critnib_get(index, e);
+	struct cache_entry *v = critnib_get(c, e);
 	if (ksize > SIZE_1K)
 		Free(e);
 	if (v == NULL) {
-		util_mutex_unlock(&index->lock);
+		util_mutex_unlock(&c->lock);
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
@@ -124,7 +179,7 @@ vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
 	vmemcache_entry_acquire(v);
 	*entry = v;
 
-	util_mutex_unlock(&index->lock);
+	util_mutex_unlock(&c->lock);
 
 	return 0;
 }
@@ -135,11 +190,13 @@ vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
 int
 vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 {
-	util_mutex_lock(&cache->index->lock);
+	struct critnib *c = shard(cache->index, entry->key.ksize, entry->key.key);
 
-	struct cache_entry *v = critnib_remove(cache->index, entry);
+	util_mutex_lock(&c->lock);
+
+	struct cache_entry *v = critnib_remove(c, entry);
 	if (v == NULL) {
-		util_mutex_unlock(&cache->index->lock);
+		util_mutex_unlock(&c->lock);
 		ERR(
 			"vmcache_index_remove: cannot find an element with the given key in the index");
 		errno = EINVAL;
@@ -148,7 +205,7 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 
 	vmemcache_entry_release(cache, entry);
 
-	util_mutex_unlock(&cache->index->lock);
+	util_mutex_unlock(&c->lock);
 
 	return 0;
 }
