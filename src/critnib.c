@@ -52,7 +52,7 @@
  * speed and memory use.
  */
 #define SLICE 4
-#define NIB ((1ULL << SLICE) - 1)
+#define NIB ((1 << SLICE) - 1)
 #define SLNODES (1 << SLICE)
 
 typedef uint32_t byten_t;
