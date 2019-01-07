@@ -44,7 +44,11 @@
 extern "C" {
 #endif
 
-typedef struct critnib vmemcache_index_t;
+#define NSHARDS 256
+
+struct vmemcache_index_t {
+	struct critnib *bucket[NSHARDS];
+};
 struct cache_entry;
 
 int vmcache_index_new(VMEMcache *cache);
