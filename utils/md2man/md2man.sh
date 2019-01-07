@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2016-2018, Intel Corporation
+# Copyright 2016-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -55,11 +55,16 @@ section=`sed -n 's/^title:.*\([0-9]\))$/\1/p' $filename`
 version=`sed -n 's/^date:\ *\(.*\)$/\1/p' $filename`
 
 dt=$(date +"%F")
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
+YEAR=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y 2>/dev/null ||
+	date -u -r "$SOURCE_DATE_EPOCH" +%Y 2>/dev/null || date -u +%Y)
+dt=$(date -u -d "@$SOURCE_DATE_EPOCH" +%F 2>/dev/null ||
+	date -u -r "$SOURCE_DATE_EPOCH" +%F 2>/dev/null || date -u +%F)
 cat $filename | sed -n -e '/# NAME #/,$p' |\
 	pandoc -s -t man -o $outfile.tmp --template=$template \
 	-V title=$title -V section=$section \
 	-V date="$dt" -V version="$version" \
-	-V year=$(date +"%Y") |
+	-V year="$YEAR" |
 sed '/^\.IP/{
 N
 /\n\.nf/{
