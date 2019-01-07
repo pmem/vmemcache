@@ -63,6 +63,11 @@ function(test name file tracer)
 		return()
 	endif()
 
+	if ((COVERAGE_BUILD) AND (${tracer} STREQUAL helgrind))
+		message(STATUS "This is the Coverage build, skipping Helgrind test: ${name}")
+		return()
+	endif()
+
 	add_test(NAME ${name}
 		COMMAND ${CMAKE_COMMAND}
 		${GLOBAL_TEST_ARGS}
