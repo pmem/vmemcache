@@ -46,6 +46,7 @@
 #include "vmemcache_heap.h"
 #include "vmemcache_index.h"
 #include "vmemcache_repl.h"
+#include "valgrind_internal.h"
 
 /*
  * vmemcache_newU -- (internal) create a vmemcache
@@ -320,10 +321,15 @@ vmemcache_entry_acquire(struct cache_entry *entry)
 void
 vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 {
-	if (__sync_fetch_and_sub(&entry->value.refcount, 1) != 1)
+	if (__sync_fetch_and_sub(&entry->value.refcount, 1) != 1) {
+		VALGRIND_ANNOTATE_HAPPENS_BEFORE(&entry->value.refcount);
 		return;
+	}
 
 	/* 'refcount' equals 0 now - it means that the entry should be freed */
+
+	VALGRIND_ANNOTATE_HAPPENS_AFTER(&entry->value.refcount);
+	VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(&entry->value.refcount);
 
 	struct heap_entry he;
 	VEC_FOREACH(he, &entry->value.fragments) {
