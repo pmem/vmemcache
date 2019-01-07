@@ -54,6 +54,7 @@ RUN apt-get update \
 	sudo \
 	wget \
 	whois \
+	valgrind \
  && rm -rf /var/lib/apt/lists/*
 
 # Add user
