@@ -44,7 +44,6 @@
 extern "C" {
 #endif
 
-typedef struct critnib vmemcache_index_t;
 struct cache_entry;
 
 int vmcache_index_new(VMEMcache *cache);
