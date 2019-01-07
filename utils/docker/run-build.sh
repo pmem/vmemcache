@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2016-2018, Intel Corporation
+# Copyright 2016-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@ mkdir -p $INSTALL_DIR
 # -----------------------------------------
 # gcc & Debug
 
+echo "Running the configuration: gcc & Debug"
 mkdir -p build
 cd build
 
@@ -66,6 +67,8 @@ rm -r build
 # -----------------------------------------
 # gcc & Release
 
+echo "Running the configuration: gcc & Release"
+
 mkdir build
 cd build
 
@@ -83,6 +86,8 @@ rm -r build
 
 # -----------------------------------------
 # Clang & Debug
+
+echo "Running the configuration: Clang & Debug"
 
 mkdir build
 cd build
@@ -102,6 +107,8 @@ rm -r build
 # -----------------------------------------
 # Clang & Release
 
+echo "Running the configuration: Clang & Release"
+
 mkdir build
 cd build
 
@@ -120,6 +127,7 @@ rm -r build
 # -----------------------------------------
 # Coverage
 if [[ $COVERAGE -eq 1 ]] ; then
+	echo "Running the configuration: Coverage"
 	mkdir build
 	cd build
 
