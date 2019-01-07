@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -94,8 +94,8 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 	struct cache_entry *e;
 
 	struct static_buffer {
-		struct cache_entry entry;
 		char key[SIZE_1K];
+		struct cache_entry entry;
 	} sb;
 
 	*entry = NULL;
