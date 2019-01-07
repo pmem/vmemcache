@@ -79,9 +79,9 @@ function(execute_arg input expectation name)
 	endif()
 endfunction()
 
-function(run_under_memcheck name)
-	message(STATUS "Executing: ${name} ${ARGN}")
-	execute_process(COMMAND valgrind --leak-check=full ${name} ${ARGN}
+function(run_under_valgrind vg_opt name text_passed)
+	message(STATUS "Executing: valgrind ${vg_opt} ${name} ${ARGN}")
+	execute_process(COMMAND valgrind ${vg_opt} ${name} ${ARGN}
 			RESULT_VARIABLE RET
 			OUTPUT_FILE ${BIN_DIR}/out
 			ERROR_FILE ${BIN_DIR}/err)
@@ -96,8 +96,7 @@ function(run_under_memcheck name)
 			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
 	endif()
 
-	set(TEXT_OK "All heap blocks were freed -- no leaks are possible")
-	string(FIND "${ERR}" "${TEXT_OK}" RET)
+	string(FIND "${ERR}" "${text_passed}" RET)
 	if(RET EQUAL -1)
 		message(FATAL_ERROR
 			"command 'valgrind ${name} ${ARGN}' failed:\n${ERR}")
@@ -108,7 +107,13 @@ function(execute expectation name)
 	if (${TRACER} STREQUAL "none")
 		execute_arg("" ${expectation} ${name} ${ARGN})
 	elseif (${TRACER} STREQUAL memcheck)
-		run_under_memcheck(${name} ${ARGN})
+		set(VG_OPT "--leak-check=full")
+		set(TEXT_PASSED "All heap blocks were freed -- no leaks are possible")
+		run_under_valgrind(${VG_OPT} ${name} "${TEXT_PASSED}" ${ARGN})
+	elseif (${TRACER} STREQUAL helgrind)
+		set(VG_OPT "--tool=helgrind")
+		set(TEXT_PASSED "ERROR SUMMARY: 0 errors from 0 contexts")
+		run_under_valgrind(${VG_OPT} ${name} "${TEXT_PASSED}" ${ARGN})
 	else ()
 		message(FATAL_ERROR "unknown tracer: ${TRACER}")
 	endif ()
