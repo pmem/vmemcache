@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2016-2018, Intel Corporation
+# Copyright 2016-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -126,6 +126,7 @@ if [[ $COVERAGE -eq 1 ]] ; then
 	CC=gcc \
 	cmake .. -DCMAKE_BUILD_TYPE=Debug \
 		-DTRACE_TESTS=1 \
+		-DCOVERAGE_BUILD=1 \
 		-DCMAKE_C_FLAGS=-coverage
 
 	make -j2
