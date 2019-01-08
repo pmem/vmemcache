@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018, Intel Corporation
+ * Copyright 2015-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,6 +75,11 @@ extern unsigned _On_valgrind;
 
 #if VG_HELGRIND_ENABLED || VG_DRD_ENABLED
 
+#define VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(obj) do {\
+	if (On_valgrind) \
+		ANNOTATE_HAPPENS_BEFORE_FORGET_ALL((obj));\
+} while (0)
+
 #define VALGRIND_ANNOTATE_HAPPENS_BEFORE(obj) do {\
 	if (On_valgrind) \
 		ANNOTATE_HAPPENS_BEFORE((obj));\
@@ -111,6 +116,9 @@ extern unsigned _On_valgrind;
 } while (0)
 
 #else
+
+#define VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(obj) \
+	do { (void)(obj); } while (0)
 
 #define VALGRIND_ANNOTATE_HAPPENS_BEFORE(obj) do { (void)(obj); } while (0)
 
