@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -57,6 +57,16 @@ if(PKG_CONFIG_FOUND)
 	pkg_check_modules(VALGRIND QUIET valgrind)
 else()
 	find_package(VALGRIND QUIET)
+endif()
+
+# The above check sometimes does not work on Fedora
+# so we need the extra one to detect Valgrind on Fedora:
+if (NOT VALGRIND_FOUND)
+	execute_process(COMMAND valgrind --version
+			RESULT_VARIABLE RET)
+	if(RET EQUAL 0)
+		set(VALGRIND_FOUND 1)
+	endif()
 endif()
 
 set(CMAKE_C_STANDARD 99)
