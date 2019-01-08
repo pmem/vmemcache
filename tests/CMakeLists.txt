@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -74,7 +74,8 @@ function(test name file tracer)
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
 
 	set_tests_properties(${name} PROPERTIES
-		ENVIRONMENT "LC_ALL=C;PATH=$ENV{PATH}")
+		ENVIRONMENT "LC_ALL=C;PATH=$ENV{PATH}"
+		TIMEOUT 300)
 endfunction()
 
 # add and link an executable
