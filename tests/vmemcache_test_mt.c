@@ -125,6 +125,32 @@ worker_thread_get(void *arg)
 }
 
 /*
+ * worker_thread_put_in_gets -- (internal) worker testing vmemcache_put()
+ */
+static void *
+worker_thread_put_in_gets(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned long long i;
+	unsigned long long start = ctx->ops_count + (ctx->thread_number & 0x1);
+
+	/*
+	 * There is '3' here - in order to have the same number (ctx->ops_count)
+	 * of operations per each thread.
+	 */
+	unsigned long long end = 3 * ctx->ops_count;
+
+	for (i = start; i < end; i += 2) {
+		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+				ctx->buffs[i % ctx->nbuffs].buff,
+				ctx->buffs[i % ctx->nbuffs].size))
+			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+	}
+
+	return NULL;
+}
+
+/*
  * run_test_put -- (internal) run test for vmemcache_put()
  */
 static void
@@ -157,10 +183,10 @@ on_evict_cb(VMEMcache *cache, const char *key, size_t key_size, void *arg)
 }
 
 /*
- * run_test_get -- (internal) run test for vmemcache_get()
+ * init_test_get -- (internal) initialize test for vmemcache_get()
  */
 static void
-run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		unsigned ops_per_thread, struct context *ctx)
 {
 	free_cache(cache);
@@ -192,6 +218,16 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		ctx[i].thread_routine = worker_thread_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
+}
+
+/*
+ * run_test_get -- (internal) run test for vmemcache_get()
+ */
+static void
+run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
+{
+	init_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 
 	printf("%s: STARTED\n", __func__);
 
@@ -200,6 +236,32 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	printf("%s: PASSED\n", __func__);
 }
 
+/*
+ * run_test_get_put -- (internal) run test for vmemcache_get()
+ *                      and vmemcache_put()
+ */
+static void
+run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
+{
+	init_test_get(cache, n_threads, threads, ops_per_thread, ctx);
+
+	/*
+	 * There are 10 threads now, let:
+	 * - threads #0-#3 be 'get'
+	 * - threads #4-#5 be 'put'
+	 * - threads #6-#9 be 'get' again -
+	 * just in order to have 2 'puts' among 8 'gets'.
+	 */
+	ctx[(n_threads >> 1) - 1].thread_routine = worker_thread_put_in_gets;
+	ctx[n_threads >> 1].thread_routine = worker_thread_put_in_gets;
+
+	printf("%s: STARTED\n", __func__);
+
+	run_threads(n_threads, threads, ctx);
+
+	printf("%s: PASSED\n", __func__);
+}
 
 int
 main(int argc, char *argv[])
@@ -279,6 +341,7 @@ main(int argc, char *argv[])
 	/* run all tests */
 	run_test_put(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
+	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
 
 	ret = 0;
 
