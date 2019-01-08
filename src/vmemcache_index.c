@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,13 +90,9 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 			struct cache_entry **entry)
 {
 #define SIZE_1K 1024
-
+	/* static buffer used for entries of size <= 1kB */
+	char static_buffer[sizeof(struct cache_entry) + SIZE_1K];
 	struct cache_entry *e;
-
-	struct static_buffer {
-		struct cache_entry entry;
-		char key[SIZE_1K];
-	} sb;
 
 	*entry = NULL;
 
@@ -107,7 +103,7 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 			return -1;
 		}
 	} else {
-		e = (struct cache_entry *)&sb;
+		e = (struct cache_entry *)&static_buffer;
 	}
 
 	e->key.ksize = ksize;
