@@ -57,6 +57,7 @@ RUN dnf update -y \
 	wget \
 	which \
 	valgrind \
+	valgrind-devel \
  && dnf clean all
 
 # Add user
