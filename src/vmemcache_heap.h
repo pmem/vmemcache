@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,6 +54,7 @@ struct heap;
 
 struct heap *vmcache_heap_create(void *addr, size_t size, size_t fragment_size);
 void vmcache_heap_destroy(struct heap *heap);
+void vmcache_heap_reset(struct heap *heap);
 
 struct heap_entry vmcache_alloc(struct heap *heap, size_t size);
 void vmcache_free(struct heap *heap, struct heap_entry he);

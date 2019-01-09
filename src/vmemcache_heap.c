@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,8 @@
 
 struct heap {
 	os_spinlock_t lock;
+	void *addr;
+	size_t size;
 	size_t fragment_size;
 	VEC(, struct heap_entry) entries;
 };
@@ -64,6 +66,8 @@ vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
 	}
 
 	util_spin_init(&heap->lock, PTHREAD_PROCESS_PRIVATE);
+	heap->addr = addr;
+	heap->size = size;
 	heap->fragment_size = fragment_size;
 	VEC_INIT(&heap->entries);
 	VEC_PUSH_BACK(&heap->entries, whole_heap);
@@ -82,6 +86,21 @@ vmcache_heap_destroy(struct heap *heap)
 	VEC_DELETE(&heap->entries);
 	util_spin_destroy(&heap->lock);
 	Free(heap);
+}
+
+/*
+ * vmcache_heap_reset -- reset vmemcache heap
+ */
+void
+vmcache_heap_reset(struct heap *heap)
+{
+	LOG(3, "heap %p", heap);
+
+	struct heap_entry whole_heap = {heap->addr, heap->size};
+
+	VEC_DELETE(&heap->entries);
+	VEC_INIT(&heap->entries);
+	VEC_PUSH_BACK(&heap->entries, whole_heap);
 }
 
 /*
