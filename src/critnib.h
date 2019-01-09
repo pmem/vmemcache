@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +30,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "vmemcache.h"
+#ifndef CRITNIB_H
+#define CRITNIB_H
 
-struct critnib;
+#include "vmemcache.h"
+#include "os_thread.h"
+
+struct critnib_node;
+struct critnib {
+	struct critnib_node *root;
+	os_mutex_t lock;
+};
+
 struct cache_entry;
 
 struct critnib *critnib_new(void);
@@ -40,3 +49,5 @@ void critnib_delete(struct critnib *c);
 int critnib_set(struct critnib *c, struct cache_entry *e);
 void *critnib_get(struct critnib *c, const struct cache_entry *e);
 void *critnib_remove(struct critnib *c, const struct cache_entry *e);
+
+#endif
