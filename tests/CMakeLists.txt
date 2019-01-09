@@ -54,12 +54,17 @@ endif()
 add_cstyle(tests)
 add_check_whitespace(tests)
 
-set(vg_tracers memcheck)
+set(vg_tracers memcheck helgrind)
 
 # Configures test ${name}
 function(test name file tracer)
 	if ((${tracer} IN_LIST vg_tracers) AND (NOT VALGRIND_FOUND))
 		message(WARNING "Valgrind not found, test skipped: ${name}")
+		return()
+	endif()
+
+	if ((COVERAGE_BUILD) AND (${tracer} STREQUAL helgrind))
+		message(STATUS "This is the Coverage build, skipping Helgrind test: ${name}")
 		return()
 	endif()
 
@@ -109,6 +114,8 @@ add_link_executable(vmemcache_test_mt
 		"${LIBS_MT}")
 
 test("test-basic" test-basic none)
-test("test-basic-valgrind" test-basic memcheck)
+test("test-basic-memcheck" test-basic memcheck)
 test("test-mt" test-mt none)
+test("test-mt-memcheck" test-mt memcheck)
+test("test-mt-helgrind" test-mt helgrind)
 test("test-bench-mt" test-bench-mt none)
