@@ -52,25 +52,29 @@ struct buffers {
 };
 
 struct context {
+	unsigned thread_number;
 	VMEMcache *cache;
 	struct buffers *buffs;
 	unsigned nbuffs;
-	unsigned write_count;
-	unsigned thread_number;
+	unsigned ops_count;
 	double secs;
+	void *(*thread_routine)(void *);
 };
 
+/*
+ * worker_thread_put -- (internal) worker testing vmemcache_put()
+ */
 static void *
-worker_thread(void *arg)
+worker_thread_put(void *arg)
 {
 	struct context *ctx = arg;
 	unsigned long long i;
-	unsigned long long shift = ctx->thread_number * ctx->write_count;
+	unsigned long long shift = ctx->thread_number * ctx->ops_count;
 	benchmark_time_t t1, t2, tdiff;
 
 	benchmark_time_get(&t1);
 
-	for (i = shift; i < (shift + ctx->write_count); i++) {
+	for (i = shift; i < (shift + ctx->ops_count); i++) {
 		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
 				ctx->buffs[i % ctx->nbuffs].buff,
 				ctx->buffs[i % ctx->nbuffs].size))
@@ -84,6 +88,69 @@ worker_thread(void *arg)
 	return NULL;
 }
 
+/*
+ * run_threads -- (internal) create and join threads
+ */
+static void
+run_threads(unsigned n_threads, os_thread_t *threads, struct context *ctx)
+{
+	for (unsigned i = 0; i < n_threads; ++i)
+		os_thread_create(&threads[i], NULL, ctx[i].thread_routine,
+					&ctx[i]);
+
+	for (unsigned i = 0; i < n_threads; ++i)
+		os_thread_join(&threads[i], NULL);
+}
+
+/*
+ * print_bench_results -- (internal) print results of the benchmark
+ */
+static void
+print_bench_results(const char *op_name, unsigned n_threads,
+			unsigned ops_per_thread, struct context *ctx)
+{
+	double total_time = 0.0;
+	for (unsigned i = 0; i < n_threads; ++i)
+		total_time += ctx[i].secs;
+
+	double ops = n_threads * ops_per_thread;
+	double avg_thread = total_time / (double)n_threads;
+	double avg_put = total_time / ops;
+	double avg_ops = ops / total_time;
+
+	printf("Total time of all threads  : %e secs\n", total_time);
+	printf("Average time of one thread : %e secs\n\n", avg_thread);
+
+	printf("Average time of one '%s' operation : %e secs\n",
+		op_name, avg_put);
+	printf("Average number of '%s' operations  : %e ops/sec\n\n",
+		op_name, avg_ops);
+}
+
+/*
+ * run_test_put -- (internal) run test for vmemcache_put()
+ */
+static void
+run_bench_put(unsigned n_threads, os_thread_t *threads,
+		unsigned ops_count, struct context *ctx)
+{
+	unsigned ops_per_thread = ops_count / n_threads;
+
+	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].thread_routine = worker_thread_put;
+		ctx[i].ops_count = ops_per_thread;
+		ctx[i].secs = 0.0;
+	}
+
+	printf("PUT benchmark:\n");
+	printf("==============\n");
+	printf("\n");
+
+	run_threads(n_threads, threads, ctx);
+
+	print_bench_results("put", n_threads, ops_per_thread, ctx);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -92,7 +159,7 @@ main(int argc, char *argv[])
 
 	if (argc < 2 || argc > 10) {
 		fprintf(stderr,
-			"usage: %s <directory> [threads] [write_count] [cache_max_size] [cache_fragment_size] [nbuffs] [min_size] [max_size] [seed]\n",
+			"usage: %s <directory> [threads] [ops_count] [cache_max_size] [cache_fragment_size] [nbuffs] [min_size] [max_size] [seed]\n",
 			argv[0]);
 		exit(-1);
 	}
@@ -101,7 +168,7 @@ main(int argc, char *argv[])
 
 	/* default values of parameters */
 	unsigned n_threads = 10;
-	unsigned write_count = 100000;
+	unsigned ops_count = 100000;
 	size_t cache_max_size = VMEMCACHE_MIN_POOL;
 	size_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 	unsigned nbuffs = 10;
@@ -112,7 +179,7 @@ main(int argc, char *argv[])
 		n_threads = (unsigned)strtoul(argv[2], NULL, 10);
 
 	if (argc >= 4)
-		write_count = (unsigned)strtoul(argv[3], NULL, 10);
+		ops_count = (unsigned)strtoul(argv[3], NULL, 10);
 
 	if (argc >= 5)
 		cache_max_size = (size_t)strtoul(argv[4], NULL, 10);
@@ -134,10 +201,10 @@ main(int argc, char *argv[])
 	else
 		my_seed = (unsigned)time(NULL);
 
-	printf("Test parameters:\n");
+	printf("Benchmark parameters:\n");
 	printf("   directory           : %s\n", dir);
 	printf("   n_threads           : %u\n", n_threads);
-	printf("   write_count         : %u\n", write_count);
+	printf("   ops_count           : %u\n", ops_count);
 	printf("   cache_max_size      : %zu\n", cache_max_size);
 	printf("   cache_fragment_size : %zu\n", cache_fragment_size);
 	printf("   nbuffs              : %u\n", nbuffs);
@@ -181,14 +248,11 @@ main(int argc, char *argv[])
 		goto exit_free_buffs;
 	}
 
-	unsigned write_count_per_thread = write_count / n_threads;
-
 	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].thread_number = i;
 		ctx[i].cache = cache;
 		ctx[i].buffs = buffs;
 		ctx[i].nbuffs = nbuffs;
-		ctx[i].write_count = write_count_per_thread;
-		ctx[i].thread_number = i;
 	}
 
 	os_thread_t *threads = calloc(n_threads, sizeof(*threads));
@@ -197,22 +261,7 @@ main(int argc, char *argv[])
 		goto exit_free_ctx;
 	}
 
-	for (unsigned i = 0; i < n_threads; ++i)
-		os_thread_create(&threads[i], NULL, worker_thread, &ctx[i]);
-
-	for (unsigned i = 0; i < n_threads; ++i)
-		os_thread_join(&threads[i], NULL);
-
-	double sum = 0.0;
-	for (unsigned i = 0; i < n_threads; ++i)
-		sum += ctx[i].secs;
-
-	double ops = n_threads * write_count_per_thread;
-	double avg_thread = sum / (double)n_threads;
-	double avg_put = sum / ops;
-
-	printf("Average time of one thread: %e secs\n\n", avg_thread);
-	printf("Average time of one 'put' operation: %e secs\n\n", avg_put);
+	run_bench_put(n_threads, threads, ops_count, ctx);
 
 	ret = 0;
 
