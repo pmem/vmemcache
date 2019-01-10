@@ -287,28 +287,28 @@ run_bench_get(const char *path, size_t max_size, size_t fragment_size,
 "       - benchmark           = all (put and get)\n"\
 "       - threads             = %u\n"\
 "       - ops_count           = %u\n"\
-"       - cache_max_size      = %zu\n"\
-"       - cache_fragment_size = %zu\n"\
+"       - cache_max_size      = %u\n"\
+"       - cache_fragment_size = %u\n"\
 "       - nbuffs               = %u\n"\
-"       - min_size            = %zu\n"\
-"       - max_size            = %zu\n"\
+"       - min_size            = %u\n"\
+"       - max_size            = %u\n"\
 "       - seed                = <random value>\n"
 
 int
 main(int argc, char *argv[])
 {
-	unsigned my_seed;
+	unsigned seed;
 	int ret = -1;
 
 	/* default values of parameters */
 	unsigned benchmark = BENCH_ALL;
 	unsigned n_threads = 10;
 	unsigned ops_count = 100000;
-	size_t cache_max_size = VMEMCACHE_MIN_POOL;
-	size_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
+	unsigned cache_max_size = VMEMCACHE_MIN_POOL;
+	unsigned cache_fragment_size = VMEMCACHE_MIN_FRAG;
 	unsigned nbuffs = 10;
-	size_t min_size = 128;
-	size_t max_size = MAX_VALUE_SIZE;
+	unsigned min_size = 128;
+	unsigned max_size = MAX_VALUE_SIZE;
 
 	if (argc < 2 || argc > 11) {
 		fprintf(stderr, USAGE_STRING, argv[0], n_threads, ops_count,
@@ -333,44 +333,56 @@ main(int argc, char *argv[])
 
 	}
 
-	if (argc >= 4)
-		n_threads = (unsigned)strtoul(argv[3], NULL, 10);
+	if (argc >= 4 &&
+	    (str_to_unsigned(argv[3], &n_threads) || n_threads < 1))
+		FATAL("incorrect value of n_threads: %s", argv[3]);
 
-	if (argc >= 5)
-		ops_count = (unsigned)strtoul(argv[4], NULL, 10);
+	if (argc >= 5 &&
+	    (str_to_unsigned(argv[4], &ops_count) || ops_count < 1))
+		FATAL("incorrect value of ops_count: %s", argv[4]);
 
-	if (argc >= 6)
-		cache_max_size = (size_t)strtoul(argv[5], NULL, 10);
+	if (argc >= 6 &&
+	    (str_to_unsigned(argv[5], &cache_max_size) ||
+			    cache_max_size < VMEMCACHE_MIN_POOL))
+		FATAL("incorrect value of cache_max_size: %s", argv[5]);
 
-	if (argc >= 7)
-		cache_fragment_size = (size_t)strtoul(argv[6], NULL, 10);
+	if (argc >= 7 &&
+	    (str_to_unsigned(argv[6], &cache_fragment_size) ||
+			    cache_fragment_size < VMEMCACHE_MIN_FRAG))
+		FATAL("incorrect value of cache_fragment_size: %s", argv[6]);
 
-	if (argc >= 8)
-		nbuffs = (unsigned)strtoul(argv[7], NULL, 10);
+	if (argc >= 8 &&
+	    (str_to_unsigned(argv[7], &nbuffs) || nbuffs < 2))
+		FATAL("incorrect value of nbuffs: %s", argv[7]);
 
-	if (argc >= 9)
-		min_size = (size_t)strtoul(argv[8], NULL, 10);
+	if (argc >= 9 &&
+	    (str_to_unsigned(argv[8], &min_size) ||
+			    min_size < VMEMCACHE_MIN_FRAG))
+		FATAL("incorrect value of min_size: %s", argv[8]);
 
-	if (argc >= 10)
-		max_size = (size_t)strtoul(argv[9], NULL, 10);
+	if (argc >= 10 &&
+	    (str_to_unsigned(argv[9], &max_size) || max_size < min_size))
+		FATAL("incorrect value of max_size: %s", argv[9]);
 
-	if (argc == 11)
-		my_seed = (unsigned)strtoul(argv[10], NULL, 10);
-	else
-		my_seed = (unsigned)time(NULL);
+	if (argc == 11) {
+		if (str_to_unsigned(argv[10], &seed))
+			FATAL("incorrect value of seed: %s", argv[10]);
+	} else {
+		seed = (unsigned)time(NULL);
+	}
 
 	printf("Benchmark parameters:\n");
 	printf("   directory           : %s\n", dir);
 	printf("   n_threads           : %u\n", n_threads);
 	printf("   ops_count           : %u\n", ops_count);
-	printf("   cache_max_size      : %zu\n", cache_max_size);
-	printf("   cache_fragment_size : %zu\n", cache_fragment_size);
+	printf("   cache_max_size      : %u\n", cache_max_size);
+	printf("   cache_fragment_size : %u\n", cache_fragment_size);
 	printf("   nbuffs              : %u\n", nbuffs);
-	printf("   min_size            : %zu\n", min_size);
-	printf("   max_size            : %zu\n", max_size);
-	printf("   seed                : %u\n\n", my_seed);
+	printf("   min_size            : %u\n", min_size);
+	printf("   max_size            : %u\n", max_size);
+	printf("   seed                : %u\n\n", seed);
 
-	srand(my_seed);
+	srand(seed);
 
 	struct buffers *buffs = calloc(nbuffs, sizeof(*buffs));
 	if (buffs == NULL) {
