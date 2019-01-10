@@ -46,6 +46,12 @@
 #include "os_thread.h"
 #include "benchmark_time.h"
 
+#define MAX_VALUE_SIZE 256
+
+#define BENCH_PUT (0x01)
+#define BENCH_GET (0x02)
+#define BENCH_ALL (BENCH_PUT | BENCH_GET)
+
 struct buffers {
 	size_t size;
 	char *buff;
@@ -113,6 +119,34 @@ worker_thread_put(void *arg)
 				ctx->buffs[i % ctx->nbuffs].buff,
 				ctx->buffs[i % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+	}
+
+	benchmark_time_get(&t2);
+	benchmark_time_diff(&tdiff, &t1, &t2);
+	ctx->secs = benchmark_time_get_secs(&tdiff);
+
+	return NULL;
+}
+
+/*
+ * worker_thread_get -- (internal) worker testing vmemcache_get()
+ */
+static void *
+worker_thread_get(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned long long i;
+	benchmark_time_t t1, t2, tdiff;
+
+	char vbuf[MAX_VALUE_SIZE];		/* user-provided buffer */
+	size_t vbufsize = MAX_VALUE_SIZE;	/* size of vbuf */
+	size_t vsize = 0;			/* real size of the object */
+
+	benchmark_time_get(&t1);
+
+	for (i = 1; i < ctx->ops_count; i++) {
+		vmemcache_get(ctx->cache, (char *)&i, sizeof(i),
+				vbuf, vbufsize, 0, &vsize);
 	}
 
 	benchmark_time_get(&t2);
@@ -191,53 +225,137 @@ run_bench_put(const char *path, size_t max_size, size_t fragment_size,
 	bench_fini(cache);
 }
 
+/*
+ * on_evict_cb -- (internal) 'on evict' callback for run_test_get
+ */
+static void
+on_evict_cb(VMEMcache *cache, const char *key, size_t key_size, void *arg)
+{
+	int *cache_is_full = arg;
+
+	*cache_is_full = 1;
+}
+
+/*
+ * run_bench_get -- (internal) run test for vmemcache_get()
+ */
+static void
+run_bench_get(const char *path, size_t max_size, size_t fragment_size,
+		enum vmemcache_replacement_policy replacement_policy,
+		unsigned n_threads, os_thread_t *threads,
+		unsigned ops_count, struct context *ctx)
+{
+	VMEMcache *cache = bench_init(path, max_size, fragment_size,
+					replacement_policy, n_threads, ctx);
+
+	int cache_is_full = 0;
+	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);
+
+	unsigned long long i = 0;
+	while (!cache_is_full) {
+		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+					ctx->buffs[i % ctx->nbuffs].buff,
+					ctx->buffs[i % ctx->nbuffs].size))
+			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+		i++;
+	}
+
+	unsigned ops_per_thread = (unsigned)i;
+
+	vmemcache_callback_on_evict(cache, NULL, NULL);
+
+	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].thread_routine = worker_thread_get;
+		ctx[i].ops_count = ops_per_thread;
+	}
+
+	printf("GET benchmark:\n");
+	printf("==============\n");
+	printf("\n");
+
+	run_threads(n_threads, threads, ctx);
+
+	print_bench_results("get", n_threads, ops_per_thread, ctx);
+
+	bench_fini(cache);
+}
+
+#define USAGE_STRING \
+"usage: %s <directory> [benchmark] [threads] [ops_count] [cache_max_size] [cache_fragment_size] [nbuffs] [min_size] [max_size] [seed]\n"\
+"       [benchmark] - can be: all (default), put or get\n"\
+"       Default values of parameters:\n"\
+"       - benchmark           = all (put and get)\n"\
+"       - threads             = %u\n"\
+"       - ops_count           = %u\n"\
+"       - cache_max_size      = %zu\n"\
+"       - cache_fragment_size = %zu\n"\
+"       - nbuffs               = %u\n"\
+"       - min_size            = %zu\n"\
+"       - max_size            = %zu\n"\
+"       - seed                = <random value>\n"
+
 int
 main(int argc, char *argv[])
 {
 	unsigned my_seed;
 	int ret = -1;
 
-	if (argc < 2 || argc > 10) {
-		fprintf(stderr,
-			"usage: %s <directory> [threads] [ops_count] [cache_max_size] [cache_fragment_size] [nbuffs] [min_size] [max_size] [seed]\n",
-			argv[0]);
-		exit(-1);
-	}
-
-	const char *dir = argv[1];
-
 	/* default values of parameters */
+	unsigned benchmark = BENCH_ALL;
 	unsigned n_threads = 10;
 	unsigned ops_count = 100000;
 	size_t cache_max_size = VMEMCACHE_MIN_POOL;
 	size_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 	unsigned nbuffs = 10;
-	size_t min_size = 8;
-	size_t max_size = 64;
+	size_t min_size = 128;
+	size_t max_size = MAX_VALUE_SIZE;
 
-	if (argc >= 3)
-		n_threads = (unsigned)strtoul(argv[2], NULL, 10);
+	if (argc < 2 || argc > 11) {
+		fprintf(stderr, USAGE_STRING, argv[0], n_threads, ops_count,
+			cache_max_size, cache_fragment_size,
+			nbuffs, min_size, max_size);
+		exit(-1);
+	}
+
+	const char *dir = argv[1];
+
+	if (argc >= 3) {
+		if (strcmp(argv[2], "put") == 0)
+			benchmark = BENCH_PUT;
+		else if (strcmp(argv[2], "get") == 0)
+			benchmark = BENCH_GET;
+		else if (strcmp(argv[2], "all") == 0)
+			benchmark = BENCH_ALL;
+		else {
+			fprintf(stderr, "unknown benchmark: %s\n", argv[2]);
+			exit(-1);
+		}
+
+	}
 
 	if (argc >= 4)
-		ops_count = (unsigned)strtoul(argv[3], NULL, 10);
+		n_threads = (unsigned)strtoul(argv[3], NULL, 10);
 
 	if (argc >= 5)
-		cache_max_size = (size_t)strtoul(argv[4], NULL, 10);
+		ops_count = (unsigned)strtoul(argv[4], NULL, 10);
 
 	if (argc >= 6)
-		cache_fragment_size = (size_t)strtoul(argv[5], NULL, 10);
+		cache_max_size = (size_t)strtoul(argv[5], NULL, 10);
 
 	if (argc >= 7)
-		nbuffs = (unsigned)strtoul(argv[6], NULL, 10);
+		cache_fragment_size = (size_t)strtoul(argv[6], NULL, 10);
 
 	if (argc >= 8)
-		min_size = (size_t)strtoul(argv[7], NULL, 10);
+		nbuffs = (unsigned)strtoul(argv[7], NULL, 10);
 
 	if (argc >= 9)
-		max_size = (size_t)strtoul(argv[8], NULL, 10);
+		min_size = (size_t)strtoul(argv[8], NULL, 10);
 
-	if (argc == 10)
-		my_seed = (unsigned)strtoul(argv[9], NULL, 10);
+	if (argc >= 10)
+		max_size = (size_t)strtoul(argv[9], NULL, 10);
+
+	if (argc == 11)
+		my_seed = (unsigned)strtoul(argv[10], NULL, 10);
 	else
 		my_seed = (unsigned)time(NULL);
 
@@ -293,9 +411,15 @@ main(int argc, char *argv[])
 		goto exit_free_ctx;
 	}
 
-	run_bench_put(dir, cache_max_size, cache_fragment_size,
-			VMEMCACHE_REPLACEMENT_LRU,
-			n_threads, threads, ops_count, ctx);
+	if (benchmark & BENCH_PUT)
+		run_bench_put(dir, cache_max_size, cache_fragment_size,
+				VMEMCACHE_REPLACEMENT_LRU,
+				n_threads, threads, ops_count, ctx);
+
+	if (benchmark & BENCH_GET)
+		run_bench_get(dir, cache_max_size, cache_fragment_size,
+				VMEMCACHE_REPLACEMENT_LRU,
+				n_threads, threads, ops_count, ctx);
 
 	ret = 0;
 
