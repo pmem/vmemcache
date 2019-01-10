@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,7 +58,7 @@ struct ctx_cb {
  * test_new_delete -- (internal) test _new() and _delete()
  */
 static void
-test_new_delete(const char *dir,
+test_new_delete(const char *dir, const char *file,
 		enum vmemcache_replacement_policy replacement_policy)
 {
 	VMEMcache *cache;
@@ -104,6 +104,21 @@ test_new_delete(const char *dir,
 	if (cache != NULL)
 		FATAL(
 			"vmemcache_new did not fail with fragment_size == max_size + 1");
+
+	/* TEST #7 - size == VMEMCACHE_MIN_POOL - 1 */
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL - 1, VMEMCACHE_MIN_FRAG,
+				replacement_policy);
+	if (cache != NULL)
+		FATAL(
+			"vmemcache_new did not fail with size == VMEMCACHE_MIN_POOL - 1");
+
+	/* TEST #8 - not a directory, but a file */
+	cache = vmemcache_new(file, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
+				replacement_policy);
+	if (cache != NULL)
+		FATAL(
+			"vmemcache_new did not fail with a file instead of a directory");
+
 }
 
 /*
@@ -413,8 +428,8 @@ main(int argc, char *argv[])
 
 	const char *dir = argv[1];
 
-	test_new_delete(dir, VMEMCACHE_REPLACEMENT_NONE);
-	test_new_delete(dir, VMEMCACHE_REPLACEMENT_LRU);
+	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_NONE);
+	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_LRU);
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_NONE);
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
 	test_evict(dir);
