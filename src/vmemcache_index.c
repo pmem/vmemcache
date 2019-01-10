@@ -34,9 +34,12 @@
  * vmemcache_index.c -- abstraction layer for vmemcache indexing API
  */
 
+#include <stdlib.h>
 #include "vmemcache.h"
 #include "vmemcache_index.h"
 #include "critnib.h"
+
+static int no_sharding = 0;
 
 /*
  * shard -- (internal) hash the key and pick a shard bucket
@@ -44,6 +47,9 @@
 static int
 shard(size_t key_size, const char *key)
 {
+	if (no_sharding)
+		return 0;
+
 	/* Fowler–Noll–Vo hash */
 	uint64_t h = 0xcbf29ce484222325;
 	for (size_t i = 0; i < key_size; i++)
@@ -58,6 +64,8 @@ shard(size_t key_size, const char *key)
 int
 vmcache_index_new(VMEMcache *cache)
 {
+	no_sharding = !!getenv("VMEMCACHE_NO_SHARDING");
+
 	for (int i = 0; i < NSHARDS; i++) {
 		struct critnib *c = critnib_new();
 		if (!c) {
