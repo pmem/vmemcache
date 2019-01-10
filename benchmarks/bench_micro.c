@@ -299,6 +299,7 @@ main(int argc, char *argv[])
 {
 	unsigned my_seed;
 	int ret = -1;
+	char *endptr = NULL;
 
 	/* default values of parameters */
 	unsigned benchmark = BENCH_ALL;
@@ -333,31 +334,56 @@ main(int argc, char *argv[])
 
 	}
 
-	if (argc >= 4)
-		n_threads = (unsigned)strtoul(argv[3], NULL, 10);
+	if (argc >= 4) {
+		n_threads = (unsigned)strtoul(argv[3], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of n_threads: %s", argv[3]);
+	}
 
-	if (argc >= 5)
-		ops_count = (unsigned)strtoul(argv[4], NULL, 10);
+	if (argc >= 5) {
+		ops_count = (unsigned)strtoul(argv[4], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of ops_count: %s", argv[4]);
+	}
 
-	if (argc >= 6)
-		cache_max_size = (size_t)strtoul(argv[5], NULL, 10);
+	if (argc >= 6) {
+		cache_max_size = (size_t)strtoul(argv[5], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of cache_max_size: %s", argv[5]);
+	}
 
-	if (argc >= 7)
-		cache_fragment_size = (size_t)strtoul(argv[6], NULL, 10);
+	if (argc >= 7) {
+		cache_fragment_size = (size_t)strtoul(argv[6], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of cache_fragment_size: %s",
+				argv[6]);
+	}
 
-	if (argc >= 8)
-		nbuffs = (unsigned)strtoul(argv[7], NULL, 10);
+	if (argc >= 8) {
+		nbuffs = (unsigned)strtoul(argv[7], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of nbuffs: %s", argv[7]);
+	}
 
-	if (argc >= 9)
-		min_size = (size_t)strtoul(argv[8], NULL, 10);
+	if (argc >= 9) {
+		min_size = (size_t)strtoul(argv[8], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of min_size: %s", argv[8]);
+	}
 
-	if (argc >= 10)
-		max_size = (size_t)strtoul(argv[9], NULL, 10);
+	if (argc >= 10) {
+		max_size = (size_t)strtoul(argv[9], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of max_size: %s", argv[9]);
+	}
 
-	if (argc == 11)
-		my_seed = (unsigned)strtoul(argv[10], NULL, 10);
-	else
+	if (argc == 11) {
+		my_seed = (unsigned)strtoul(argv[10], &endptr, 10);
+		if (endptr)
+			ERROR("incorrect value of my_seed: %s", argv[10]);
+	} else {
 		my_seed = (unsigned)time(NULL);
+	}
 
 	printf("Benchmark parameters:\n");
 	printf("   directory           : %s\n", dir);
