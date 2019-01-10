@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018, Intel Corporation
+ * Copyright 2015-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,6 +76,7 @@ benchmark_time_get_secs(benchmark_time_t *t)
 	return (double)t->tv_sec + (double)t->tv_nsec / NSECPSEC;
 }
 
+#if 0
 /*
  * benchmark_time_get_nsecs -- get total number of nanoseconds
  */
@@ -141,3 +142,4 @@ benchmark_get_avg_get_time(void)
 
 	return avg;
 }
+#endif
