@@ -103,6 +103,7 @@ struct tm *util_localtime(const time_t *timep);
 int util_safe_strcpy(char *dst, const char *src, size_t max_length);
 void util_emit_log(const char *lib, const char *func, int order);
 char *util_readline(FILE *fh);
+int env_yesno10(const char *var, int def);
 
 #ifdef _WIN32
 char *util_toUTF8(const wchar_t *wstr);

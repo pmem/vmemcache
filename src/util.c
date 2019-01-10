@@ -42,6 +42,7 @@
 #include <errno.h>
 #include <time.h>
 
+#include "out.h"
 #include "util.h"
 #include "valgrind_internal.h"
 
@@ -449,3 +450,22 @@ util_readline(FILE *fh)
 	return buffer;
 }
 #endif
+
+/*
+ * env_yesno10 -- check an env var for 1/0/y/n, fatal if invalid
+ */
+int
+env_yesno10(const char *var, int def)
+{
+	const char *q = getenv(var);
+	if (!q)
+		return def;
+
+	if (!strcasecmp(q, "0") || !strcasecmp(q, "n") || !strcasecmp(q, "no"))
+			return 0;
+	if (!strcasecmp(q, "1") || !strcasecmp(q, "y") || !strcasecmp(q, "yes"))
+		return 1;
+
+	ERR("env var %s needs to be 0 or 1", var);
+	return def;
+}
