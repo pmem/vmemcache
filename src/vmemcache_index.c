@@ -35,6 +35,7 @@
  */
 
 #include <alloca.h>
+#include <stdlib.h>
 
 #include "vmemcache.h"
 #include "vmemcache_index.h"
@@ -45,6 +46,7 @@
 
 struct index {
 	struct critnib *bucket[NSHARDS];
+	int sharding;
 };
 
 /*
@@ -67,7 +69,10 @@ shard_id(size_t key_size, const char *key)
 static struct critnib *
 shard(VMEMcache *cache, size_t key_size, const char *key)
 {
-	return cache->index->bucket[shard_id(key_size, key)];
+	if (cache->index->sharding)
+		return cache->index->bucket[shard_id(key_size, key)];
+
+	return cache->index->bucket[0];
 }
 
 /*
@@ -80,6 +85,7 @@ vmcache_index_new(VMEMcache *cache)
 	if (!index)
 		return ENOMEM;
 	cache->index = index;
+	index->sharding = !getenv("VMEMCACHE_NO_SHARDING");
 
 	for (int i = 0; i < NSHARDS; i++) {
 		struct critnib *c = critnib_new();
