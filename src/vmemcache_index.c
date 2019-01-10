@@ -35,6 +35,7 @@
  */
 
 #include <alloca.h>
+#include <stdlib.h>
 
 #include "vmemcache.h"
 #include "vmemcache_index.h"
@@ -45,6 +46,7 @@
 
 struct index {
 	struct critnib *bucket[NSHARDS];
+	int sharding;
 };
 
 /*
@@ -67,7 +69,29 @@ shard_id(size_t key_size, const char *key)
 static struct critnib *
 shard(struct index *index, size_t key_size, const char *key)
 {
-	return index->bucket[shard_id(key_size, key)];
+	if (index->sharding)
+		return index->bucket[shard_id(key_size, key)];
+
+	return index->bucket[0];
+}
+
+/*
+ * env_yn10 -- (internal) check an env var for 1/0/y/n, fatal if invalid
+ */
+static int
+env_yesno10(const char *var, int def)
+{
+	const char *q = getenv(var);
+	if (!q)
+		return def;
+
+	if (!strcasecmp(q, "0") || !strcasecmp(q, "n"))
+		return 0;
+	if (!strcasecmp(q, "1") || !strcasecmp(q, "y"))
+		return 1;
+
+	ERR("env var %s needs to be 0 or 1", var);
+	return def;
 }
 
 /*
@@ -79,6 +103,8 @@ vmcache_index_new(void)
 	struct index *index = malloc(sizeof(struct index));
 	if (!index)
 		return NULL;
+
+	index->sharding = env_yesno10("VMEMCACHE_SHARDING", 1);
 
 	for (int i = 0; i < NSHARDS; i++) {
 		struct critnib *c = critnib_new();
