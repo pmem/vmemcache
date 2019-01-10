@@ -48,6 +48,7 @@ extern "C" {
 
 struct vmemcache_index_t {
 	struct critnib *bucket[NSHARDS];
+	int sharding;
 };
 struct cache_entry;
 
