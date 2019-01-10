@@ -45,6 +45,12 @@ mkdir -p $INSTALL_DIR
 # -----------------------------------------
 # gcc & Debug
 
+echo
+echo " ##########################################"
+echo " # Running the configuration: gcc & Debug #"
+echo " ##########################################"
+echo
+
 mkdir -p build
 cd build
 
@@ -66,6 +72,12 @@ rm -r build
 # -----------------------------------------
 # gcc & Release
 
+echo
+echo " ############################################"
+echo " # Running the configuration: gcc & Release #"
+echo " ############################################"
+echo
+
 mkdir build
 cd build
 
@@ -83,6 +95,12 @@ rm -r build
 
 # -----------------------------------------
 # Clang & Debug
+
+echo
+echo " ############################################"
+echo " # Running the configuration: Clang & Debug #"
+echo " ############################################"
+echo
 
 mkdir build
 cd build
@@ -102,6 +120,12 @@ rm -r build
 # -----------------------------------------
 # Clang & Release
 
+echo
+echo " ##############################################"
+echo " # Running the configuration: Clang & Release #"
+echo " ##############################################"
+echo
+
 mkdir build
 cd build
 
@@ -120,6 +144,12 @@ rm -r build
 # -----------------------------------------
 # Coverage
 if [[ $COVERAGE -eq 1 ]] ; then
+	echo
+	echo " #######################################"
+	echo " # Running the configuration: Coverage #"
+	echo " #######################################"
+	echo
+
 	mkdir build
 	cd build
 
