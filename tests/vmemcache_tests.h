@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,12 @@
 /*
  * vmemcache_tests.h -- unit tests header
  */
+
+#define ERROR(...) do {\
+	fprintf(stderr, "ERROR: " __VA_ARGS__);\
+	fprintf(stderr, "\n");\
+	exit(-1);\
+} while (/*CONSTCOND*/0)
 
 #define FATAL(...) do {\
 	fprintf(stderr, "FATAL ERROR at %s:%i in %s(): ",\
