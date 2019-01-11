@@ -80,8 +80,8 @@ function(execute_arg input expectation name)
 endfunction()
 
 function(run_under_valgrind vg_opt name text_passed)
-	message(STATUS "Executing: valgrind ${vg_opt} ${name} ${ARGN}")
-	execute_process(COMMAND valgrind ${vg_opt} ${name} ${ARGN}
+	message(STATUS "Executing: valgrind --suppressions=${SUPP_FILE} ${vg_opt} ${name} ${ARGN}")
+	execute_process(COMMAND valgrind --suppressions=${SUPP_FILE} ${vg_opt} ${name} ${ARGN}
 			RESULT_VARIABLE RET
 			OUTPUT_FILE ${BIN_DIR}/out
 			ERROR_FILE ${BIN_DIR}/err)

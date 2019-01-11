@@ -32,6 +32,8 @@
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test
 	CACHE STRING "working directory for tests")
 
+set(SUPP_FILE ${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp)
+
 set(DEVICE_DAX_PATHS "" CACHE STRING
 	"for tests that require raw dax devices without a file system. Some tests might require two DAX devices.
 	Example: '/dev/dax1.0 /dev/dax2.0'")
@@ -76,6 +78,7 @@ function(test name file tracer)
 		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
 		-DCONFIG=$<CONFIG>
 		-DTRACER=${tracer}
+		-DSUPP_FILE=${SUPP_FILE}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
 
 	set_tests_properties(${name} PROPERTIES

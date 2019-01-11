@@ -1,0 +1,84 @@
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/vmcache_alloc_1>
+     Helgrind:Misc
+     ...
+     fun:util_spin_lock
+     fun:vmcache_alloc
+     ...
+}
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/vmcache_alloc_2>
+     Helgrind:Misc
+     ...
+     fun:pthread_spin_lock
+     fun:vmcache_alloc
+     ...
+}
+
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/vmcache_free_1>
+     Helgrind:Misc
+     ...
+     fun:util_spin_lock
+     fun:vmcache_free
+     ...
+}
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/vmcache_free_2>
+     Helgrind:Misc
+     ...
+     fun:pthread_spin_lock
+     fun:vmcache_free
+     ...
+}
+
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/repl_p_lru_insert_1>
+     Helgrind:Misc
+     ...
+     fun:util_spin_lock
+     fun:repl_p_lru_insert
+     ...
+}
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/repl_p_lru_insert_2>
+     Helgrind:Misc
+     ...
+     fun:pthread_spin_lock
+     fun:repl_p_lru_insert
+     ...
+}
+
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/repl_p_lru_use_1>
+     Helgrind:Misc
+     ...
+     fun:util_spin_lock
+     fun:repl_p_lru_use
+     ...
+}
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/repl_p_lru_use_2>
+     Helgrind:Misc
+     ...
+     fun:pthread_spin_lock
+     fun:repl_p_lru_use
+     ...
+}
+
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/repl_p_lru_evict_1>
+     Helgrind:Misc
+     ...
+     fun:util_spin_lock
+     fun:repl_p_lru_evict
+     ...
+}
+{
+     <libpthread/recursive_write_lock_granted_on_mutex/wrlock_which_does_not_support_recursion/repl_p_lru_evict_2>
+     Helgrind:Misc
+     ...
+     fun:pthread_spin_lock
+     fun:repl_p_lru_evict
+     ...
+}
