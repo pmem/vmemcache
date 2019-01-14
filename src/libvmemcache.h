@@ -87,6 +87,18 @@ enum vmemcache_replacement_policy {
 	VMEMCACHE_REPLACEMENT_NUM
 };
 
+enum vmemcache_statistic {
+	VMEMCACHE_STAT_PUT,
+	VMEMCACHE_STAT_GET,
+	VMEMCACHE_STAT_HIT,
+	VMEMCACHE_STAT_MISS,
+	VMEMCACHE_STAT_EVICT,
+	VMEMCACHE_STAT_DRAM_SIZE_USED,
+	VMEMCACHE_STAT_POOL_SIZE_USED,
+
+	VMEMCACHE_STATS_NUM
+};
+
 typedef void vmemcache_on_evict(VMEMcache *cache,
 	const char *key, size_t key_size, void *arg);
 typedef int vmemcache_on_miss(VMEMcache *cache,
@@ -124,6 +136,11 @@ int vmemcache_put(VMEMcache *cache,
 	const char *value, size_t value_size);
 
 int vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize);
+
+int vmemcache_get_stat(VMEMcache *cache,
+	enum vmemcache_statistic stat,
+	void *value,
+	size_t value_size);
 
 #ifndef _WIN32
 const char *vmemcache_errormsg(void);
