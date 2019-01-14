@@ -34,6 +34,7 @@
  * vmemcache_heap.c -- implementation of simple vmemcache linear allocator
  */
 
+#include "vmemcache.h"
 #include "vmemcache_heap.h"
 #include "vec.h"
 #include "sys_util.h"
@@ -42,6 +43,9 @@ struct heap {
 	os_mutex_t lock;
 	size_t fragment_size;
 	VEC(, struct heap_entry) entries;
+
+	/* statistic */
+	stat_t size_used;
 };
 
 /*
@@ -108,6 +112,8 @@ vmcache_alloc(struct heap *heap, size_t size)
 		he.size = size;
 	}
 
+	__sync_fetch_and_add(&heap->size_used, he.size);
+
 error_no_mem:
 	util_mutex_unlock(&heap->lock);
 
@@ -124,7 +130,18 @@ vmcache_free(struct heap *heap, struct heap_entry he)
 
 	util_mutex_lock(&heap->lock);
 
+	__sync_fetch_and_sub(&heap->size_used, he.size);
+
 	VEC_PUSH_BACK(&heap->entries, he);
 
 	util_mutex_unlock(&heap->lock);
+}
+
+/*
+ * vmcache_get_heap_used_size -- get the 'size_used' statistic
+ */
+stat_t
+vmcache_get_heap_used_size(struct heap *heap)
+{
+	return heap->size_used;
 }

@@ -48,11 +48,107 @@
 #define VSIZE LEN /* value size */
 #define DNUM 10 /* number of data */
 
+/* type of statistics */
+typedef unsigned long long stat_t;
+
+/* names of statistics */
+static const char *stat_str[VMEMCACHE_STATS_NUM] = {
+	"PUTs",
+	"GETs",
+	"HITs",
+	"MISSes",
+	"EVICTs",
+	"DRAM_SIZE_USED",
+	"POOL_SIZE_USED"
+};
+
+/* context of callbacks */
 struct ctx_cb {
 	char vbuf[VSIZE];
 	size_t vbufsize;
 	size_t vsize;
+	stat_t miss_count;
+	stat_t evict_count;
 };
+
+/*
+ * verify_stats -- (internal) verify statistics
+ */
+static void
+verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
+		stat_t evict, stat_t dram, stat_t pool)
+{
+	stat_t stat;
+	int ret;
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_PUT,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != put)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_PUT], stat, put);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_GET,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != get)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_GET], stat, get);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_HIT,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != hit)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_HIT], stat, hit);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_MISS,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != miss)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_MISS], stat, miss);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_EVICT,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != evict)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_EVICT], stat, evict);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_DRAM_SIZE_USED,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != dram)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_DRAM_SIZE_USED], stat, dram);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_POOL_SIZE_USED,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != pool)
+		FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_POOL_SIZE_USED], stat, pool);
+
+	ret = vmemcache_get_stat(cache, -1, &stat, sizeof(stat));
+	if (ret != -1)
+		FATAL(
+			"vmemcache_get_stat() succeeded for incorrect statistic (-1)");
+}
 
 /*
  * test_new_delete -- (internal) test _new() and _delete()
@@ -199,6 +295,8 @@ on_evict_test_evict_cb(VMEMcache *cache, const char *key, size_t key_size,
 	struct ctx_cb *ctx = arg;
 	ssize_t ret;
 
+	ctx->evict_count++;
+
 	ret = vmemcache_get(cache, key, key_size, ctx->vbuf, ctx->vbufsize, 0,
 				&ctx->vsize);
 	if (ret < 0)
@@ -217,6 +315,8 @@ on_miss_test_evict_cb(VMEMcache *cache, const char *key, size_t key_size,
 		void *arg)
 {
 	struct ctx_cb *ctx = arg;
+
+	ctx->miss_count++;
 
 	size_t size = (key_size <= ctx->vbufsize) ? key_size : ctx->vbufsize;
 
@@ -237,7 +337,7 @@ test_evict(const char *dir)
 	size_t vsize = 0;
 	ssize_t ret;
 
-	struct ctx_cb ctx = {"", VSIZE, 0};
+	struct ctx_cb ctx = {"", VSIZE, 0, 0, 0};
 
 	struct kv {
 		char key[KSIZE];
@@ -350,6 +450,13 @@ test_evict(const char *dir)
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
 
+	/* check statistics */
+	verify_stats(cache,
+			DNUM, /* put */
+			2 - ctx.miss_count + ctx.evict_count, /* get */
+			2 - 2 * ctx.miss_count + ctx.evict_count, /* hit */
+			ctx.miss_count, ctx.evict_count, 0, 0);
+
 	vmemcache_delete(cache);
 }
 
@@ -361,7 +468,7 @@ static void
 on_evict_test_memory_leaks_cb(VMEMcache *cache,
 				const char *key, size_t key_size, void *arg)
 {
-	unsigned long long *counter = arg;
+	stat_t *counter = arg;
 
 	(*counter)++;
 }
@@ -378,8 +485,8 @@ test_memory_leaks(const char *dir)
 
 	srand((unsigned)time(NULL));
 
-	unsigned long long n_puts = 0;
-	unsigned long long n_evicts = 0;
+	stat_t n_puts = 0;
+	stat_t n_evicts = 0;
 
 	size_t min_size = VMEMCACHE_MIN_FRAG / 2;
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
@@ -393,8 +500,6 @@ test_memory_leaks(const char *dir)
 					&n_evicts);
 
 	while (n_evicts < 1000) {
-		n_puts++;
-
 		size = min_size + (size_t)rand() % (max_size - min_size + 1);
 		buff = malloc(size);
 		if (buff == NULL)
@@ -404,6 +509,7 @@ test_memory_leaks(const char *dir)
 					buff, size))
 			FATAL("vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
 				n_puts, n_evicts, vmemcache_errormsg());
+		n_puts++;
 
 		free(buff);
 	}
@@ -411,6 +517,9 @@ test_memory_leaks(const char *dir)
 	/* free all the memory */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
+
+	/* check statistics */
+	verify_stats(cache, n_puts, 0, 0, 0, n_evicts, 0, 0);
 
 	vmemcache_delete(cache);
 
