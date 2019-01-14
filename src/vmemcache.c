@@ -200,11 +200,16 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 	struct cache_entry *entry;
 	struct heap_entry he;
 
-	entry = Zalloc(sizeof(struct cache_entry) + ksize);
+	size_t size_entry = sizeof(struct cache_entry) + ksize;
+
+	entry = Zalloc(size_entry);
 	if (entry == NULL) {
 		ERR("!Zalloc");
 		return -1;
 	}
+
+	entry->size = size_entry;
+	__sync_fetch_and_add(&cache->size_DRAM, entry->size);
 
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
@@ -241,6 +246,8 @@ vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
 
 	cache->repl.ops->repl_p_insert(cache->repl.head, entry,
 					&entry->value.p_entry);
+
+	__sync_fetch_and_add(&cache->put_count, 1);
 
 	return 0;
 
@@ -336,6 +343,9 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 	}
 
 	VEC_DELETE(&entry->value.fragments);
+
+	__sync_fetch_and_sub(&cache->size_DRAM, entry->size);
+
 	Free(entry);
 }
 
@@ -354,6 +364,8 @@ vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
 		return -1;
 
 	if (entry == NULL) { /* cache miss */
+		__sync_fetch_and_add(&cache->miss_count, 1);
+
 		if (cache->on_miss == NULL ||
 		    (*cache->on_miss)(cache, key, ksize, cache->arg_miss) == 0)
 			return 0;
@@ -365,6 +377,8 @@ vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
 		if (entry == NULL)
 			return 0;
 	}
+
+	__sync_fetch_and_add(&cache->get_count, 1);
 
 	cache->repl.ops->repl_p_use(cache->repl.head, &entry->value.p_entry);
 
@@ -422,6 +436,8 @@ vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
 		}
 	}
 
+	__sync_fetch_and_add(&cache->evict_count, 1);
+
 	if (cache->on_evict != NULL)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
 
@@ -469,6 +485,53 @@ vmemcache_callback_on_miss(VMEMcache *cache, vmemcache_on_miss *miss,
 {
 	cache->on_miss = miss;
 	cache->arg_miss = arg;
+}
+
+/*
+ * vmemcache_get_stat -- get the statistic
+ */
+int
+vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistics stat,
+			void *value, size_t value_size)
+{
+	if (value_size != sizeof(stat_t)) {
+		ERR("wrong size of the value: %zu (should be: %zu)",
+			value_size, sizeof(stat_t));
+		errno = EINVAL;
+		return -1;
+	}
+
+	stat_t *val = value;
+
+	switch (stat) {
+	case VMEMCACHE_STAT_PUT:
+		*val = cache->put_count;
+		break;
+	case VMEMCACHE_STAT_GET:
+		*val = cache->get_count;
+		break;
+	case VMEMCACHE_STAT_HIT:
+		*val = cache->get_count - cache->miss_count;
+		break;
+	case VMEMCACHE_STAT_MISS:
+		*val = cache->miss_count;
+		break;
+	case VMEMCACHE_STAT_EVICT:
+		*val = cache->evict_count;
+		break;
+	case VMEMCACHE_STAT_DRAM_SIZE_USED:
+		*val = cache->size_DRAM;
+		break;
+	case VMEMCACHE_STAT_POOL_SIZE_USED:
+		*val = vmcache_get_heap_used_size(cache->heap);
+		break;
+	default:
+		ERR("unknown value of statistic: %u", stat);
+		errno = EINVAL;
+		return -1;
+	}
+
+	return 0;
 }
 
 #ifndef _WIN32

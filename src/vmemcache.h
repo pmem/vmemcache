@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,9 @@ extern "C" {
 #define VMEMCACHE_LEVEL_VAR "VMEMCACHE_LEVEL"
 #define VMEMCACHE_FILE_VAR "VMEMCACHE_FILE"
 
+/* type of the statistics */
+typedef unsigned long long stat_t;
+
 struct vmemcache {
 	void *addr;			/* mapping address */
 	size_t size;			/* mapping size */
@@ -63,9 +66,18 @@ struct vmemcache {
 	void *arg_evict;		/* argument for callback on evict */
 	vmemcache_on_miss *on_miss;	/* callback on miss */
 	void *arg_miss;			/* argument for callback on miss */
+
+	/* statistics */
+	stat_t put_count;
+	stat_t get_count;
+	stat_t miss_count;
+	stat_t evict_count;
+	stat_t size_DRAM;
 };
 
 struct cache_entry {
+	size_t size; /* size of this structure with allocated key[] */
+
 	struct value {
 		uint64_t refcount;
 		int evicting;
