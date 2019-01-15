@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018, Intel Corporation
+ * Copyright 2015-2019, Intel Corporation
  * Copyright (c) 2016, Microsoft Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -93,7 +93,11 @@ typedef union {
 #define cpu_set_t cpuset_t
 typedef uintptr_t os_spinlock_t;
 #else
+#if VALGRIND_REPLACE_SPINLOCKS
+typedef os_mutex_t os_spinlock_t;
+#else
 typedef volatile int os_spinlock_t; /* XXX: not implemented on windows */
+#endif
 #endif
 
 void os_cpu_zero(os_cpu_set_t *set);

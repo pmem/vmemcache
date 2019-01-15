@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -62,6 +62,10 @@ target_compile_definitions(vmemcache PRIVATE SRCVERSION="${VERSION}")
 
 if(VALGRIND_FOUND)
 	target_compile_definitions(vmemcache PRIVATE VALGRIND_ENABLED=1)
+	if(VALGRIND_REPLACE_SPINLOCKS)
+		target_compile_definitions(vmemcache PRIVATE
+				VALGRIND_REPLACE_SPINLOCKS=1)
+	endif()
 endif()
 
 install(TARGETS vmemcache

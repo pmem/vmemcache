@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018, Intel Corporation
+ * Copyright 2017-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -241,8 +241,13 @@ os_rwlock_timedwrlock(os_rwlock_t *__restrict rwlock,
 int
 os_spin_init(os_spinlock_t *lock, int pshared)
 {
+#if VALGRIND_REPLACE_SPINLOCKS
+	COMPILE_ERROR_ON(sizeof(os_spinlock_t) < sizeof(pthread_mutex_t));
+	return pthread_mutex_init((pthread_mutex_t *)lock, NULL);
+#else
 	COMPILE_ERROR_ON(sizeof(os_spinlock_t) < sizeof(pthread_spinlock_t));
 	return pthread_spin_init((pthread_spinlock_t *)lock, pshared);
+#endif
 }
 
 /*
@@ -251,7 +256,11 @@ os_spin_init(os_spinlock_t *lock, int pshared)
 int
 os_spin_destroy(os_spinlock_t *lock)
 {
+#if VALGRIND_REPLACE_SPINLOCKS
+	return pthread_mutex_destroy((pthread_mutex_t *)lock);
+#else
 	return pthread_spin_destroy((pthread_spinlock_t *)lock);
+#endif
 }
 
 /*
@@ -260,7 +269,11 @@ os_spin_destroy(os_spinlock_t *lock)
 int
 os_spin_lock(os_spinlock_t *lock)
 {
+#if VALGRIND_REPLACE_SPINLOCKS
+	return pthread_mutex_lock((pthread_mutex_t *)lock);
+#else
 	return pthread_spin_lock((pthread_spinlock_t *)lock);
+#endif
 }
 
 /*
@@ -269,7 +282,11 @@ os_spin_lock(os_spinlock_t *lock)
 int
 os_spin_unlock(os_spinlock_t *lock)
 {
+#if VALGRIND_REPLACE_SPINLOCKS
+	return pthread_mutex_unlock((pthread_mutex_t *)lock);
+#else
 	return pthread_spin_unlock((pthread_spinlock_t *)lock);
+#endif
 }
 
 /*
@@ -279,7 +296,11 @@ os_spin_unlock(os_spinlock_t *lock)
 int
 os_spin_trylock(os_spinlock_t *lock)
 {
+#if VALGRIND_REPLACE_SPINLOCKS
+	return pthread_mutex_trylock((pthread_mutex_t *)lock);
+#else
 	return pthread_spin_trylock((pthread_spinlock_t *)lock);
+#endif
 }
 /*
  * os_cond_init -- pthread_cond_init abstraction layer

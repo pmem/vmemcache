@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -196,6 +196,9 @@ endif(DEVELOPER_MODE)
 
 option(TRACE_TESTS
  	"more verbose test outputs" OFF)
+
+option(VALGRIND_REPLACE_SPINLOCKS
+	"replace all spin locks with mutexes when tested under Valgrind" OFF)
 
 enable_testing()
 add_subdirectory(src)
