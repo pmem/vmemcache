@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -41,8 +41,6 @@ LIBVMEMCACHE_1.0 {
 		vmemcache_evict;
 		vmemcache_callback_on_evict;
 		vmemcache_callback_on_miss;
-		vmemcache_check_version;
-		vmemcache_set_funcs;
 		vmemcache_errormsg;
 	local:
 		*;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,9 +68,6 @@ extern "C" {
 /*
  * VMEMCACHE_MAJOR_VERSION and VMEMCACHE_MINOR_VERSION provide the current
  * version of the libvmemcache API as provided by this header file.
- * Applications can verify that the version available at run-time
- * is compatible with the version used at compile-time by passing
- * these defines to vmemcache_check_version().
  */
 #define VMEMCACHE_MAJOR_VERSION 0
 #define VMEMCACHE_MINOR_VERSION 1
