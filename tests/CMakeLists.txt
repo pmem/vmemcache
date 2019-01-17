@@ -68,6 +68,14 @@ function(test name file tracer)
 		return()
 	endif()
 
+	if (${tracer} STREQUAL helgrind)
+		set(N_THREADS 2)
+		set(N_OPS 200)
+	else()
+		set(N_THREADS 10)
+		set(N_OPS 10000)
+	endif()
+
 	add_test(NAME ${name}
 		COMMAND ${CMAKE_COMMAND}
 		${GLOBAL_TEST_ARGS}
@@ -76,6 +84,8 @@ function(test name file tracer)
 		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
 		-DCONFIG=$<CONFIG>
 		-DTRACER=${tracer}
+		-DN_THREADS=${N_THREADS}
+		-DN_OPS=${N_OPS}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
 
 	set_tests_properties(${name} PROPERTIES
