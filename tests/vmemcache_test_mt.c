@@ -193,29 +193,46 @@ int
 main(int argc, char *argv[])
 {
 	unsigned my_seed;
+	char *endptr = NULL;
 	int ret = -1;
 
-	if (argc < 2 || argc > 3) {
-		fprintf(stderr, "usage: %s dir-name [seed]\n", argv[0]);
+	if (argc < 2 || argc > 5) {
+		fprintf(stderr,
+			"usage: %s dir-name [threads] [ops_count] [seed]\n",
+			argv[0]);
 		exit(-1);
 	}
 
 	const char *dir = argv[1];
 
-	if (argc == 3)
-		my_seed = (unsigned)strtoul(argv[2], NULL, 10);
+	/* default values of parameters */
+	unsigned n_threads = 10;
+	unsigned ops_count = 1000;
+	unsigned nbuffs = 10;
+	size_t min_size = 8;
+	size_t max_size = 64;
+
+	if (argc >= 3) {
+		n_threads = (unsigned)strtoul(argv[2], &endptr, 10);
+		if ((endptr && strcmp(endptr, "")) || (n_threads < 1))
+			FATAL("incorrect value of n_threads: %s (%s)",
+				argv[2], endptr);
+	}
+
+	if (argc >= 4) {
+		ops_count = (unsigned)strtoul(argv[3], &endptr, 10);
+		if ((endptr && strcmp(endptr, "")) || (ops_count < 1))
+			FATAL("incorrect value of ops_count: %s (%s)",
+				argv[3], endptr);
+	}
+
+	if (argc == 5)
+		my_seed = (unsigned)strtoul(argv[4], NULL, 10);
 	else
 		my_seed = (unsigned)time(NULL);
 
 	printf("value of seed: %u\n", my_seed);
 	srand(my_seed);
-
-	/* default values of parameters */
-	unsigned n_threads = 10;
-	unsigned ops_count = 10000;
-	unsigned nbuffs = 10;
-	size_t min_size = 8;
-	size_t max_size = 64;
 
 	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
 				VMEMCACHE_MIN_FRAG, VMEMCACHE_REPLACEMENT_LRU);
