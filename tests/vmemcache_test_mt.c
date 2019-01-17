@@ -231,7 +231,15 @@ main(int argc, char *argv[])
 	else
 		my_seed = (unsigned)time(NULL);
 
-	printf("value of seed: %u\n", my_seed);
+	printf("Multi-threaded test parameters:\n");
+	printf("   directory           : %s\n", dir);
+	printf("   n_threads           : %u\n", n_threads);
+	printf("   ops_count           : %u\n", ops_count);
+	printf("   nbuffs              : %u\n", nbuffs);
+	printf("   min_size            : %zu\n", min_size);
+	printf("   max_size            : %zu\n", max_size);
+	printf("   seed                : %u\n\n", my_seed);
+
 	srand(my_seed);
 
 	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
