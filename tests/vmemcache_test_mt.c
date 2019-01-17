@@ -137,6 +137,8 @@ run_test_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		ctx[i].thread_routine = worker_thread_put;
 	}
 
+	printf("%s: STARTED\n", __func__);
+
 	run_threads(n_threads, threads, ctx);
 
 	printf("%s: PASSED\n", __func__);
@@ -165,6 +167,8 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	int cache_is_full = 0;
 	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);
 
+	printf("%s: filling up the pool...\n", __func__);
+
 	unsigned long long i = 0;
 	while (!cache_is_full) {
 		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
@@ -182,6 +186,8 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		ctx[i].thread_routine = worker_thread_get;
 		ctx[i].ops_count = ops_count;
 	}
+
+	printf("%s: STARTED\n", __func__);
 
 	run_threads(n_threads, threads, ctx);
 
