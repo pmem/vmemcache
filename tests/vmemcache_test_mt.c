@@ -202,20 +202,28 @@ main(int argc, char *argv[])
 
 	const char *dir = argv[1];
 
-	if (argc == 3)
-		my_seed = (unsigned)strtoul(argv[2], NULL, 10);
-	else
-		my_seed = (unsigned)time(NULL);
-
-	printf("value of seed: %u\n", my_seed);
-	srand(my_seed);
-
 	/* default values of parameters */
 	unsigned n_threads = 10;
 	unsigned ops_count = 10000;
 	unsigned nbuffs = 10;
 	size_t min_size = 8;
 	size_t max_size = 64;
+
+	if (argc == 3)
+		my_seed = (unsigned)strtoul(argv[2], NULL, 10);
+	else
+		my_seed = (unsigned)time(NULL);
+
+	printf("Multi-threaded test parameters:\n");
+	printf("   directory           : %s\n", dir);
+	printf("   n_threads           : %u\n", n_threads);
+	printf("   ops_count           : %u\n", ops_count);
+	printf("   nbuffs              : %u\n", nbuffs);
+	printf("   min_size            : %zu\n", min_size);
+	printf("   max_size            : %zu\n", max_size);
+	printf("   seed                : %u\n\n", my_seed);
+
+	srand(my_seed);
 
 	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
 				VMEMCACHE_MIN_FRAG, VMEMCACHE_REPLACEMENT_LRU);
