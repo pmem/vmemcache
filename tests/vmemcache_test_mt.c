@@ -178,13 +178,10 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		i++;
 	}
 
-	unsigned long long ops_count = i;
-
 	vmemcache_callback_on_evict(cache, NULL, NULL);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].thread_routine = worker_thread_get;
-		ctx[i].ops_count = ops_count;
 	}
 
 	printf("%s: STARTED\n", __func__);
