@@ -1,6 +1,9 @@
 libvmemcache: buffer based LRU cache
 =======================================
 
+[![Build Status](https://travis-ci.org/pmem/vmemcache.svg?branch=master)](https://travis-ci.org/pmem/vmemcache)
+[![Coverage Status](https://codecov.io/github/pmem/vmemcache/coverage.svg?branch=master)](https://codecov.io/gh/pmem/vmemcache/branch/master)
+
 ### WARNING ###
 
 This library is in a '**Work-In-Progress**' state,
