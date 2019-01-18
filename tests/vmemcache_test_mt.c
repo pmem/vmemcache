@@ -125,17 +125,46 @@ worker_thread_get(void *arg)
 }
 
 /*
+ * worker_thread_put_in_gets -- (internal) worker testing vmemcache_put()
+ */
+static void *
+worker_thread_put_in_gets(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned long long i;
+	unsigned long long start = ctx->ops_count + (ctx->thread_number & 0x1);
+
+	/*
+	 * There is '3' here - in order to have the same number (ctx->ops_count)
+	 * of operations per each thread.
+	 */
+	unsigned long long end = 3 * ctx->ops_count;
+
+	for (i = start; i < end; i += 2) {
+		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+				ctx->buffs[i % ctx->nbuffs].buff,
+				ctx->buffs[i % ctx->nbuffs].size))
+			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+	}
+
+	return NULL;
+}
+
+/*
  * run_test_put -- (internal) run test for vmemcache_put()
  */
 static void
 run_test_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
-		struct context *ctx)
+		unsigned ops_per_thread, struct context *ctx)
 {
 	free_cache(cache);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].thread_routine = worker_thread_put;
+		ctx[i].ops_count = ops_per_thread;
 	}
+
+	printf("%s: STARTED\n", __func__);
 
 	run_threads(n_threads, threads, ctx);
 
@@ -154,18 +183,20 @@ on_evict_cb(VMEMcache *cache, const char *key, size_t key_size, void *arg)
 }
 
 /*
- * run_test_get -- (internal) run test for vmemcache_get()
+ * init_test_get -- (internal) initialize test for vmemcache_get()
  */
 static void
-run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
-		struct context *ctx)
+init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
 {
 	free_cache(cache);
 
 	int cache_is_full = 0;
 	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);
 
-	unsigned long long i = 0;
+	printf("%s: filling up the pool...\n", __func__);
+
+	unsigned i = 0;
 	while (!cache_is_full) {
 		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
 					ctx->buffs[i % ctx->nbuffs].buff,
@@ -174,20 +205,63 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		i++;
 	}
 
-	unsigned long long ops_count = i;
-
 	vmemcache_callback_on_evict(cache, NULL, NULL);
+
+	if (ops_per_thread > i) {
+		/* we cannot get more than we have put */
+		ops_per_thread = i;
+		printf("%s: decreasing ops_count to: %u\n",
+			__func__, n_threads * ops_per_thread);
+	}
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].thread_routine = worker_thread_get;
-		ctx[i].ops_count = ops_count;
+		ctx[i].ops_count = ops_per_thread;
 	}
+}
+
+/*
+ * run_test_get -- (internal) run test for vmemcache_get()
+ */
+static void
+run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
+{
+	init_test_get(cache, n_threads, threads, ops_per_thread, ctx);
+
+	printf("%s: STARTED\n", __func__);
 
 	run_threads(n_threads, threads, ctx);
 
 	printf("%s: PASSED\n", __func__);
 }
 
+/*
+ * run_test_get_put -- (internal) run test for vmemcache_get()
+ *                      and vmemcache_put()
+ */
+static void
+run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
+{
+	init_test_get(cache, n_threads, threads, ops_per_thread, ctx);
+
+	if (n_threads < 10) {
+		ctx[n_threads >> 1].thread_routine = worker_thread_put_in_gets;
+	} else {
+		/* 20% of threads (in the middle of their array) are puts */
+		unsigned n_puts = (2 * n_threads) / 10; /* 20% of threads */
+		unsigned start = (n_threads / 2) - (n_puts / 2);
+		for (unsigned i = start; i < start + n_puts; i++)
+			ctx[i].thread_routine = worker_thread_put_in_gets;
+	}
+
+	printf("%s: STARTED\n", __func__);
+
+	run_threads(n_threads, threads, ctx);
+
+	printf("%s: PASSED\n", __func__);
+}
 
 int
 main(int argc, char *argv[])
@@ -268,12 +342,14 @@ main(int argc, char *argv[])
 		ctx[i].cache = cache;
 		ctx[i].buffs = buffs;
 		ctx[i].nbuffs = nbuffs;
-		ctx[i].ops_count = ops_count / n_threads;
 	}
 
+	unsigned ops_per_thread = ops_count / n_threads;
+
 	/* run all tests */
-	run_test_put(cache, n_threads, threads, ctx);
-	run_test_get(cache, n_threads, threads, ctx);
+	run_test_put(cache, n_threads, threads, ops_per_thread, ctx);
+	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
+	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
 
 	ret = 0;
 
