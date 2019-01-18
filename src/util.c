@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -129,6 +129,7 @@ util_emit_log(const char *lib, const char *func, int order)
 }
 #endif
 
+#if 0
 /*
  * util_is_zeroed -- check if given memory range is all zero
  */
@@ -312,6 +313,7 @@ util_parse_size(const char *str, size_t *sizep)
 		*sizep = size;
 	return res;
 }
+#endif
 
 /*
  * util_init -- initialize the utils
@@ -350,6 +352,7 @@ util_init(void)
 #endif
 }
 
+#if 0
 /*
  * util_concat_str -- concatenate two strings
  */
@@ -445,3 +448,4 @@ util_readline(FILE *fh)
 
 	return buffer;
 }
+#endif

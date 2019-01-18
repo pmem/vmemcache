@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018, Intel Corporation
+ * Copyright 2017-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,7 @@ os_open(const char *pathname, int flags, ...)
 	}
 }
 
+#if 0
 /*
  * os_fsync -- fsync abstraction layer
  */
@@ -103,6 +104,7 @@ os_fsync_dir(const char *dir_name)
 
 	return ret;
 }
+#endif
 
 /*
  * os_stat -- stat abstraction layer
@@ -140,6 +142,7 @@ os_fopen(const char *pathname, const char *mode)
 	return fopen(pathname, mode);
 }
 
+#if 0
 /*
  * os_fdopen -- fdopen abstraction layer
  */
@@ -157,6 +160,7 @@ os_chmod(const char *pathname, mode_t mode)
 {
 	return chmod(pathname, mode);
 }
+#endif
 
 /*
  * os_mkstemp -- mkstemp abstraction layer
@@ -211,6 +215,7 @@ os_posix_fallocate(int fd, os_off_t offset, off_t len)
 	return posix_fallocate(fd, offset, len);
 }
 
+#if 0
 /*
  * os_ftruncate -- ftruncate abstraction layer
  */
@@ -247,6 +252,7 @@ os_writev(int fd, const struct iovec *iov, int iovcnt)
 {
 	return writev(fd, iov, iovcnt);
 }
+#endif
 
 /*
  * os_clock_gettime -- clock_gettime abstraction layer
@@ -257,6 +263,7 @@ os_clock_gettime(int id, struct timespec *ts)
 	return clock_gettime(id, ts);
 }
 
+#if 0
 /*
  * os_rand_r -- rand_r abstraction layer
  */
@@ -283,6 +290,7 @@ os_setenv(const char *name, const char *value, int overwrite)
 {
 	return setenv(name, value, overwrite);
 }
+#endif
 
 /*
  * secure_getenv -- provide GNU secure_getenv for FreeBSD
@@ -307,6 +315,7 @@ os_getenv(const char *name)
 	return secure_getenv(name);
 }
 
+#if 0
 /*
  * os_strsignal -- strsignal abstraction layer
  */
@@ -321,3 +330,4 @@ os_execv(const char *path, char *const argv[])
 {
 	return execv(path, argv);
 }
+#endif
