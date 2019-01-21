@@ -42,7 +42,7 @@
 #include <errno.h>
 
 #include "libvmemcache.h"
-#include "vmemcache_tests.h"
+#include "test_helpers.h"
 #include "os_thread.h"
 #include "benchmark_time.h"
 

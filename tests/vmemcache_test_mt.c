@@ -39,7 +39,7 @@
 #include <string.h>
 
 #include "libvmemcache.h"
-#include "vmemcache_tests.h"
+#include "test_helpers.h"
 #include "os_thread.h"
 
 #define BUF_SIZE 256
