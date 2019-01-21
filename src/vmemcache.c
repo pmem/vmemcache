@@ -94,6 +94,9 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 		goto error_free_cache;
 	}
 
+	/* silently enforce multiple of mapping alignment */
+	cache->size = roundup(max_size, Mmap_align);
+
 	if (type == TYPE_DEVDAX) {
 		const char *devdax = dir;
 		ssize_t size = util_file_get_size(devdax);
@@ -102,17 +105,17 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 			goto error_free_cache;
 		}
 
+		if ((size_t)size < cache->size) {
+			ERR("too little size of DAX device (%li)", size);
+			goto error_free_cache;
+		}
+
 		cache->addr = util_file_map_whole(devdax);
 		if (cache->addr == NULL) {
 			LOG(1, "mapping of whole DAX device failed");
 			goto error_free_cache;
 		}
-
-		cache->size = (size_t)size;
 	} else {
-		/* silently enforce multiple of mapping alignment */
-		cache->size = roundup(max_size, Mmap_align);
-
 		/*
 		 * XXX: file should be mapped on-demand during allocation,
 		 *      up to cache->size
