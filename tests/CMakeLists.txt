@@ -51,8 +51,8 @@ if(TRACE_TESTS)
 	set(GLOBAL_TEST_ARGS ${GLOBAL_TEST_ARGS} --trace-expand)
 endif()
 
-add_cstyle(tests)
-add_check_whitespace(tests)
+add_cstyle(tests ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
+add_check_whitespace(tests ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 
 set(vg_tracers memcheck helgrind)
 
