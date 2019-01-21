@@ -40,6 +40,12 @@
 #include <limits.h>
 #include <errno.h>
 
+#define ERROR(...) do {\
+	fprintf(stderr, "ERROR: " __VA_ARGS__);\
+	fprintf(stderr, "\n");\
+	exit(-1);\
+} while (/*CONSTCOND*/0)
+
 #define FATAL(...) do {\
 	fprintf(stderr, "FATAL ERROR at %s:%i in %s(): ",\
 			__FILE__, __LINE__, __func__);\
