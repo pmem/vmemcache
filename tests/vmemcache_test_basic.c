@@ -40,7 +40,7 @@
 #include <time.h>
 
 #include "libvmemcache.h"
-#include "vmemcache_tests.h"
+#include "test_helpers.h"
 
 #define VMEMCACHE_FRAGMENT 16
 #define LEN (VMEMCACHE_FRAGMENT)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,14 @@
  */
 
 /*
- * vmemcache_tests.h -- unit tests header
+ * test_helpers.h -- header with helpers
  */
+
+#ifndef TEST_HELPERS_H
+#define TEST_HELPERS_H 1
+
+#include <limits.h>
+#include <errno.h>
 
 #define FATAL(...) do {\
 	fprintf(stderr, "FATAL ERROR at %s:%i in %s(): ",\
@@ -41,3 +47,26 @@
 	fprintf(stderr, "\n");\
 	abort();\
 } while (/*CONSTCOND*/0)
+
+/*
+ * str_to_unsigned -- (internal) convert string argument to unsigned int
+ */
+static inline int
+str_to_unsigned(const char *str, unsigned *value)
+{
+	char *endptr = NULL;
+
+	errno = 0;    /* to distinguish success/failure after call */
+
+	unsigned val = (unsigned)strtoul(str, &endptr, 10);
+	if ((errno == ERANGE && val == ULONG_MAX) ||
+	    (errno != 0 && val == 0) ||
+	    (endptr == str) || (*endptr != '\0'))
+		return -1;
+
+	*value = val;
+
+	return 0;
+}
+
+#endif /* TEST_HELPERS_H */
