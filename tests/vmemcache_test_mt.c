@@ -116,7 +116,7 @@ worker_thread_get(void *arg)
 	size_t vbufsize = BUF_SIZE;	/* size of vbuf */
 	size_t vsize = 0;		/* real size of the object */
 
-	for (i = 1; i < ctx->ops_count; i++) {
+	for (i = 0; i < ctx->ops_count; i++) {
 		vmemcache_get(ctx->cache, (char *)&i, sizeof(i),
 				vbuf, vbufsize, 0, &vsize);
 	}
@@ -194,22 +194,25 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	int cache_is_full = 0;
 	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);
 
-	printf("%s: filling up the pool...\n", __func__);
+	printf("%s: filling the pool...", __func__);
+	fflush(stdout);
 
-	unsigned i = 0;
-	while (!cache_is_full) {
-		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
-					ctx->buffs[i % ctx->nbuffs].buff,
-					ctx->buffs[i % ctx->nbuffs].size))
+	unsigned n = 0; /* number of elements put into the cache */
+	while (!cache_is_full && n < ops_per_thread) {
+		if (vmemcache_put(ctx->cache, (char *)&n, sizeof(n),
+					ctx->buffs[n % ctx->nbuffs].buff,
+					ctx->buffs[n % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
-		i++;
+		n++;
 	}
+
+	printf(" done (inserted %u elements)\n", n);
 
 	vmemcache_callback_on_evict(cache, NULL, NULL);
 
-	if (ops_per_thread > i) {
+	if (ops_per_thread > n) {
 		/* we cannot get more than we have put */
-		ops_per_thread = i;
+		ops_per_thread = n;
 		printf("%s: decreasing ops_count to: %u\n",
 			__func__, n_threads * ops_per_thread);
 	}
