@@ -43,6 +43,7 @@
 #include "os_thread.h"
 
 #define BUF_SIZE 256
+#define MAX_PUTS 25000 /* maximum number of puts */
 
 struct buffers {
 	size_t size;
@@ -194,16 +195,18 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	int cache_is_full = 0;
 	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);
 
-	printf("%s: filling up the pool...\n", __func__);
+	printf("%s: filling the pool...", __func__);
 
 	unsigned i = 0;
-	while (!cache_is_full) {
+	while (!cache_is_full && i < MAX_PUTS) {
 		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
 					ctx->buffs[i % ctx->nbuffs].buff,
 					ctx->buffs[i % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
 		i++;
 	}
+
+	printf(" done (inserted %u elements)\n", i);
 
 	vmemcache_callback_on_evict(cache, NULL, NULL);
 
