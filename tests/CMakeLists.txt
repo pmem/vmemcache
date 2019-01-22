@@ -32,20 +32,17 @@
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test
 	CACHE STRING "working directory for tests")
 
-set(DEVICE_DAX_PATHS "" CACHE STRING
-	"for tests that require raw dax devices without a file system. Some tests might require two DAX devices.
-	Example: '/dev/dax1.0 /dev/dax2.0'")
+set(TEST_POOL_DIR ${TEST_DIR}
+	CACHE STRING "directory for vmemcache memory pool used for tests")
 
-set(GLOBAL_TEST_ARGS
-	-DPARENT_DIR=${TEST_DIR}/
-	-DDEVICE_DAX_PATHS=${DEVICE_DAX_PATHS})
+set(DEVICE_DAX_PATH "" CACHE STRING
+	"raw DAX device without a file system for tests. Example: /dev/dax0.0")
 
-# convert the DEVICE_DAX_PATHS list to the array
-if(DEVICE_DAX_PATHS)
-	string(REPLACE " " ";" DEVICE_DAX_PATHS ${DEVICE_DAX_PATHS})
+if(("${TEST_POOL_DIR}" STREQUAL "") AND ("${DEVICE_DAX_PATH}" STREQUAL ""))
+	set(TEST_POOL_DIR ${TEST_DIR})
 endif()
 
-list(LENGTH DEVICE_DAX_PATHS devdax_num)
+set(GLOBAL_TEST_ARGS -DPARENT_DIR=${TEST_DIR}/)
 
 if(TRACE_TESTS)
 	set(GLOBAL_TEST_ARGS ${GLOBAL_TEST_ARGS} --trace-expand)
@@ -57,7 +54,7 @@ add_check_whitespace(tests)
 set(vg_tracers memcheck helgrind drd)
 
 # Configures test ${name}
-function(test name file tracer)
+function(test name file tracer location)
 	if (${tracer} IN_LIST vg_tracers)
 		if (NOT VALGRIND_FOUND)
 			message(WARNING
@@ -76,6 +73,15 @@ function(test name file tracer)
 		return()
 	endif()
 
+	if(${location} STREQUAL fs)
+		set(TEST_POOL_LOCATION ${TEST_POOL_DIR})
+	elseif(${location} STREQUAL dax)
+		set(TEST_POOL_LOCATION ${DEVICE_DAX_PATH})
+	else()
+		message(FATAL_ERROR "Unknown pool's location: ${location}")
+		return()
+	endif()
+
 	add_test(NAME ${name}
 		COMMAND ${CMAKE_COMMAND}
 		${GLOBAL_TEST_ARGS}
@@ -84,6 +90,7 @@ function(test name file tracer)
 		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
 		-DCONFIG=$<CONFIG>
 		-DTRACER=${tracer}
+		-DTEST_POOL_LOCATION=${TEST_POOL_LOCATION}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cmake)
 
 	set_tests_properties(${name} PROPERTIES
@@ -121,10 +128,22 @@ add_link_executable(vmemcache_test_mt
 		"${SOURCES_MT}"
 		"${LIBS_MT}")
 
-test("test-basic" test-basic none)
-test("test-basic-memcheck" test-basic memcheck)
-test("test-mt" test-mt none)
-test("test-mt-memcheck" test-mt memcheck)
-test("test-mt-helgrind" test-mt helgrind)
-test("test-mt-drd" test-mt drd)
-test("test-bench-mt" test-bench-mt none)
+if(NOT "${TEST_POOL_DIR}" STREQUAL "")
+	test("FS-test-basic" test-basic none fs)
+	test("FS-test-basic-memcheck" test-basic memcheck fs)
+	test("FS-test-mt" test-mt none fs)
+	test("FS-test-mt-memcheck" test-mt memcheck fs)
+	test("FS-test-mt-helgrind" test-mt helgrind fs)
+	test("FS-test-mt-drd" test-mt drd fs)
+	test("FS-test-bench-mt" test-bench-mt none fs)
+endif()
+
+if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
+	test("DAX-test-basic" test-basic none dax)
+	test("DAX-test-basic-memcheck" test-basic memcheck dax)
+	test("DAX-test-mt" test-mt none dax)
+	test("DAX-test-mt-memcheck" test-mt memcheck dax)
+	test("DAX-test-mt-helgrind" test-mt helgrind dax)
+	test("DAX-test-mt-drd" test-mt drd dax)
+	test("DAX-test-bench-mt" test-bench-mt none dax)
+endif()

@@ -43,6 +43,6 @@ else()
 	set(N_OPS 10000)
 endif()
 
-execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_DIR} ${N_THREADS} ${N_OPS})
+execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} ${N_THREADS} ${N_OPS})
 
 cleanup()
