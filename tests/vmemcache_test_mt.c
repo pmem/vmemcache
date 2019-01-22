@@ -266,11 +266,13 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 int
 main(int argc, char *argv[])
 {
-	unsigned my_seed;
+	unsigned seed;
 	int ret = -1;
 
-	if (argc < 2 || argc > 3) {
-		fprintf(stderr, "usage: %s dir-name [seed]\n", argv[0]);
+	if (argc < 2 || argc > 5) {
+		fprintf(stderr,
+			"usage: %s dir-name [threads] [ops_count] [seed]\n",
+			argv[0]);
 		exit(-1);
 	}
 
@@ -283,10 +285,20 @@ main(int argc, char *argv[])
 	size_t min_size = 8;
 	size_t max_size = 64;
 
-	if (argc == 3)
-		my_seed = (unsigned)strtoul(argv[2], NULL, 10);
-	else
-		my_seed = (unsigned)time(NULL);
+	if (argc >= 3 &&
+	    (str_to_unsigned(argv[2], &n_threads) || n_threads < 1))
+		FATAL("incorrect value of n_threads: %s", argv[2]);
+
+	if (argc >= 4 &&
+	    (str_to_unsigned(argv[3], &ops_count) || ops_count < 1))
+		FATAL("incorrect value of ops_count: %s", argv[3]);
+
+	if (argc == 5) {
+		if (str_to_unsigned(argv[4], &seed) || seed < 1)
+			FATAL("incorrect value of seed: %s", argv[4]);
+	} else {
+		seed = (unsigned)time(NULL);
+	}
 
 	printf("Multi-threaded test parameters:\n");
 	printf("   directory           : %s\n", dir);
@@ -295,9 +307,9 @@ main(int argc, char *argv[])
 	printf("   nbuffs              : %u\n", nbuffs);
 	printf("   min_size            : %zu\n", min_size);
 	printf("   max_size            : %zu\n", max_size);
-	printf("   seed                : %u\n\n", my_seed);
+	printf("   seed                : %u\n\n", seed);
 
-	srand(my_seed);
+	srand(seed);
 
 	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
 				VMEMCACHE_MIN_FRAG, VMEMCACHE_REPLACEMENT_LRU);
