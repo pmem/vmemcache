@@ -32,13 +32,21 @@
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test
 	CACHE STRING "working directory for tests")
 
+set(TEST_POOL_DIR ${TEST_DIR}
+	CACHE STRING "directory for vmemcache memory pool used for tests")
+
 set(DEVICE_DAX_PATHS "" CACHE STRING
 	"for tests that require raw dax devices without a file system. Some tests might require two DAX devices.
 	Example: '/dev/dax1.0 /dev/dax2.0'")
 
+if("${TEST_POOL_DIR}" STREQUAL "")
+	set(TEST_POOL_DIR ${TEST_DIR})
+endif()
+
 set(GLOBAL_TEST_ARGS
 	-DPARENT_DIR=${TEST_DIR}/
-	-DDEVICE_DAX_PATHS=${DEVICE_DAX_PATHS})
+	-DDEVICE_DAX_PATHS=${DEVICE_DAX_PATHS}
+	-DTEST_POOL_DIR=${TEST_POOL_DIR})
 
 # convert the DEVICE_DAX_PATHS list to the array
 if(DEVICE_DAX_PATHS)
