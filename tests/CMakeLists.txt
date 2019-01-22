@@ -54,13 +54,21 @@ endif()
 add_cstyle(tests)
 add_check_whitespace(tests)
 
-set(vg_tracers memcheck helgrind)
+set(vg_tracers memcheck helgrind drd)
 
 # Configures test ${name}
 function(test name file tracer)
-	if ((${tracer} IN_LIST vg_tracers) AND (NOT VALGRIND_FOUND))
-		message(WARNING "Valgrind not found, test skipped: ${name}")
-		return()
+	if (${tracer} IN_LIST vg_tracers)
+		if (NOT VALGRIND_FOUND)
+			message(WARNING
+				"Valgrind not found, test skipped: ${name}")
+			return()
+		endif()
+		if (COVERAGE_BUILD)
+			message(STATUS
+				"This is the Coverage build, skipping Valgrind test: ${name}")
+			return()
+		endif()
 	endif()
 
 	if ((COVERAGE_BUILD) AND (${tracer} STREQUAL helgrind))
@@ -118,4 +126,5 @@ test("test-basic-memcheck" test-basic memcheck)
 test("test-mt" test-mt none)
 test("test-mt-memcheck" test-mt memcheck)
 test("test-mt-helgrind" test-mt helgrind)
+test("test-mt-drd" test-mt drd)
 test("test-bench-mt" test-bench-mt none)

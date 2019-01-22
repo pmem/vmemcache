@@ -33,7 +33,9 @@ include(${SRC_DIR}/helpers.cmake)
 
 setup()
 
-if (${TRACER} STREQUAL helgrind)
+set(vg_thread_tracers helgrind drd)
+
+if (${TRACER} IN_LIST vg_thread_tracers)
 	set(N_THREADS 4)
 	set(N_OPS 400)
 else()
