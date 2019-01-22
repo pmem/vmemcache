@@ -33,6 +33,6 @@ include(${SRC_DIR}/helpers.cmake)
 
 setup()
 
-execute(0 ${TEST_DIR}/../benchmarks/bench_micro "${TEST_DIR}")
+execute(0 ${TEST_DIR}/../benchmarks/bench_micro "${TEST_POOL_LOCATION}")
 
 cleanup()
