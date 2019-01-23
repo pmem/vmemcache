@@ -94,7 +94,7 @@ worker_thread_put(void *arg)
 	unsigned long long shift = ctx->thread_number * ctx->ops_count;
 
 	for (i = shift; i < (shift + ctx->ops_count); i++) {
-		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+		if (vmemcache_put(ctx->cache, &i, sizeof(i),
 				ctx->buffs[i % ctx->nbuffs].buff,
 				ctx->buffs[i % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
@@ -117,7 +117,7 @@ worker_thread_get(void *arg)
 	size_t vsize = 0;		/* real size of the object */
 
 	for (i = 0; i < ctx->ops_count; i++) {
-		vmemcache_get(ctx->cache, (char *)&i, sizeof(i),
+		vmemcache_get(ctx->cache, &i, sizeof(i),
 				vbuf, vbufsize, 0, &vsize);
 	}
 
@@ -141,7 +141,7 @@ worker_thread_put_in_gets(void *arg)
 	unsigned long long end = 3 * ctx->ops_count;
 
 	for (i = start; i < end; i += 2) {
-		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+		if (vmemcache_put(ctx->cache, &i, sizeof(i),
 				ctx->buffs[i % ctx->nbuffs].buff,
 				ctx->buffs[i % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
@@ -175,7 +175,7 @@ run_test_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
  * on_evict_cb -- (internal) 'on evict' callback for run_test_get
  */
 static void
-on_evict_cb(VMEMcache *cache, const char *key, size_t key_size, void *arg)
+on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 {
 	int *cache_is_full = arg;
 
@@ -199,7 +199,7 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 
 	unsigned n = 0; /* number of elements put into the cache */
 	while (!cache_is_full && n < ops_per_thread) {
-		if (vmemcache_put(ctx->cache, (char *)&n, sizeof(n),
+		if (vmemcache_put(ctx->cache, &n, sizeof(n),
 					ctx->buffs[n % ctx->nbuffs].buff,
 					ctx->buffs[n % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());

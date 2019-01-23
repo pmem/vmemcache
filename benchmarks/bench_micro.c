@@ -115,7 +115,7 @@ worker_thread_put(void *arg)
 	benchmark_time_get(&t1);
 
 	for (i = shift; i < (shift + ctx->ops_count); i++) {
-		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+		if (vmemcache_put(ctx->cache, &i, sizeof(i),
 				ctx->buffs[i % ctx->nbuffs].buff,
 				ctx->buffs[i % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
@@ -145,7 +145,7 @@ worker_thread_get(void *arg)
 	benchmark_time_get(&t1);
 
 	for (i = 0; i < ctx->ops_count; i++) {
-		vmemcache_get(ctx->cache, (char *)&i, sizeof(i),
+		vmemcache_get(ctx->cache, &i, sizeof(i),
 				vbuf, vbufsize, 0, &vsize);
 	}
 
@@ -229,7 +229,7 @@ run_bench_put(const char *path, size_t max_size, size_t fragment_size,
  * on_evict_cb -- (internal) 'on evict' callback for run_test_get
  */
 static void
-on_evict_cb(VMEMcache *cache, const char *key, size_t key_size, void *arg)
+on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 {
 	int *cache_is_full = arg;
 
@@ -253,7 +253,7 @@ run_bench_get(const char *path, size_t max_size, size_t fragment_size,
 
 	unsigned long long i = 0;
 	while (!cache_is_full) {
-		if (vmemcache_put(ctx->cache, (char *)&i, sizeof(i),
+		if (vmemcache_put(ctx->cache, &i, sizeof(i),
 					ctx->buffs[i % ctx->nbuffs].buff,
 					ctx->buffs[i % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());

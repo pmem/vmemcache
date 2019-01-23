@@ -86,7 +86,7 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
  * vmcache_index_get -- get data from the vmemcache indexing structure
  */
 int
-vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
+vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
 			struct cache_entry **entry)
 {
 #define SIZE_1K 1024
