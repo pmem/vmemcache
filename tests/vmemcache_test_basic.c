@@ -48,6 +48,8 @@
 #define VSIZE LEN /* value size */
 #define DNUM 10 /* number of data */
 
+#define SIZE_1K 1024
+
 /* type of statistics */
 typedef unsigned long long stat_t;
 
@@ -69,6 +71,12 @@ struct ctx_cb {
 	size_t vsize;
 	stat_t miss_count;
 	stat_t evict_count;
+};
+
+/* key bigger than 1kB */
+struct big_key {
+	char buf[SIZE_1K];
+	stat_t n_puts;
 };
 
 /*
@@ -477,11 +485,12 @@ on_evict_test_memory_leaks_cb(VMEMcache *cache,
  * test_memory_leaks -- (internal) test if there are any memory leaks
  */
 static void
-test_memory_leaks(const char *dir)
+test_memory_leaks(const char *dir, int test_key_lt_1K)
 {
 	VMEMcache *cache;
 	char *buff;
 	size_t size;
+	int ret;
 
 	srand((unsigned)time(NULL));
 
@@ -505,8 +514,17 @@ test_memory_leaks(const char *dir)
 		if (buff == NULL)
 			FATAL("out of memory");
 
-		if (vmemcache_put(cache, &n_puts, sizeof(n_puts),
-					buff, size))
+		if (test_key_lt_1K) {
+			ret = vmemcache_put(cache, &n_puts, sizeof(n_puts),
+						buff, size);
+		} else {
+			struct big_key bk;
+			bk.n_puts = n_puts;
+
+			ret = vmemcache_put(cache, &bk, sizeof(bk), buff, size);
+		}
+
+		if (ret)
 			FATAL("vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
 				n_puts, n_evicts, vmemcache_errormsg());
 		n_puts++;
@@ -542,7 +560,8 @@ main(int argc, char *argv[])
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_NONE);
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
 	test_evict(dir);
-	test_memory_leaks(dir);
+	test_memory_leaks(dir, 0 /* test_key_lt_1K */);
+	test_memory_leaks(dir, 1 /* test_key_lt_1K */);
 
 	return 0;
 }
