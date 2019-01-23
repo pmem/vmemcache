@@ -103,13 +103,28 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 			goto error_free_cache;
 		}
 
+		if (max_size != 0 && max_size > (size_t)size) {
+			ERR(
+				"error: maximum cache size (%zu) is bigger than the size of the DAX device (%li)",
+				max_size, size);
+			errno = EINVAL;
+			goto error_free_cache;
+		}
+
+		if (max_size == 0) {
+			cache->size = (size_t)size;
+		} else {
+			cache->size = roundup(max_size, Mmap_align);
+			if (cache->size > (size_t)size)
+				cache->size = (size_t)size;
+		}
+
 		cache->addr = util_file_map_whole(devdax);
 		if (cache->addr == NULL) {
 			LOG(1, "mapping of whole DAX device failed");
 			goto error_free_cache;
 		}
 
-		cache->size = (size_t)size;
 	} else {
 		/* silently enforce multiple of mapping alignment */
 		cache->size = roundup(max_size, Mmap_align);
