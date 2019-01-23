@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -47,7 +47,6 @@ set(SOURCES
 	mmap_posix.c
 	libvmemcache.c
 	critnib.c
-	ravl.c
 	vmemcache.c
 	vmemcache_heap.c
 	vmemcache_index.c
