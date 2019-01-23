@@ -34,6 +34,8 @@
  * vmemcache_index.c -- abstraction layer for vmemcache indexing API
  */
 
+#include <alloca.h>
+
 #include "vmemcache.h"
 #include "vmemcache_index.h"
 #include "critnib.h"
@@ -90,8 +92,6 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 			struct cache_entry **entry)
 {
 #define SIZE_1K 1024
-	/* static buffer used for entries of size <= 1kB */
-	char static_buffer[sizeof(struct cache_entry) + SIZE_1K];
 	struct cache_entry *e;
 
 	*entry = NULL;
@@ -103,7 +103,7 @@ vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
 			return -1;
 		}
 	} else {
-		e = (struct cache_entry *)&static_buffer;
+		e = alloca(sizeof(struct cache_entry) + SIZE_1K);
 	}
 
 	e->key.ksize = ksize;
