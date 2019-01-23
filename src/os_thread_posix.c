@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018, Intel Corporation
+ * Copyright 2017-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -141,6 +141,7 @@ os_mutex_unlock(os_mutex_t *__restrict mutex)
 	return pthread_mutex_unlock((pthread_mutex_t *)mutex);
 }
 
+#if 0
 /*
  * os_mutex_timedlock -- pthread_mutex_timedlock abstraction layer
  */
@@ -150,6 +151,7 @@ os_mutex_timedlock(os_mutex_t *__restrict mutex,
 {
 	return pthread_mutex_timedlock((pthread_mutex_t *)mutex, abstime);
 }
+#endif
 
 /*
  * os_rwlock_init -- pthread_rwlock_init abstraction layer
@@ -197,6 +199,7 @@ os_rwlock_unlock(os_rwlock_t *__restrict rwlock)
 	return pthread_rwlock_unlock((pthread_rwlock_t *)rwlock);
 }
 
+#if 0
 /*
  * os_rwlock_tryrdlock -- pthread_rwlock_tryrdlock abstraction layer
  */
@@ -234,7 +237,9 @@ os_rwlock_timedwrlock(os_rwlock_t *__restrict rwlock,
 {
 	return pthread_rwlock_timedwrlock((pthread_rwlock_t *)rwlock, abstime);
 }
+#endif
 
+#if 0
 /*
  * os_spin_init -- pthread_spin_init abstraction layer
  */
@@ -281,6 +286,9 @@ os_spin_trylock(os_spinlock_t *lock)
 {
 	return pthread_spin_trylock((pthread_spinlock_t *)lock);
 }
+#endif
+
+#if 0
 /*
  * os_cond_init -- pthread_cond_init abstraction layer
  */
@@ -339,6 +347,7 @@ os_cond_wait(os_cond_t *__restrict cond,
 	return pthread_cond_wait((pthread_cond_t *)cond,
 		(pthread_mutex_t *)mutex);
 }
+#endif
 
 /*
  * os_thread_create -- pthread_create abstraction layer
@@ -365,6 +374,7 @@ os_thread_join(os_thread_t *thread, void **result)
 	return pthread_join(thread_info->thread, result);
 }
 
+#if 0
 /*
  * os_thread_self -- pthread_self abstraction layer
  */
@@ -463,3 +473,4 @@ os_semaphore_post(os_semaphore_t *sem)
 {
 	return sem_post((sem_t *)sem);
 }
+#endif

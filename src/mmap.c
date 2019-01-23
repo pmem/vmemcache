@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -209,6 +209,7 @@ err:
 	return NULL;
 }
 
+#if 0
 /*
  * util_range_ro -- set a memory range read-only
  */
@@ -566,3 +567,5 @@ util_range_is_pmem(const void *addrp, size_t len)
 
 	return retval;
 }
+
+#endif

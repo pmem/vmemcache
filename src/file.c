@@ -55,7 +55,9 @@
 
 #define MAX_SIZE_LENGTH 64
 
+#if 0
 #define DEVICE_DAX_ZERO_LEN (2 * MEGABYTE)
+#endif
 
 #ifndef _WIN32
 /*
@@ -190,6 +192,7 @@ get_file_type_internal(os_stat_t *st)
 #endif
 }
 
+#if 0
 /*
  * util_fd_get_type -- checks whether a file descriptor is associated
  *		       with a device dax or a normal file
@@ -212,6 +215,7 @@ util_fd_get_type(int fd)
 	return get_file_type_internal(&st);
 #endif
 }
+#endif
 
 /*
  * util_file_get_type -- checks whether the path points to a device dax,
@@ -314,6 +318,7 @@ out:
 	return addr;
 }
 
+#if 0
 /*
  * util_file_zero -- zeroes the specified region of the file
  */
@@ -685,3 +690,5 @@ util_write_all(int fd, const char *buf, size_t count)
 
 	return 0;
 }
+
+#endif

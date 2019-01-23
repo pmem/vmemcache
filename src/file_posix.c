@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,8 +51,10 @@
 #include "file.h"
 #include "out.h"
 
+#if 0
 #define MAX_SIZE_LENGTH 64
 #define DAX_REGION_ID_LEN 6 /* 5 digits + \0 */
+#endif
 
 /*
  * util_tmpfile_mkstemp --  (internal) create temporary file
@@ -130,6 +132,7 @@ util_tmpfile(const char *dir, const char *templ, int flags)
 	return util_tmpfile_mkstemp(dir, templ);
 }
 
+#if 0
 /*
  * util_is_absolute_path -- check if the path is an absolute one
  */
@@ -374,3 +377,4 @@ err:
 	os_close(dax_reg_id_fd);
 	return -1;
 }
+#endif
