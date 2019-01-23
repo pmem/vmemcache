@@ -289,7 +289,7 @@ test_put_get_evict(const char *dir,
  * on_evict_test_evict_cb -- (internal) 'on evict' callback for test_evict
  */
 static void
-on_evict_test_evict_cb(VMEMcache *cache, const char *key, size_t key_size,
+on_evict_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
 		void *arg)
 {
 	struct ctx_cb *ctx = arg;
@@ -311,7 +311,7 @@ on_evict_test_evict_cb(VMEMcache *cache, const char *key, size_t key_size,
  * on_miss_test_evict_cb -- (internal) 'on miss' callback for test_evict
  */
 static int
-on_miss_test_evict_cb(VMEMcache *cache, const char *key, size_t key_size,
+on_miss_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
 		void *arg)
 {
 	struct ctx_cb *ctx = arg;
@@ -466,7 +466,7 @@ test_evict(const char *dir)
  */
 static void
 on_evict_test_memory_leaks_cb(VMEMcache *cache,
-				const char *key, size_t key_size, void *arg)
+				const void *key, size_t key_size, void *arg)
 {
 	stat_t *counter = arg;
 
@@ -505,7 +505,7 @@ test_memory_leaks(const char *dir)
 		if (buff == NULL)
 			FATAL("out of memory");
 
-		if (vmemcache_put(cache, (char *)&n_puts, sizeof(n_puts),
+		if (vmemcache_put(cache, &n_puts, sizeof(n_puts),
 					buff, size))
 			FATAL("vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
 				n_puts, n_evicts, vmemcache_errormsg());

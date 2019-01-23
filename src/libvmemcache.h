@@ -100,9 +100,9 @@ enum vmemcache_statistic {
 };
 
 typedef void vmemcache_on_evict(VMEMcache *cache,
-	const char *key, size_t key_size, void *arg);
+	const void *key, size_t key_size, void *arg);
 typedef int vmemcache_on_miss(VMEMcache *cache,
-	const char *key, size_t key_size, void *arg);
+	const void *key, size_t key_size, void *arg);
 
 #ifndef _WIN32
 VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t segment_size,
@@ -125,17 +125,17 @@ void vmemcache_callback_on_miss(VMEMcache *cache,
 
 ssize_t /* returns the number of bytes read */
 vmemcache_get(VMEMcache *cache,
-	const char *key, size_t key_size,
+	const void *key, size_t key_size,
 	void *vbuf, /* user-provided buffer */
 	size_t vbufsize, /* size of vbuf */
 	size_t offset, /* offset inside of value from which to begin copying */
 	size_t *vsize /* real size of the object */);
 
 int vmemcache_put(VMEMcache *cache,
-	const char *key, size_t key_size,
-	const char *value, size_t value_size);
+	const void *key, size_t key_size,
+	const void *value, size_t value_size);
 
-int vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize);
+int vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize);
 
 int vmemcache_get_stat(VMEMcache *cache,
 	enum vmemcache_statistic stat,

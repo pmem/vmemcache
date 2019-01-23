@@ -190,7 +190,7 @@ vmemcache_delete(VMEMcache *cache)
  */
 static void
 vmemcache_populate_fragments(struct cache_entry *entry,
-				const char *value, size_t value_size)
+				const void *value, size_t value_size)
 {
 	struct heap_entry he;
 	size_t size_left = value_size;
@@ -199,7 +199,7 @@ vmemcache_populate_fragments(struct cache_entry *entry,
 		ASSERT(size_left > 0);
 		size_t len = (he.size < size_left) ? he.size : size_left;
 		memcpy(he.ptr, value, len);
-		value += len;
+		value = (char *)value + len;
 		size_left -= len;
 	}
 
@@ -210,8 +210,8 @@ vmemcache_populate_fragments(struct cache_entry *entry,
  * vmemcache_put -- put an element into the vmemcache
  */
 int
-vmemcache_put(VMEMcache *cache, const char *key, size_t ksize,
-				const char *value, size_t value_size)
+vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
+				const void *value, size_t value_size)
 {
 	struct cache_entry *entry;
 	struct heap_entry he;
@@ -281,7 +281,7 @@ error_exit:
  *                              from the 'offset'
  */
 static size_t
-vmemcache_populate_value(char *vbuf, size_t vbufsize, size_t offset,
+vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 				struct cache_entry *entry)
 {
 	struct heap_entry he;
@@ -312,7 +312,7 @@ vmemcache_populate_value(char *vbuf, size_t vbufsize, size_t offset,
 		memcpy(vbuf, (char *)he.ptr + off, len);
 
 		vbufsize -= len;
-		vbuf += len;
+		vbuf = (char *)vbuf + len;
 		copied += len;
 		left_to_copy -= len;
 
@@ -367,7 +367,7 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
  *                 returns the number of bytes read
  */
 ssize_t
-vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
+vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 		size_t vbufsize, size_t offset, size_t *vsize)
 {
 	struct cache_entry *entry;
@@ -407,7 +407,7 @@ vmemcache_get(VMEMcache *cache, const char *key, size_t ksize, void *vbuf,
  * vmemcache_evict -- evict an element from the vmemcache
  */
 int
-vmemcache_evict(VMEMcache *cache, const char *key, size_t ksize)
+vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 {
 	struct cache_entry *entry = NULL;
 	int evicted_from_repl_p = 0;
