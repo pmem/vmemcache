@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2018-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@ vmemcache_index_t *vmcache_index_new(void);
 void vmcache_index_delete(vmemcache_index_t *index);
 int vmcache_index_insert(vmemcache_index_t *index,
 			struct cache_entry *entry);
-int vmcache_index_get(vmemcache_index_t *index, const char *key, size_t ksize,
+int vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
 			struct cache_entry **entry);
 int vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry);
 
