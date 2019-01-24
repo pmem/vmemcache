@@ -68,11 +68,11 @@ struct vmemcache {
 	void *arg_miss;			/* argument for callback on miss */
 
 	/* statistics */
-	stat_t put_count;
-	stat_t get_count;
-	stat_t miss_count;
-	stat_t evict_count;
-	stat_t size_DRAM;
+	stat_t put_count;		/* total number of puts */
+	stat_t get_count;		/* total number of gets */
+	stat_t miss_count;		/* total number of misses */
+	stat_t evict_count;		/* total number of evicts */
+	stat_t size_DRAM;		/* current size of DRAM used for keys */
 };
 
 struct cache_entry {
