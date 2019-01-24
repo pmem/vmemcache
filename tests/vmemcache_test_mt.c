@@ -59,17 +59,6 @@ struct context {
 };
 
 /*
- * free_cache -- (internal) free the cache
- */
-static void
-free_cache(VMEMcache *cache)
-{
-	/* evict all entries from the cache */
-	while (vmemcache_evict(cache, NULL, 0) == 0)
-		;
-}
-
-/*
  * run_threads -- (internal) create and join threads
  */
 static void
@@ -157,7 +146,7 @@ static void
 run_test_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		unsigned ops_per_thread, struct context *ctx)
 {
-	free_cache(cache);
+	vmemcache_free_entries(cache);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].thread_routine = worker_thread_put;
@@ -189,7 +178,7 @@ static void
 init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		unsigned ops_per_thread, struct context *ctx)
 {
-	free_cache(cache);
+	vmemcache_free_entries(cache);
 
 	int cache_is_full = 0;
 	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);
@@ -379,7 +368,7 @@ exit_free_buffs:
 	free(buffs);
 
 exit_delete:
-	free_cache(cache);
+	vmemcache_free_entries(cache);
 	vmemcache_delete(cache);
 
 	return ret;

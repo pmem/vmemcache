@@ -304,6 +304,9 @@ test_put_get_evict(const char *dir,
 	/* evict the only one element */
 	switch (replacement_policy) {
 	case VMEMCACHE_REPLACEMENT_NONE:
+		if (vmemcache_free_entries(cache) != -1)
+			FATAL(
+				"vmemcache_free_entries succeeded unexpectedly for the VMEMCACHE_REPLACEMENT_NONE replacement_policy");
 		ret = vmemcache_evict(cache, key, key_size);
 		break;
 	case VMEMCACHE_REPLACEMENT_LRU:
@@ -488,9 +491,8 @@ test_evict(const char *dir)
 		FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[2].key);
 
-	/* free all the memory */
-	while (vmemcache_evict(cache, NULL, 0) == 0)
-		;
+	/* free all the cache entries */
+	vmemcache_free_entries(cache);
 
 	/* check statistics */
 	verify_stats(cache,
@@ -568,9 +570,8 @@ test_memory_leaks(const char *dir, int test_key_lt_1K)
 
 	verify_stat_entries(cache, n_puts - n_evicts);
 
-	/* free all the memory */
-	while (vmemcache_evict(cache, NULL, 0) == 0)
-		;
+	/* free all the cache entries */
+	vmemcache_free_entries(cache);
 
 	/* check statistics */
 	verify_stats(cache, n_puts, 0, 0, 0, n_evicts, 0, 0, 0);

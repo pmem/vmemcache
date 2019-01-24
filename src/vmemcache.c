@@ -482,6 +482,26 @@ exit_release:
 }
 
 /*
+ * vmemcache_free_entries -- free all the vmemcache entries
+ */
+int
+vmemcache_free_entries(VMEMcache *cache)
+{
+	if (cache->repl_kind == VMEMCACHE_REPLACEMENT_NONE) {
+		ERR(
+			"vmemcache_free_entries() is not supported in case of the 'none' replacement policy");
+		errno = ENOTSUP;
+		return -1;
+	}
+
+	/* free all the cache entries */
+	while (vmemcache_evict(cache, NULL, 0) == 0)
+		;
+
+	return 0;
+}
+
+/*
  * vmemcache_callback_on_evict -- install the 'on evict' callback
  */
 void

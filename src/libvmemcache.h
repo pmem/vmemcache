@@ -138,6 +138,8 @@ int vmemcache_put(VMEMcache *cache,
 
 int vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize);
 
+int vmemcache_free_entries(VMEMcache *cache);
+
 int vmemcache_get_stat(VMEMcache *cache,
 	enum vmemcache_statistic stat,
 	void *value,
