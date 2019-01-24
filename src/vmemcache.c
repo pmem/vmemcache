@@ -253,10 +253,9 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 	while (left_to_allocate > 0) {
 		he = vmcache_alloc(cache->heap, left_to_allocate);
 		if (HEAP_ENTRY_IS_NULL(he)) {
-			if (vmemcache_evict(cache, NULL, 0)) {
-				LOG(1, "vmemcache_evict() failed");
-				if (errno == ESRCH)
-					errno = ENOSPC;
+			if (vmemcache_evict(cache, NULL, 0) &&
+							errno == ENOENT) {
+				errno = ENOSPC;
 				goto error_exit;
 			}
 			continue;
@@ -462,7 +461,6 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 							NULL);
 			if (entry == NULL) {
 				ERR("no element to evict");
-				errno = ESRCH;
 				return -1;
 			}
 

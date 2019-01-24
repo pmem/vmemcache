@@ -47,6 +47,7 @@ set(SOURCES
 	mmap_posix.c
 	libvmemcache.c
 	critnib.c
+	ringbuf.c
 	vmemcache.c
 	vmemcache_heap.c
 	vmemcache_index.c
