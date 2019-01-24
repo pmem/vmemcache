@@ -42,6 +42,9 @@
 #include "out.h"
 #include "sys/queue.h"
 #include "sys_util.h"
+#include "ringbuf.h"
+
+#define LEN_RING_BUF (1 << 12)
 
 struct repl_p_entry {
 	TAILQ_ENTRY(repl_p_entry) node;
@@ -52,6 +55,7 @@ struct repl_p_entry {
 struct repl_p_head {
 	os_mutex_t lock;
 	TAILQ_HEAD(head, repl_p_entry) first;
+	struct ringbuf *ringbuf;
 };
 
 /* forward declarations of replacement policy operations */
@@ -196,9 +200,39 @@ repl_p_lru_new(struct repl_p_head **head)
 
 	util_mutex_init(&h->lock);
 	TAILQ_INIT(&h->first);
+	h->ringbuf = ringbuf_new(LEN_RING_BUF);
 	*head = h;
 
 	return 0;
+}
+
+/*
+ * dequeue_all -- (internal) dequeue all repl_p entries,
+ *                           it MUST be run under a lock
+ */
+static void
+dequeue_all(struct repl_p_head *head)
+{
+	struct repl_p_entry *e;
+	int counter = 0;
+
+	do {
+		e = ringbuf_trydequeue_s(head->ringbuf,
+						sizeof(struct repl_p_entry));
+		if (e == NULL)
+			break;
+
+		TAILQ_MOVE_TO_TAIL(&head->first, e, node);
+		util_bool_compare_and_swap64(e->ptr_entry, NULL, e);
+
+		counter++;
+
+		/*
+		 * We are limiting the number of iterations,
+		 * so that this loop ends for sure, because other thread
+		 * can insert new elements to the ring buffer in the same time.
+		 */
+	} while (counter < LEN_RING_BUF);
 }
 
 /*
@@ -207,6 +241,9 @@ repl_p_lru_new(struct repl_p_head **head)
 static void
 repl_p_lru_delete(struct repl_p_head *head)
 {
+	dequeue_all(head);
+	ringbuf_delete(head->ringbuf);
+
 	while (!TAILQ_EMPTY(&head->first)) {
 		struct repl_p_entry *entry = TAILQ_FIRST(&head->first);
 		TAILQ_REMOVE(&head->first, entry, node);
@@ -232,7 +269,7 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 
 	ASSERTne(ptr_entry, NULL);
 	entry->ptr_entry = ptr_entry;
-	*(entry->ptr_entry) = entry;
+	util_bool_compare_and_swap64(entry->ptr_entry, NULL, entry);
 
 	util_mutex_lock(&head->lock);
 
@@ -250,14 +287,19 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 static void
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
+	struct repl_p_entry *entry;
+
 	ASSERTne(ptr_entry, NULL);
 
-	util_mutex_lock(&head->lock);
+	entry = util_val_compare_and_swap64(ptr_entry, *ptr_entry, NULL);
+	if (entry == NULL)
+		return;
 
-	if (*ptr_entry != NULL)
-		TAILQ_MOVE_TO_TAIL(&head->first, *ptr_entry, node);
-
-	util_mutex_unlock(&head->lock);
+	while (ringbuf_tryenqueue(head->ringbuf, entry) != 0) {
+		util_mutex_lock(&head->lock);
+		dequeue_all(head);
+		util_mutex_unlock(&head->lock);
+	}
 }
 
 /*
@@ -267,30 +309,36 @@ static void *
 repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
 	struct repl_p_entry *entry;
-	void *data;
+	void *data = NULL;
 
 	util_mutex_lock(&head->lock);
 
-	if (ptr_entry != NULL)
-		entry = *ptr_entry;
-	else
-		entry = TAILQ_FIRST(&head->first);
+	if (TAILQ_EMPTY(&head->first)) {
+		errno = ENOENT;
+		goto exit_unlock;
+	}
+
+	if (ptr_entry == NULL)
+		ptr_entry = TAILQ_FIRST(&head->first)->ptr_entry;
+
+	int max_retry = 2;
+
+	while ((entry = util_val_compare_and_swap64(ptr_entry,
+			*ptr_entry, NULL)) == NULL && (--max_retry > 0)) {
+		dequeue_all(head);
+	}
 
 	if (entry == NULL) {
-		util_mutex_unlock(&head->lock);
-		return NULL;
+		errno = EBUSY;
+		goto exit_unlock;
 	}
 
 	TAILQ_REMOVE(&head->first, entry, node);
 
-	ASSERTne(entry->ptr_entry, NULL);
-	*(entry->ptr_entry) = NULL;
-
-	util_mutex_unlock(&head->lock);
-
 	data = entry->data;
-
 	Free(entry);
 
+exit_unlock:
+	util_mutex_unlock(&head->lock);
 	return data;
 }

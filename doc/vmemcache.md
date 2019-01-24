@@ -229,8 +229,8 @@ be:
  + **EEXIST**
 	(put) entry for that key already exists
  + **ENOENT**
-	(evict) no entry for that key
- + **ESRCH**
 	(evict) couldn't find an evictable entry
+ + **EBUSY**
+	(evict) the entry is busy and cannot be evicted
  + **ENOSPC**
 	(create, put) not enough space in the memory pool

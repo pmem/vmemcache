@@ -427,6 +427,7 @@ os_cpu_set(size_t cpu, os_cpu_set_t *set)
 {
 	CPU_SET(cpu, (cpu_set_t *)set);
 }
+#endif
 
 /*
  * os_semaphore_init -- initializes semaphore instance
@@ -473,4 +474,3 @@ os_semaphore_post(os_semaphore_t *sem)
 {
 	return sem_post((sem_t *)sem);
 }
-#endif

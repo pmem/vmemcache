@@ -494,7 +494,18 @@ test_evict(const char *dir,
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			vbuf, data[1].value);
 
-	/* TEST #4 - evict the LRU element (it should be #2 now) */
+	struct kv lru;
+	switch (replacement_policy) {
+	case VMEMCACHE_REPLACEMENT_LRU:
+		lru = data[1];
+		break;
+	default:
+		UT_FATAL("unsupported policy for this test: %u",
+			replacement_policy);
+		break;
+	}
+
+	/* TEST #4 - evict the LRU element */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
 		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
@@ -504,13 +515,13 @@ test_evict(const char *dir,
 			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
-	/* check if the evicted LRU element is #2 */
-	if (strncmp(ctx.vbuf, data[2].value, ctx.vsize))
+	/* check number of the evicted LRU element */
+	if (strncmp(ctx.vbuf, lru.value, ctx.vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
-			ctx.vbuf, data[2].value);
+			ctx.vbuf, lru.value);
 
-	/* TEST #5 - get the evicted element with index #2 */
-	ret = vmemcache_get(cache, data[2].key, KSIZE, vbuf, VSIZE,
+	/* TEST #5 - get the evicted element */
+	ret = vmemcache_get(cache, lru.key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
 	if (ret == -1)
 		UT_FATAL("vmemcache_get");
@@ -520,15 +531,15 @@ test_evict(const char *dir,
 			"vmemcache_get: wrong return value: %zi (should be %i)",
 			ret, 0);
 
-	if (vsize != VSIZE)
+	if (ctx.vsize != VSIZE)
 		UT_FATAL(
 			"vmemcache_get: wrong size of value: %zi (should be %i)",
-			vsize, VSIZE);
+			ctx.vsize, VSIZE);
 
 	/* check if the 'on_miss' callback got key #2 */
-	if (strncmp(ctx.vbuf, data[2].key, ctx.vsize))
+	if (strncmp(ctx.vbuf, lru.key, ctx.vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
-			ctx.vbuf, data[2].key);
+			ctx.vbuf, lru.key);
 
 	/* TEST #6 - null output arguments */
 	vmemcache_get(cache, data[2].key, KSIZE, NULL, VSIZE, 0, NULL);
