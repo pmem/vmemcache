@@ -37,6 +37,7 @@ add_check_whitespace(benchmarks
 
 set(SOURCES
 	benchmark_time.c
+	rand.c
 	${CMAKE_SOURCE_DIR}/src/os_posix.c
 	${CMAKE_SOURCE_DIR}/src/os_thread_posix.c)
 
