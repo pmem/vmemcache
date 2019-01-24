@@ -43,15 +43,28 @@
 #include "sys/queue.h"
 #include "sys_util.h"
 
+/*
+ * atomic store lval = rval
+ * 'util_atomic_store_explicit64' does not work correctly with Helgrind and DRD
+ */
+#define ATOMIC_STORE(lval, rval)\
+	util_bool_compare_and_swap64(&(lval), (lval), (rval))
+
+/* atomic load lval = rval */
+#define ATOMIC_LOAD(lval, rval)\
+	util_atomic_load_explicit64(&(rval), &(lval), __ATOMIC_RELAXED)
+
 struct repl_p_entry {
 	TAILQ_ENTRY(repl_p_entry) node;
 	void *data;
 	struct repl_p_entry **ptr_entry; /* pointer to be zeroed when evicted */
+	time_t promoted;
 };
 
 struct repl_p_head {
 	os_mutex_t lock;
 	TAILQ_HEAD(head, repl_p_entry) first;
+	time_t promotion_delay;
 };
 
 /* forward declarations of replacement policy operations */
@@ -196,6 +209,8 @@ repl_p_lru_new(struct repl_p_head **head)
 
 	util_mutex_init(&h->lock);
 	TAILQ_INIT(&h->first);
+	h->promotion_delay = LONG_MAX;
+
 	*head = h;
 
 	return 0;
@@ -224,15 +239,19 @@ static struct repl_p_entry *
 repl_p_lru_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry)
 {
-	struct repl_p_entry *entry = Zalloc(sizeof(struct repl_p_entry));
+	ASSERTne(ptr_entry, NULL);
+
+	struct repl_p_entry *entry = Malloc(sizeof(struct repl_p_entry));
 	if (entry == NULL)
 		return NULL;
 
-	entry->data = element;
+	time_t time_now = time(NULL);
 
-	ASSERTne(ptr_entry, NULL);
+	entry->data = element;
 	entry->ptr_entry = ptr_entry;
-	*(entry->ptr_entry) = entry;
+	ATOMIC_STORE(entry->promoted, time_now);
+	VALGRIND_ANNOTATE_HAPPENS_BEFORE(&entry->promoted);
+	ATOMIC_STORE(*(entry->ptr_entry), entry);
 
 	util_mutex_lock(&head->lock);
 
@@ -250,14 +269,29 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 static void
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
+	struct repl_p_entry *entry;
+
 	ASSERTne(ptr_entry, NULL);
+	ATOMIC_LOAD(entry, *ptr_entry);
+	if (entry == NULL)
+		return;
+
+	time_t entry_promoted;
+	VALGRIND_ANNOTATE_HAPPENS_AFTER(&entry->promoted);
+	ATOMIC_LOAD(entry_promoted, entry->promoted);
+
+	time_t time_now = time(NULL);
+
+	if (time_now - entry_promoted < head->promotion_delay)
+		return;
 
 	util_mutex_lock(&head->lock);
 
-	if (*ptr_entry != NULL)
-		TAILQ_MOVE_TO_TAIL(&head->first, *ptr_entry, node);
+	TAILQ_MOVE_TO_TAIL(&head->first, entry, node);
 
 	util_mutex_unlock(&head->lock);
+
+	ATOMIC_STORE(entry->promoted, time_now);
 }
 
 /*
@@ -271,10 +305,39 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 
 	util_mutex_lock(&head->lock);
 
-	if (ptr_entry != NULL)
+	if (ptr_entry != NULL) {
 		entry = *ptr_entry;
-	else
+	} else {
 		entry = TAILQ_FIRST(&head->first);
+		if (entry == NULL)
+			goto exit_NULL;
+
+		time_t entry_promoted;
+		ATOMIC_LOAD(entry_promoted, entry->promoted);
+
+		time_t time_now = time(NULL);
+
+		struct repl_p_entry *next = TAILQ_NEXT(entry, node);
+		while (next != NULL) {
+			time_t next_promoted;
+			ATOMIC_LOAD(next_promoted, next->promoted);
+
+			if (next_promoted >= entry_promoted)
+				break;
+
+			ATOMIC_STORE(entry->promoted, time_now);
+			TAILQ_MOVE_TO_TAIL(&head->first, entry, node);
+
+			entry = next;
+			entry_promoted = next_promoted;
+
+			next = TAILQ_NEXT(entry, node);
+		}
+
+		time_t delay = time_now - entry_promoted;
+		if (head->promotion_delay > delay)
+			head->promotion_delay = delay;
+	}
 
 	if (entry == NULL) {
 		util_mutex_unlock(&head->lock);
@@ -293,4 +356,8 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	Free(entry);
 
 	return data;
+
+exit_NULL:
+	util_mutex_unlock(&head->lock);
+	return NULL;
 }
