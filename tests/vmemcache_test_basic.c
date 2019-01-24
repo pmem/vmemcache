@@ -310,6 +310,7 @@ test_put_get_evict(const char *dir,
 		ret = vmemcache_evict(cache, key, key_size);
 		break;
 	case VMEMCACHE_REPLACEMENT_LRU:
+	case VMEMCACHE_REPLACEMENT_LRU_time:
 		ret = vmemcache_evict(cache, NULL, 0);
 		break;
 	default:
@@ -464,7 +465,21 @@ test_evict(const char *dir,
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			vbuf, data[1].value);
 
-	/* TEST #4 - evict the LRU element (it should be #2 now) */
+	struct kv lru;
+	switch (replacement_policy) {
+	case VMEMCACHE_REPLACEMENT_LRU:
+		lru = data[2];
+		break;
+	case VMEMCACHE_REPLACEMENT_LRU_time:
+		lru = data[1];
+		break;
+	default:
+		UT_FATAL("unsupported policy for this test: %u",
+			replacement_policy);
+		break;
+	}
+
+	/* TEST #4 - evict the LRU element */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
 		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
@@ -474,13 +489,13 @@ test_evict(const char *dir,
 			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
-	/* check if the evicted LRU element is #2 */
-	if (strncmp(ctx.vbuf, data[2].value, ctx.vsize))
+	/* check number of the evicted LRU element */
+	if (strncmp(ctx.vbuf, lru.value, ctx.vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
-			ctx.vbuf, data[2].value);
+			ctx.vbuf, lru.value);
 
-	/* TEST #5 - get the evicted element with index #2 */
-	ret = vmemcache_get(cache, data[2].key, KSIZE, vbuf, VSIZE,
+	/* TEST #5 - get the evicted element */
+	ret = vmemcache_get(cache, lru.key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
 	if (ret == -1)
 		UT_FATAL("vmemcache_get");
@@ -496,9 +511,9 @@ test_evict(const char *dir,
 			vsize, VSIZE);
 
 	/* check if the 'on_miss' callback got key #2 */
-	if (strncmp(ctx.vbuf, data[2].key, ctx.vsize))
+	if (strncmp(ctx.vbuf, lru.key, ctx.vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
-			ctx.vbuf, data[2].key);
+			ctx.vbuf, lru.key);
 
 	/* free all the memory */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
@@ -608,17 +623,22 @@ main(int argc, char *argv[])
 
 	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_NONE);
 	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_LRU);
+	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_LRU_time);
 
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_NONE);
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
+	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_LRU_time);
 
 	test_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
+	test_evict(dir, VMEMCACHE_REPLACEMENT_LRU_time);
 
 	/* '0' means: key size < 1kB */
 	test_memory_leaks(dir, 0, VMEMCACHE_REPLACEMENT_LRU);
+	test_memory_leaks(dir, 0, VMEMCACHE_REPLACEMENT_LRU_time);
 
 	/* '1' means: key size > 1kB */
 	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU);
+	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU_time);
 
 	return 0;
 }

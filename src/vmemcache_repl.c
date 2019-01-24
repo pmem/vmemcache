@@ -42,16 +42,21 @@
 #include "out.h"
 #include "sys/queue.h"
 #include "sys_util.h"
+#include "os.h"
+
+#define DEFAULT_PROMOTION_DELAY 10 /* default promotion delay = 10 secs */
 
 struct repl_p_entry {
 	TAILQ_ENTRY(repl_p_entry) node;
 	void *data;
 	struct repl_p_entry **ptr_entry; /* pointer to be zeroed when evicted */
+	time_t last_promoted;
 };
 
 struct repl_p_head {
 	os_mutex_t lock;
 	TAILQ_HEAD(head, repl_p_entry) first;
+	time_t promotion_delay;
 };
 
 /* forward declarations of replacement policy operations */
@@ -88,6 +93,16 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
 static void *
 repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
 
+static int
+repl_p_lru_time_new(struct repl_p_head **head);
+
+static struct repl_p_entry *
+repl_p_lru_time_insert(struct repl_p_head *head, void *element,
+			struct repl_p_entry **ptr_entry);
+
+static void
+repl_p_lru_time_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry);
+
 /* replacement policy operations */
 static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
 {
@@ -102,6 +117,13 @@ static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
 	.repl_p_delete	= repl_p_lru_delete,
 	.repl_p_insert	= repl_p_lru_insert,
 	.repl_p_use	= repl_p_lru_use,
+	.repl_p_evict	= repl_p_lru_evict,
+},
+{
+	.repl_p_new	= repl_p_lru_time_new,
+	.repl_p_delete	= repl_p_lru_delete,
+	.repl_p_insert	= repl_p_lru_time_insert,
+	.repl_p_use	= repl_p_lru_time_use,
 	.repl_p_evict	= repl_p_lru_evict,
 }
 };
@@ -293,4 +315,85 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	Free(entry);
 
 	return data;
+}
+
+/*
+ * repl_p_lru_time_new -- (internal) create a new LRU replacement policy
+ */
+static int
+repl_p_lru_time_new(struct repl_p_head **head)
+{
+	struct repl_p_head *h = Zalloc(sizeof(struct repl_p_head));
+	if (h == NULL)
+		return -1;
+
+	util_mutex_init(&h->lock);
+	TAILQ_INIT(&h->first);
+
+	h->promotion_delay = DEFAULT_PROMOTION_DELAY;
+
+	char *pdelay = os_getenv("VMEMCACHE_PROMOTION_DELAY");
+	if (pdelay) {
+		int delay = atoi(pdelay);
+		if (delay > 0)
+			h->promotion_delay = delay;
+	}
+
+	*head = h;
+
+	return 0;
+}
+
+/*
+ * repl_p_lru_time_insert -- (internal) insert a new element
+ */
+static struct repl_p_entry *
+repl_p_lru_time_insert(struct repl_p_head *head, void *element,
+			struct repl_p_entry **ptr_entry)
+{
+	struct repl_p_entry *entry = Zalloc(sizeof(struct repl_p_entry));
+	if (entry == NULL)
+		return NULL;
+
+	entry->data = element;
+
+	ASSERTne(ptr_entry, NULL);
+	entry->ptr_entry = ptr_entry;
+	*(entry->ptr_entry) = entry;
+
+	entry->last_promoted = time(NULL);
+
+	util_mutex_lock(&head->lock);
+
+	vmemcache_entry_acquire(element);
+	TAILQ_INSERT_TAIL(&head->first, entry, node);
+
+	util_mutex_unlock(&head->lock);
+
+	return entry;
+}
+
+/*
+ * repl_p_lru_time_use -- (internal) use the element
+ */
+static void
+repl_p_lru_time_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
+{
+	ASSERTne(ptr_entry, NULL);
+
+	struct repl_p_entry *entry = *ptr_entry;
+	if (entry == NULL)
+		return;
+
+	time_t time_now = time(NULL);
+	if (time_now - entry->last_promoted < head->promotion_delay)
+		return;
+
+	util_mutex_lock(&head->lock);
+
+	TAILQ_MOVE_TO_TAIL(&head->first, entry, node);
+
+	util_mutex_unlock(&head->lock);
+
+	entry->last_promoted = time_now;
 }
