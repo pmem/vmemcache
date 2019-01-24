@@ -44,7 +44,7 @@ struct heap {
 	size_t fragment_size;
 	VEC(, struct heap_entry) entries;
 
-	/* statistic */
+	/* statistic - current size of memory pool used for values */
 	stat_t size_used;
 };
 

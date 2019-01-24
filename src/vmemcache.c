@@ -532,6 +532,9 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 	case VMEMCACHE_STAT_EVICT:
 		*val = cache->evict_count;
 		break;
+	case VMEMCACHE_STAT_ENTRIES:
+		*val = cache->put_count - cache->evict_count;
+		break;
 	case VMEMCACHE_STAT_DRAM_SIZE_USED:
 		*val = cache->size_DRAM;
 		break;

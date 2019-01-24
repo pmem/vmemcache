@@ -88,15 +88,16 @@ enum vmemcache_replacement_policy {
 };
 
 enum vmemcache_statistic {
-	VMEMCACHE_STAT_PUT,
-	VMEMCACHE_STAT_GET,
-	VMEMCACHE_STAT_HIT,
-	VMEMCACHE_STAT_MISS,
-	VMEMCACHE_STAT_EVICT,
-	VMEMCACHE_STAT_DRAM_SIZE_USED,
-	VMEMCACHE_STAT_POOL_SIZE_USED,
-
-	VMEMCACHE_STATS_NUM
+	VMEMCACHE_STAT_PUT,		/* total number of puts */
+	VMEMCACHE_STAT_GET,		/* total number of gets */
+	VMEMCACHE_STAT_HIT,		/* total number of hits */
+	VMEMCACHE_STAT_MISS,		/* total number of misses */
+	VMEMCACHE_STAT_EVICT,		/* total number of evicts */
+	VMEMCACHE_STAT_ENTRIES,		/* current number of cache entries */
+	VMEMCACHE_STAT_DRAM_SIZE_USED,	/* current size of DRAM used for keys */
+	VMEMCACHE_STAT_POOL_SIZE_USED,	/* current size of memory pool */
+					/*    used for values */
+	VMEMCACHE_STATS_NUM		/* total number of statistics */
 };
 
 typedef void vmemcache_on_evict(VMEMcache *cache,
