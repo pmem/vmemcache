@@ -85,7 +85,7 @@ struct big_key {
  */
 static void
 verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
-		stat_t evict, stat_t entries, stat_t dram, stat_t pool)
+		stat_t evict, stat_t entries)
 {
 	stat_t stat;
 	int ret;
@@ -143,24 +143,6 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 		FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_ENTRIES], stat, entries);
-
-	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_DRAM_SIZE_USED,
-			&stat, sizeof(stat));
-	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
-	if (stat != dram)
-		FATAL(
-			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
-			stat_str[VMEMCACHE_STAT_DRAM_SIZE_USED], stat, dram);
-
-	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_POOL_SIZE_USED,
-			&stat, sizeof(stat));
-	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
-	if (stat != pool)
-		FATAL(
-			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
-			stat_str[VMEMCACHE_STAT_POOL_SIZE_USED], stat, pool);
 
 	ret = vmemcache_get_stat(cache, -1, &stat, sizeof(stat));
 	if (ret != -1)
@@ -488,16 +470,12 @@ test_evict(const char *dir)
 		FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[2].key);
 
-	/* free all the memory */
-	while (vmemcache_evict(cache, NULL, 0) == 0)
-		;
-
 	/* check statistics */
 	verify_stats(cache,
 			DNUM, /* put */
 			2 - ctx.miss_count + ctx.evict_count, /* get */
 			2 - 2 * ctx.miss_count + ctx.evict_count, /* hit */
-			ctx.miss_count, ctx.evict_count, 0, 0, 0);
+			ctx.miss_count, ctx.evict_count, DNUM - 3);
 
 	vmemcache_delete(cache);
 }
@@ -567,19 +545,10 @@ test_memory_leaks(const char *dir, int test_key_lt_1K)
 		free(buff);
 	}
 
-	verify_stat_entries(cache, n_puts - n_evicts);
-
-	/* free all the memory */
-	while (vmemcache_evict(cache, NULL, 0) == 0)
-		;
-
 	/* check statistics */
-	verify_stats(cache, n_puts, 0, 0, 0, n_evicts, 0, 0, 0);
+	verify_stats(cache, n_puts, 0, 0, 0, n_evicts, n_puts - n_evicts);
 
 	vmemcache_delete(cache);
-
-	if (n_evicts != n_puts)
-		FATAL("memory leak detected");
 }
 
 int
