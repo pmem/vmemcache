@@ -39,6 +39,7 @@ LIBVMEMCACHE_1.0 {
 		vmemcache_put;
 		vmemcache_get;
 		vmemcache_evict;
+		vmemcache_free_entries;
 		vmemcache_callback_on_evict;
 		vmemcache_callback_on_miss;
 		vmemcache_get_stat;
