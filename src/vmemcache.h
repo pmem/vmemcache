@@ -56,11 +56,14 @@ extern "C" {
 /* type of the statistics */
 typedef unsigned long long stat_t;
 
+typedef enum vmemcache_replacement_policy repl_p_t;
+
 struct vmemcache {
 	void *addr;			/* mapping address */
 	size_t size;			/* mapping size */
 	struct heap *heap;		/* heap address */
 	vmemcache_index_t *index;	/* indexing structure */
+	repl_p_t repl_kind;		/* kind of replacement policy */
 	struct repl_p repl;		/* replacement policy abstraction */
 	vmemcache_on_evict *on_evict;	/* callback on evict */
 	void *arg_evict;		/* argument for callback on evict */

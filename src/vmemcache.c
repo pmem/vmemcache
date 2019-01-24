@@ -158,6 +158,9 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 		goto error_destroy_index;
 	}
 
+	/* save kind of replacement policy */
+	cache->repl_kind = replacement_policy;
+
 	return cache;
 
 error_destroy_index:
