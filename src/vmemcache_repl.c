@@ -110,11 +110,17 @@ static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
  * repl_p_init -- initialize the replacement policy structure
  */
 int
-repl_p_init(struct repl_p *repl_p, enum vmemcache_replacement_policy rp)
+repl_p_init(struct repl_p **repl_p, enum vmemcache_replacement_policy rp)
 {
-	repl_p->ops = &repl_p_ops[rp];
+	ASSERTne(repl_p, NULL);
 
-	return repl_p->ops->repl_p_new(&repl_p->head);
+	*repl_p = Malloc(sizeof(struct repl_p));
+	if (*repl_p == NULL)
+		return -1;
+
+	(*repl_p)->ops = &repl_p_ops[rp];
+
+	return (*repl_p)->ops->repl_p_new(&(*repl_p)->head);
 }
 
 /*
@@ -123,7 +129,10 @@ repl_p_init(struct repl_p *repl_p, enum vmemcache_replacement_policy rp)
 void
 repl_p_destroy(struct repl_p *repl_p)
 {
+	ASSERTne(repl_p, NULL);
+
 	repl_p->ops->repl_p_delete(repl_p->head);
+	Free(repl_p);
 }
 
 /*

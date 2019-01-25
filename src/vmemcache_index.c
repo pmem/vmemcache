@@ -39,11 +39,12 @@
 #include "vmemcache.h"
 #include "vmemcache_index.h"
 #include "critnib.h"
+#include "sys_util.h"
 
 /*
  * vmcache_index_new -- initialize vmemcache indexing structure
  */
-vmemcache_index_t *
+struct critnib *
 vmcache_index_new(void)
 {
 	struct critnib *c = critnib_new();
@@ -56,7 +57,7 @@ vmcache_index_new(void)
  * vmcache_index_delete -- destroy vmemcache indexing structure
  */
 void
-vmcache_index_delete(vmemcache_index_t *index)
+vmcache_index_delete(struct critnib *index)
 {
 	util_mutex_destroy(&index->lock);
 	critnib_delete(index);
@@ -66,7 +67,7 @@ vmcache_index_delete(vmemcache_index_t *index)
  * vmcache_index_insert -- insert data into the vmemcache indexing structure
  */
 int
-vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
+vmcache_index_insert(struct critnib *index, struct cache_entry *entry)
 {
 	util_mutex_lock(&index->lock);
 
@@ -88,7 +89,7 @@ vmcache_index_insert(vmemcache_index_t *index, struct cache_entry *entry)
  * vmcache_index_get -- get data from the vmemcache indexing structure
  */
 int
-vmcache_index_get(vmemcache_index_t *index, const void *key, size_t ksize,
+vmcache_index_get(struct critnib *index, const void *key, size_t ksize,
 			struct cache_entry **entry)
 {
 #define SIZE_1K 1024
