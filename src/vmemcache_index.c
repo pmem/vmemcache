@@ -94,7 +94,7 @@ vmcache_index_new(delete_entry_t del_entry)
 		if (!c) {
 			for (i--; i >= 0; i--) {
 				util_mutex_destroy(&index->bucket[i]->lock);
-				critnib_delete(index->bucket[i]);
+				critnib_delete(index->bucket[i], del_entry);
 			}
 			free(index);
 
@@ -116,7 +116,7 @@ vmcache_index_delete(struct index *index, delete_entry_t del_entry)
 {
 	for (int i = 0; i < NSHARDS; i++) {
 		util_mutex_destroy(&index->bucket[i]->lock);
-		critnib_delete(index->bucket[i]);
+		critnib_delete(index->bucket[i], del_entry);
 	}
 
 	free(index);
