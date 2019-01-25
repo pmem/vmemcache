@@ -153,7 +153,8 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 		goto error_destroy_heap;
 	}
 
-	if (repl_p_init(&cache->repl, replacement_policy)) {
+	cache->repl = repl_p_init(replacement_policy);
+	if (cache->repl == NULL) {
 		LOG(1, "replacement policy initialization failed");
 		goto error_destroy_index;
 	}
@@ -177,7 +178,7 @@ error_free_cache:
 void
 vmemcache_delete(VMEMcache *cache)
 {
-	repl_p_destroy(&cache->repl);
+	repl_p_destroy(cache->repl);
 	vmcache_index_delete(cache->index);
 	vmcache_heap_destroy(cache->heap);
 	util_unmap(cache->addr, cache->size);
@@ -257,7 +258,7 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		goto error_exit;
 	}
 
-	cache->repl.ops->repl_p_insert(cache->repl.head, entry,
+	cache->repl->ops->repl_p_insert(cache->repl->head, entry,
 					&entry->value.p_entry);
 
 	util_fetch_and_add64(&cache->put_count, 1);
@@ -393,7 +394,7 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 
 	util_fetch_and_add64(&cache->get_count, 1);
 
-	cache->repl.ops->repl_p_use(cache->repl.head, &entry->value.p_entry);
+	cache->repl->ops->repl_p_use(cache->repl->head, &entry->value.p_entry);
 
 	size_t read = vmemcache_populate_value(vbuf, vbufsize, offset, entry);
 	if (vsize)
@@ -415,8 +416,9 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 
 	if (key == NULL) {
 		do {
-			entry = cache->repl.ops->repl_p_evict(cache->repl.head,
-								NULL);
+			entry = cache->repl->ops->repl_p_evict(
+							cache->repl->head,
+							NULL);
 			if (entry == NULL) {
 				ERR("no element to evict");
 				errno = EINVAL;
@@ -456,7 +458,7 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
 
 	if (!evicted_from_repl_p) {
-		if (cache->repl.ops->repl_p_evict(cache->repl.head,
+		if (cache->repl->ops->repl_p_evict(cache->repl->head,
 						&entry->value.p_entry)) {
 			/* release the reference from the replacement policy */
 			vmemcache_entry_release(cache, entry);
