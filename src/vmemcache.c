@@ -147,7 +147,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 		goto error_unmap;
 	}
 
-	if (vmcache_index_new(cache)) {
+	if (vmcache_index_new(cache, vmemcache_delete_entry_cb)) {
 		LOG(1, "indexing structure initialization failed");
 		goto error_destroy_heap;
 	}
@@ -161,7 +161,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 	return cache;
 
 error_destroy_index:
-	vmcache_index_delete(cache);
+	vmcache_index_delete(cache, vmemcache_delete_entry_cb);
 error_destroy_heap:
 	vmcache_heap_destroy(cache->heap);
 error_unmap:
@@ -172,13 +172,24 @@ error_free_cache:
 }
 
 /*
+ * vmemcache_delete_entry_cb -- callback deleting a vmemcache entry
+ *                              for vmemcache_delete()
+ */
+void
+vmemcache_delete_entry_cb(struct cache_entry *entry)
+{
+	VEC_DELETE(&entry->value.fragments);
+	Free(entry);
+}
+
+/*
  * vmemcache_delete -- destroy a vmemcache
  */
 void
 vmemcache_delete(VMEMcache *cache)
 {
 	repl_p_destroy(cache->repl);
-	vmcache_index_delete(cache);
+	vmcache_index_delete(cache, vmemcache_delete_entry_cb);
 	vmcache_heap_destroy(cache->heap);
 	util_unmap(cache->addr, cache->size);
 	Free(cache);

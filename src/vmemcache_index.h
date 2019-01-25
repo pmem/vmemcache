@@ -46,8 +46,8 @@ extern "C" {
 
 struct cache_entry;
 
-int vmcache_index_new(VMEMcache *cache);
-void vmcache_index_delete(VMEMcache *cache);
+int vmcache_index_new(VMEMcache *cache, delete_entry_t del_entry);
+void vmcache_index_delete(VMEMcache *cache, delete_entry_t del_entry);
 int vmcache_index_insert(VMEMcache *cache, struct cache_entry *entry);
 int vmcache_index_get(VMEMcache *cache, const void *key, size_t ksize,
 			struct cache_entry **entry);
