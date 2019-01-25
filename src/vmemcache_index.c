@@ -112,7 +112,7 @@ vmcache_index_new(void)
  * vmcache_index_delete -- destroy vmemcache indexing structure
  */
 void
-vmcache_index_delete(struct index *index)
+vmcache_index_delete(struct index *index, delete_entry_t del_entry)
 {
 	for (int i = 0; i < NSHARDS; i++) {
 		util_mutex_destroy(&index->bucket[i]->lock);
