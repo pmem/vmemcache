@@ -114,23 +114,26 @@ critnib_new(void)
  * delete_node -- (internal) recursively free a subtree
  */
 static void
-delete_node(struct critnib_node *n)
+delete_node(struct critnib_node *n, delete_entry_t del)
 {
 	if (!n)
 		return;
-	if (is_leaf(n))
+	if (is_leaf(n)) {
+		if (del)
+			del(to_leaf(n)->value);
 		return Free(to_leaf(n));
+	}
 	for (int i = 0; i < SLNODES; i++)
-		delete_node(n->child[i]);
+		delete_node(n->child[i], del);
 }
 
 /*
  * critnib_delete -- free a hashmap
  */
 void
-critnib_delete(struct critnib *c)
+critnib_delete(struct critnib *c, delete_entry_t del)
 {
-	delete_node(c->root);
+	delete_node(c->root, del);
 	Free(c);
 }
 
