@@ -91,6 +91,12 @@ struct cache_entry {
 	} key;
 };
 
+/* type of callback deleting a cache entry */
+typedef void (*delete_entry_t)(struct cache_entry *entry);
+
+/* callback deleting a cache entry (of the above type 'delete_entry_t') */
+void vmemcache_delete_entry_cb(struct cache_entry *entry);
+
 void vmemcache_entry_acquire(struct cache_entry *entry);
 void vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry);
 

@@ -81,7 +81,7 @@ shard(struct index *index, size_t key_size, const char *key)
  * vmcache_index_new -- initialize vmemcache indexing structure
  */
 struct index *
-vmcache_index_new(void)
+vmcache_index_new(delete_entry_t del_entry)
 {
 	struct index *index = malloc(sizeof(struct index));
 	if (!index)
@@ -112,7 +112,7 @@ vmcache_index_new(void)
  * vmcache_index_delete -- destroy vmemcache indexing structure
  */
 void
-vmcache_index_delete(struct index *index)
+vmcache_index_delete(struct index *index, delete_entry_t del_entry)
 {
 	for (int i = 0; i < NSHARDS; i++) {
 		util_mutex_destroy(&index->bucket[i]->lock);
