@@ -553,6 +553,7 @@ test_memory_leaks(const char *dir, int test_key_lt_1K)
 						buff, size);
 		} else {
 			struct big_key bk;
+			memset(bk.buf, 42, sizeof(bk.buf));
 			bk.n_puts = n_puts;
 
 			ret = vmemcache_put(cache, &bk, sizeof(bk), buff, size);
