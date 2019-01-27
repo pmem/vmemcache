@@ -396,7 +396,8 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	cache->repl.ops->repl_p_use(cache->repl.head, &entry->value.p_entry);
 
 	size_t read = vmemcache_populate_value(vbuf, vbufsize, offset, entry);
-	*vsize = entry->value.vsize;
+	if (vsize)
+		*vsize = entry->value.vsize;
 
 	vmemcache_entry_release(cache, entry);
 
