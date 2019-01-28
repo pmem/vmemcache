@@ -132,7 +132,7 @@ vmcache_index_insert(struct index *index, struct cache_entry *entry)
 
 	util_mutex_lock(&c->lock);
 
-	if (critnib_set(c, entry)) {
+	if ((errno = critnib_set(c, entry))) {
 		util_mutex_unlock(&c->lock);
 		ERR("inserting to the index failed");
 		return -1;
