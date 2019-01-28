@@ -449,6 +449,35 @@ util_readline(FILE *fh)
 
 	return buffer;
 }
+
+/*
+ * util_print_mem -- print a near-string piece of memory, escaping non-text
+ */
+void
+util_print_mem(const char *s, size_t len)
+{
+	for (; len > 0; len--, s++) {
+		switch (*s) {
+		case 0:
+			printf("\\0"); break;
+		case '\b':
+			printf("\\b"); break;
+		case '\e':
+			printf("\\e"); break;
+		case '\n':
+			printf("\\n"); break;
+		case '\r':
+			printf("\\r"); break;
+		case '\\':
+			printf("\\\\"); break;
+		case 0x7f:
+			printf("\\x7f"); break;
+		default:
+			printf((*s >= ' ' && *s < 0x7f) ? "%c" : "\\x%02x", *s);
+		}
+	}
+}
+
 #endif
 
 /*
