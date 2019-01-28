@@ -125,6 +125,7 @@ delete_node(struct critnib_node *n, delete_entry_t del)
 	}
 	for (int i = 0; i < SLNODES; i++)
 		delete_node(n->child[i], del);
+	Free(n);
 }
 
 /*
