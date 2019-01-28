@@ -41,7 +41,6 @@
 #include <stddef.h>
 
 #include "libvmemcache.h"
-#include "sys_util.h"
 #include "vec.h"
 
 #ifdef __cplusplus
