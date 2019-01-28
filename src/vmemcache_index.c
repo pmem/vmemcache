@@ -36,10 +36,12 @@
 
 #include <alloca.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "vmemcache.h"
 #include "vmemcache_index.h"
 #include "critnib.h"
+#include "sys_util.h"
 
 /* must be a power of 2 */
 #define NSHARDS 256
