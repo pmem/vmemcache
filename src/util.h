@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  * Copyright (c) 2016, Microsoft Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -104,6 +104,7 @@ int util_safe_strcpy(char *dst, const char *src, size_t max_length);
 void util_emit_log(const char *lib, const char *func, int order);
 char *util_readline(FILE *fh);
 int env_yesno10(const char *var, int def);
+void util_print_mem(const char *s, size_t len);
 
 #ifdef _WIN32
 char *util_toUTF8(const wchar_t *wstr);
