@@ -106,7 +106,11 @@ static void parse_param_arg(char *arg)
 		return;
 	}
 
-	ERROR("unknown param \"%s\"", arg);
+	fprintf(stderr, "Unknown param \"%s\"; valid ones:", arg);
+	for (struct param_t *p = params; p->name; p++)
+		fprintf(stderr, " %s", p->name);
+	fprintf(stderr, "\n");
+	exit(1);
 }
 
 /*
