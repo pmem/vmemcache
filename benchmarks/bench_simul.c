@@ -40,20 +40,33 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include "libvmemcache.h"
 #include "test_helpers.h"
 #include "os_thread.h"
 #include "benchmark_time.h"
+#include "rand.h"
 
 #define PROG "bench_simul"
+#define MAX_THREADS 4096
+
+#define SIZE_MB 1024 * 1024ULL
+#define SIZE_GB 1024 * 1024 * 1024ULL
+
+#define NSECPSEC 1000000000
 
 static const char *dir;
 static uint64_t n_threads = 100;
 static uint64_t ops_count = 100000;
 static uint64_t min_size  = 8;
-static uint64_t max_size  = 8 * 1048576;
+static uint64_t max_size  = 8 * SIZE_MB;
+static uint64_t cache_size = VMEMCACHE_MIN_POOL;
+static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
+static uint64_t seed = 0;
+
+static VMEMcache *cache;
 
 static struct param_t {
 	const char *name;
@@ -61,10 +74,14 @@ static struct param_t {
 	uint64_t min;
 	uint64_t max;
 } params[] = {
-	{ "n_threads", &n_threads, 0 /* n_procs */, 4095 },
+	{ "n_threads", &n_threads, 0 /* n_procs */, MAX_THREADS },
 	{ "ops_count", &ops_count, 1, -1ULL },
 	{ "min_size", &min_size, 1, -1ULL },
 	{ "max_size", &max_size, 1, -1ULL },
+	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL },
+	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
+		4 * SIZE_GB },
+	{ "seed", &seed, 0, -1ULL },
 	{ 0 },
 };
 
@@ -141,14 +158,86 @@ static void parse_args(const char **argv)
 		parse_param_arg(*argv);
 }
 
+static void *worker(void *arg)
+{
+	rng_t rng;
+	randomize_r(&rng, 0);
+
+	benchmark_time_t t1, t2;
+	benchmark_time_get(&t1);
+
+	for (uint64_t count = 0; count < ops_count; count++) {
+		uint64_t obj = n_lowest_bits(rnd64_r(&rng), 3);
+
+		char key[64];
+		size_t ksize = (size_t)snprintf(key, sizeof(key), "%lx", obj);
+
+		char val[1];
+		if (vmemcache_get(cache, key, ksize, val, sizeof(val), 0, NULL)
+			<= 0) {
+			if (vmemcache_put(cache, key, ksize, val, 1) &&
+				errno != EEXIST) {
+				FATAL("vmemcache_put failed");
+			}
+		}
+	}
+
+	benchmark_time_get(&t2);
+	benchmark_time_diff(&t1, &t1, &t2);
+
+	return (void *)(intptr_t)(t1.tv_sec * NSECPSEC + t1.tv_nsec);
+}
+
+static void run_bench()
+{
+	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
+		VMEMCACHE_REPLACEMENT_LRU);
+	if (!cache)
+		FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
+
+	os_thread_t th[MAX_THREADS];
+	for (uint64_t i = 0; i < n_threads; i++) {
+		if (os_thread_create(&th[i], 0, worker, 0))
+			FATAL("thread creation failed: %m");
+	}
+
+	uint64_t total = 0;
+
+	for (uint64_t i = 0; i < n_threads; i++) {
+		uint64_t t;
+		if (os_thread_join(&th[i], (void **)&t))
+			FATAL("thread join failed: %m");
+		total += t;
+	}
+
+	vmemcache_delete(cache);
+
+	printf("Total time: %lu.%09lu\n",
+		total / NSECPSEC, total % NSECPSEC);
+	total /= n_threads;
+	total /= ops_count;
+	printf("Avg time per op: %lu.%09lu\n",
+		total / NSECPSEC, total % NSECPSEC);
+}
+
 int
 main(int argc, const char **argv)
 {
 	parse_args(argv + 1);
 
+	if (!n_threads) {
+		n_threads = (uint32_t)sysconf(_SC_NPROCESSORS_ONLN);
+		if (n_threads > MAX_THREADS)
+			n_threads = MAX_THREADS;
+		if (!n_threads)
+			FATAL("can't obtain number of processor cores");
+	}
+
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
 	for (struct param_t *p = params; p->name; p++)
 		printf("  %-20s : %lu\n", p->name, *p->var);
+
+	run_bench();
 
 	return 0;
 }
