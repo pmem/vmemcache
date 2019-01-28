@@ -479,9 +479,9 @@ test_evict(const char *dir)
 		FATAL("vmemcache_get: wrong return value: %zi (should be %i)",
 			ret, 0);
 
-	if (ctx.vsize != VSIZE)
+	if (vsize != VSIZE)
 		FATAL("vmemcache_get: wrong size of value: %zi (should be %i)",
-			ctx.vsize, VSIZE);
+			vsize, VSIZE);
 
 	/* check if the 'on_miss' callback got key #2 */
 	if (strncmp(ctx.vbuf, data[2].key, ctx.vsize))
