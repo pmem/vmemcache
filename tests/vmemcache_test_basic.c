@@ -370,7 +370,8 @@ on_miss_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
  * test_evict -- (internal) test _evict()
  */
 static void
-test_evict(const char *dir)
+test_evict(const char *dir,
+		enum vmemcache_replacement_policy replacement_policy)
 {
 	VMEMcache *cache;
 	char vbuf[VSIZE];
@@ -385,7 +386,7 @@ test_evict(const char *dir)
 	} data[DNUM];
 
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_FRAGMENT,
-					VMEMCACHE_REPLACEMENT_LRU);
+				replacement_policy);
 	if (cache == NULL)
 		FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -519,7 +520,8 @@ on_evict_test_memory_leaks_cb(VMEMcache *cache,
  * test_memory_leaks -- (internal) test if there are any memory leaks
  */
 static void
-test_memory_leaks(const char *dir, int test_key_lt_1K)
+test_memory_leaks(const char *dir, int key_gt_1K,
+			enum vmemcache_replacement_policy replacement_policy)
 {
 	VMEMcache *cache;
 	char *buff;
@@ -535,7 +537,7 @@ test_memory_leaks(const char *dir, int test_key_lt_1K)
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
 
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
-				VMEMCACHE_REPLACEMENT_LRU);
+				replacement_policy);
 	if (cache == NULL)
 		FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -548,15 +550,15 @@ test_memory_leaks(const char *dir, int test_key_lt_1K)
 		if (buff == NULL)
 			FATAL("out of memory");
 
-		if (test_key_lt_1K) {
-			ret = vmemcache_put(cache, &n_puts, sizeof(n_puts),
-						buff, size);
-		} else {
+		if (key_gt_1K) {
 			struct big_key bk;
 			memset(bk.buf, 42 /* arbitrary */, sizeof(bk.buf));
 			bk.n_puts = n_puts;
 
 			ret = vmemcache_put(cache, &bk, sizeof(bk), buff, size);
+		} else {
+			ret = vmemcache_put(cache, &n_puts, sizeof(n_puts),
+						buff, size);
 		}
 
 		if (ret)
@@ -594,11 +596,17 @@ main(int argc, char *argv[])
 
 	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_NONE);
 	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_LRU);
+
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_NONE);
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
-	test_evict(dir);
-	test_memory_leaks(dir, 0 /* test_key_lt_1K */);
-	test_memory_leaks(dir, 1 /* test_key_lt_1K */);
+
+	test_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
+
+	/* '0' means: key size < 1kB */
+	test_memory_leaks(dir, 0, VMEMCACHE_REPLACEMENT_LRU);
+
+	/* '1' means: key size > 1kB */
+	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU);
 
 	return 0;
 }
