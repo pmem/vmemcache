@@ -52,8 +52,10 @@
 #define PROG "bench_simul"
 #define MAX_THREADS 4096
 
-#define SIZE_MB 1024 * 1024ULL
-#define SIZE_GB 1024 * 1024 * 1024ULL
+#define SIZE_KB (1024ULL)
+#define SIZE_MB (1024 * 1024ULL)
+#define SIZE_GB (1024 * 1024 * 1024ULL)
+#define SIZE_TB (1024 * 1024 * 1024 * 1024ULL)
 
 #define NSECPSEC 1000000000
 
@@ -112,8 +114,24 @@ static void parse_param_arg(const char *arg)
 		if (errno)
 			FATAL("invalid value for %s: \"%s\"", p->name, eq + 1);
 
-		if (*endptr)
-			FATAL("invalid value for %s: \"%s\"", p->name, eq + 1);
+		if (*endptr) {
+			if (strcmp(endptr, "K") == 0 ||
+					strcmp(endptr, "KB") == 0)
+				x *= SIZE_KB;
+			else if (strcmp(endptr, "M") == 0 ||
+					strcmp(endptr, "MB") == 0)
+				x *= SIZE_MB;
+			else if (strcmp(endptr, "G") == 0 ||
+					strcmp(endptr, "GB") == 0)
+				x *= SIZE_GB;
+			else if (strcmp(endptr, "T") == 0 ||
+					strcmp(endptr, "TB") == 0)
+				x *= SIZE_TB;
+			else {
+				FATAL("invalid value for %s: \"%s\"", p->name,
+					eq + 1);
+			}
+		}
 
 		if (x < p->min) {
 			FATAL(
