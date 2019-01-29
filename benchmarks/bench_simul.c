@@ -52,8 +52,10 @@
 #define PROG "bench_simul"
 #define MAX_THREADS 4096
 
-#define SIZE_MB 1024 * 1024ULL
-#define SIZE_GB 1024 * 1024 * 1024ULL
+#define SIZE_KB (1024ULL)
+#define SIZE_MB (1024 * 1024ULL)
+#define SIZE_GB (1024 * 1024 * 1024ULL)
+#define SIZE_TB (1024 * 1024 * 1024 * 1024ULL)
 
 static const char *dir;
 static uint64_t n_threads = 100;
@@ -110,8 +112,20 @@ static void parse_param_arg(char *arg)
 		if (errno)
 			ERROR("invalid value for %s: \"%s\"", p->name, eq + 1);
 
-		if (*endptr)
-			ERROR("invalid value for %s: \"%s\"", p->name, eq + 1);
+		if (*endptr) {
+			if (!(strcmp(endptr, "K") && strcmp(endptr, "KB")))
+				x *= SIZE_KB;
+			else if (!(strcmp(endptr, "M") && strcmp(endptr, "MB")))
+				x *= SIZE_MB;
+			else if (!(strcmp(endptr, "G") && strcmp(endptr, "GB")))
+				x *= SIZE_GB;
+			else if (!(strcmp(endptr, "T") && strcmp(endptr, "TB")))
+				x *= SIZE_TB;
+			else {
+				ERROR("invalid value for %s: \"%s\"", p->name,
+					eq + 1);
+			}
+		}
 
 		if (x < p->min) {
 			ERROR("value for %s too small: wanted %lu..%lu, "
