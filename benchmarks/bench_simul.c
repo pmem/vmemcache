@@ -62,6 +62,7 @@ static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_MB;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
+static uint64_t key_size = 16;
 static uint64_t seed = 0;
 
 static VMEMcache *cache;
@@ -79,6 +80,7 @@ static struct param_t {
 	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL },
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB },
+	{ "key_size", &key_size, 1, SIZE_GB },
 	{ "seed", &seed, 0, -1ULL },
 	{ 0 },
 };
@@ -147,6 +149,23 @@ static void parse_args(char **argv)
 		parse_param_arg(*argv);
 }
 
+static void
+fill_key(char *key, uint64_t r)
+{
+	rng_t rng;
+	randomize_r(&rng, r);
+
+	size_t len = key_size;
+	for (; len >= 8; len -= 8, key += 8)
+		*((uint64_t *)key) = rnd64_r(&rng);
+
+	if (!len)
+		return;
+
+	uint64_t rest = rnd64_r(&rng);
+	memcpy(key, &rest, len);
+}
+
 static void *worker(void *arg)
 {
 	rng_t rng;
@@ -158,13 +177,13 @@ static void *worker(void *arg)
 	for (uint64_t count = 0; count < ops_count; count++) {
 		uint64_t obj = n_lowest_bits(rnd64_r(&rng), 3);
 
-		char key[64];
-		size_t ksize = (size_t)snprintf(key, sizeof(key), "%lx", obj);
+		char key[key_size + 1];
+		fill_key(key, obj);
 
 		char val[1];
-		if (vmemcache_get(cache, key, ksize, val, sizeof(val), 0, NULL)
-			<= 0) {
-			if (vmemcache_put(cache, key, ksize, val, 1) && errno
+		if (vmemcache_get(cache, key, key_size, val, sizeof(val), 0,
+			NULL) <= 0) {
+			if (vmemcache_put(cache, key, key_size, val, 1) && errno
 				!= EEXIST) {
 				ERROR("put failed");
 			}
