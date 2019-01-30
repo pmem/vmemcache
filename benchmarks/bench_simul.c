@@ -264,6 +264,20 @@ static void run_bench()
 		total / 1000, total % 1000);
 }
 
+static void
+print_units(uint64_t x)
+{
+	const char *units[] = { "", "KB", "MB", "GB", "TB", "PB", "EB" };
+	int u = 0;
+
+	while (x && !(x % 1024)) {
+		u++;
+		x /= 1024;
+	}
+
+	printf("%lu%s", x, units[u]);
+}
+
 int
 main(int argc, const char **argv)
 {
@@ -278,8 +292,11 @@ main(int argc, const char **argv)
 	}
 
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
-	for (struct param_t *p = params; p->name; p++)
-		printf("  %-20s : %lu\n", p->name, *p->var);
+	for (struct param_t *p = params; p->name; p++) {
+		printf("  %-20s : ", p->name);
+		print_units(*p->var);
+		printf("\n");
+	}
 
 	run_bench();
 
