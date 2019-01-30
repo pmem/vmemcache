@@ -205,7 +205,7 @@ fill_key(char *key, uint64_t r)
 static void *worker(void *arg)
 {
 	rng_t rng;
-	randomize_r(&rng, 0);
+	randomize_r(&rng, seed ? seed + (uintptr_t)arg : 0);
 
 	benchmark_time_t t1, t2;
 	benchmark_time_get(&t1);
@@ -241,7 +241,7 @@ static void run_bench()
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
-		if (os_thread_create(&th[i], 0, worker, 0))
+		if (os_thread_create(&th[i], 0, worker, (void *)i))
 			UT_FATAL("thread creation failed: %s", strerror(errno));
 	}
 
