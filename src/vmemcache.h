@@ -40,8 +40,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "vmemcache_repl.h"
-#include "sys_util.h"
+#include "libvmemcache.h"
 #include "vec.h"
 
 #ifdef __cplusplus
@@ -56,13 +55,14 @@ extern "C" {
 typedef unsigned long long stat_t;
 
 struct index;
+struct repl_p;
 
 struct vmemcache {
 	void *addr;			/* mapping address */
 	size_t size;			/* mapping size */
 	struct heap *heap;		/* heap address */
 	struct index *index;		/* indexing structure */
-	struct repl_p repl;		/* replacement policy abstraction */
+	struct repl_p *repl;		/* replacement policy abstraction */
 	vmemcache_on_evict *on_evict;	/* callback on evict */
 	void *arg_evict;		/* argument for callback on evict */
 	vmemcache_on_miss *on_miss;	/* callback on miss */
