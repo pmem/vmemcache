@@ -298,6 +298,11 @@ static void run_bench()
 static void
 print_units(uint64_t x)
 {
+	if (x == -1ULL) {
+		printf("∞");
+		return;
+	}
+
 	const char *units[] = { "", "K", "M", "G", "T", "P", "E" };
 	int u = 0;
 
