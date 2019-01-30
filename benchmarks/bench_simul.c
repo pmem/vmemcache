@@ -267,6 +267,11 @@ static void run_bench()
 static void
 print_units(uint64_t x)
 {
+	if (x == -1ULL) {
+		printf("∞");
+		return;
+	}
+
 	const char *units[] = { "", "KB", "MB", "GB", "TB", "PB", "EB" };
 	int u = 0;
 
