@@ -46,7 +46,6 @@
 #define ERROR(...) do {\
 	fprintf(stderr, "ERROR: " __VA_ARGS__);\
 	fprintf(stderr, "\n");\
-	exit(-1);\
 } while (/*CONSTCOND*/0)
 
 #define FATAL(...) do {\
@@ -67,13 +66,20 @@ str_to_unsigned(const char *str, unsigned *value)
 
 	errno = 0;    /* to distinguish success/failure after call */
 
-	unsigned val = (unsigned)strtoul(str, &endptr, 10);
+	unsigned long val = strtoul(str, &endptr, 10);
 	if ((errno == ERANGE && val == ULONG_MAX) ||
 	    (errno != 0 && val == 0) ||
-	    (endptr == str) || (*endptr != '\0'))
+	    (endptr == str) || (*endptr != '\0')) {
+		ERROR("strtoul() failed to convert the string %s", str);
 		return -1;
+	}
 
-	*value = val;
+	if (val > UINT_MAX) {
+		ERROR("value %s is bigger than UINT_MAX (%u)", str, UINT_MAX);
+		return -1;
+	}
+
+	*value = (unsigned)val;
 
 	return 0;
 }

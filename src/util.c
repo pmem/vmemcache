@@ -467,5 +467,4 @@ env_yesno10(const char *var, int def_answer)
 		return 1;
 
 	FATAL("env var %s needs to be 0 or 1", var);
-	return def_answer;
 }
