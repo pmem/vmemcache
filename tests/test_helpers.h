@@ -46,7 +46,6 @@
 #define ERROR(...) do {\
 	fprintf(stderr, "ERROR: " __VA_ARGS__);\
 	fprintf(stderr, "\n");\
-	exit(-1);\
 } while (/*CONSTCOND*/0)
 
 #define FATAL(...) do {\
