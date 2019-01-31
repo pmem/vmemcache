@@ -381,10 +381,8 @@ main(int argc, char *argv[])
 	srand(seed);
 
 	struct buffers *buffs = calloc(nbuffs, sizeof(*buffs));
-	if (buffs == NULL) {
+	if (buffs == NULL)
 		FATAL("out of memory");
-		return -1;
-	}
 
 	for (unsigned i = 0; i < nbuffs; ++i) {
 		/* generate N random sizes (between A – B bytes) */
@@ -393,19 +391,15 @@ main(int argc, char *argv[])
 
 		/* allocate a buffer and fill it for every generated size */
 		buffs[i].buff = malloc(buffs[i].size);
-		if (buffs[i].buff == NULL) {
+		if (buffs[i].buff == NULL)
 			FATAL("out of memory");
-			goto exit_free_buffs;
-		}
 
 		memset(buffs[i].buff, 0xCC, buffs[i].size);
 	}
 
 	struct context *ctx = calloc(n_threads, sizeof(*ctx));
-	if (ctx == NULL) {
+	if (ctx == NULL)
 		FATAL("out of memory");
-		goto exit_free_buffs;
-	}
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].thread_number = i;
@@ -414,10 +408,8 @@ main(int argc, char *argv[])
 	}
 
 	os_thread_t *threads = calloc(n_threads, sizeof(*threads));
-	if (threads == NULL) {
+	if (threads == NULL)
 		FATAL("out of memory");
-		goto exit_free_ctx;
-	}
 
 	if (benchmark & BENCH_PUT)
 		run_bench_put(dir, cache_max_size, cache_fragment_size,
@@ -432,13 +424,11 @@ main(int argc, char *argv[])
 	ret = 0;
 
 	free(threads);
-
-exit_free_ctx:
 	free(ctx);
 
-exit_free_buffs:
 	for (unsigned i = 0; i < nbuffs; ++i)
 		free(buffs[i].buff);
+
 	free(buffs);
 
 	return ret;
