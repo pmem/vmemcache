@@ -72,24 +72,80 @@ static uint64_t seed = 0;
 
 static VMEMcache *cache;
 
+/* case insensitive */
+static const char *enum_repl[] = {
+	"none",
+	"LRU",
+	0
+};
+
 static struct param_t {
 	const char *name;
 	uint64_t *var;
 	uint64_t min;
 	uint64_t max;
+	const char **enums;
 } params[] = {
-	{ "n_threads", &n_threads, 0 /* n_procs */, MAX_THREADS },
-	{ "ops_count", &ops_count, 1, -1ULL },
-	{ "min_size", &min_size, 1, -1ULL },
-	{ "max_size", &max_size, 1, -1ULL },
-	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL },
+	{ "n_threads", &n_threads, 0 /* n_procs */, MAX_THREADS, NULL },
+	{ "ops_count", &ops_count, 1, -1ULL, NULL },
+	{ "min_size", &min_size, 1, -1ULL, NULL },
+	{ "max_size", &max_size, 1, -1ULL, NULL },
+	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL, NULL },
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
-		4 * SIZE_GB },
-	{ "repl_policy", &repl_policy, 1, 1 },
-	{ "key_size", &key_size, 1, SIZE_GB },
-	{ "seed", &seed, 0, -1ULL },
+		4 * SIZE_GB, NULL },
+	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
+	{ "key_size", &key_size, 1, SIZE_GB, NULL },
+	{ "seed", &seed, 0, -1ULL, NULL },
 	{ 0 },
 };
+
+/*
+ * parse_uint_param -- parse an uint, accepting suffixes
+ */
+static uint64_t parse_uint_param(const char *val, const char *name)
+{
+	char *endptr;
+	errno = 0;
+	uint64_t x = strtoull(val, &endptr, 0);
+
+	if (errno)
+		UT_FATAL("invalid value for %s: \"%s\"", name, val);
+
+	if (*endptr) {
+		if (strcmp(endptr, "K") == 0 || strcmp(endptr, "KB") == 0)
+			x *= SIZE_KB;
+		else if (strcmp(endptr, "M") == 0 || strcmp(endptr, "MB") == 0)
+			x *= SIZE_MB;
+		else if (strcmp(endptr, "G") == 0 || strcmp(endptr, "GB") == 0)
+			x *= SIZE_GB;
+		else if (strcmp(endptr, "T") == 0 || strcmp(endptr, "TB") == 0)
+			x *= SIZE_TB;
+		else {
+			UT_FATAL("invalid value for %s: \"%s\"", name,
+				val);
+		}
+	}
+
+	return x;
+}
+
+/*
+ * parse_enum_param -- find an enum by name
+ */
+static uint64_t parse_enum_param(const char *val, const char *name,
+	const char **enums)
+{
+	for (uint64_t x = 0; enums[x]; x++) {
+		if (!strcasecmp(val, enums[x]))
+			return x;
+	}
+
+	fprintf(stderr, "Unknown value of %s; valid ones:", name);
+	for (uint64_t x = 0; enums[x]; x++)
+		fprintf(stderr, " %s", enums[x]);
+	fprintf(stderr, "\n");
+	exit(1);
+}
 
 /*
  * parse_param_arg -- parse a single name=value arg
@@ -109,34 +165,9 @@ static void parse_param_arg(const char *arg)
 			continue;
 		}
 
-		char *endptr;
-		errno = 0;
-		uint64_t x = strtoull(eq + 1, &endptr, 0);
-
-		if (errno)
-			UT_FATAL(
-				"invalid value for %s: \"%s\"",
-				p->name, eq + 1);
-
-		if (*endptr) {
-			if (strcmp(endptr, "K") == 0 ||
-					strcmp(endptr, "KB") == 0)
-				x *= SIZE_KB;
-			else if (strcmp(endptr, "M") == 0 ||
-					strcmp(endptr, "MB") == 0)
-				x *= SIZE_MB;
-			else if (strcmp(endptr, "G") == 0 ||
-					strcmp(endptr, "GB") == 0)
-				x *= SIZE_GB;
-			else if (strcmp(endptr, "T") == 0 ||
-					strcmp(endptr, "TB") == 0)
-				x *= SIZE_TB;
-			else {
-				UT_FATAL(
-					"invalid value for %s: \"%s\"",
-					p->name, eq + 1);
-			}
-		}
+		uint64_t x = p->enums ?
+			parse_enum_param(eq + 1, p->name, p->enums) :
+			parse_uint_param(eq + 1, p->name);
 
 		if (x < p->min) {
 			UT_FATAL(
@@ -278,8 +309,21 @@ main(int argc, const char **argv)
 	}
 
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
-	for (struct param_t *p = params; p->name; p++)
-		printf("  %-20s : %lu\n", p->name, *p->var);
+	for (struct param_t *p = params; p->name; p++) {
+		printf("  %-20s : ", p->name);
+		if (p->enums) {
+			uint64_t nvalid = 0;
+			for (; p->enums[nvalid]; nvalid++)
+				;
+
+			if (*p->var < nvalid)
+				printf("%s", p->enums[*p->var]);
+			else
+				printf("enum out of range: %lu", *p->var);
+		} else
+			printf("%lu", *p->var);
+		printf("\n");
+	}
 
 	run_bench();
 
