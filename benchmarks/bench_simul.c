@@ -66,6 +66,7 @@ static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_MB;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
+static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
 static uint64_t key_size = 16;
 static uint64_t seed = 0;
 
@@ -84,6 +85,7 @@ static struct param_t {
 	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL },
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB },
+	{ "repl_policy", &repl_policy, 1, 1 },
 	{ "key_size", &key_size, 1, SIZE_GB },
 	{ "seed", &seed, 0, -1ULL },
 	{ 0 },
@@ -224,7 +226,7 @@ static void *worker(void *arg)
 static void run_bench()
 {
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
-		VMEMCACHE_REPLACEMENT_LRU);
+		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
 		FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
 
