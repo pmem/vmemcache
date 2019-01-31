@@ -379,7 +379,6 @@ exit_free_buffs:
 	free(buffs);
 
 exit_delete:
-	free_cache(cache);
 	vmemcache_delete(cache);
 
 	return ret;
