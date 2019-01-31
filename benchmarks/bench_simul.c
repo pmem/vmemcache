@@ -251,12 +251,12 @@ static void run_bench()
 
 	vmemcache_delete(cache);
 
-	printf("Total time: %lu.%09lu\n",
+	printf("Total time: %lu.%09lu s\n",
 		total / NSECPSEC, total % NSECPSEC);
 	total /= n_threads;
 	total /= ops_count;
-	printf("Avg time per op: %lu.%09lu\n",
-		total / NSECPSEC, total % NSECPSEC);
+	printf("Avg time per op: %lu.%03lu μs\n",
+		total / 1000, total % 1000);
 }
 
 int
