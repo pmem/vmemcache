@@ -98,10 +98,10 @@ static void parse_param_arg(const char *arg)
 {
 	const char *eq = strchr(arg, '=');
 	if (!eq)
-		FATAL("params need to be var=value, got \"%s\"", arg);
+		UT_FATAL("params need to be var=value, got \"%s\"", arg);
 
 	if (!eq[1])
-		FATAL("empty value in \"%s\"", arg);
+		UT_FATAL("empty value in \"%s\"", arg);
 
 	for (struct param_t *p = params; p->name; p++) {
 		if (strncmp(p->name, arg, (size_t)(eq - arg)) ||
@@ -114,7 +114,9 @@ static void parse_param_arg(const char *arg)
 		uint64_t x = strtoull(eq + 1, &endptr, 0);
 
 		if (errno)
-			FATAL("invalid value for %s: \"%s\"", p->name, eq + 1);
+			UT_FATAL(
+				"invalid value for %s: \"%s\"",
+				p->name, eq + 1);
 
 		if (*endptr) {
 			if (strcmp(endptr, "K") == 0 ||
@@ -130,19 +132,20 @@ static void parse_param_arg(const char *arg)
 					strcmp(endptr, "TB") == 0)
 				x *= SIZE_TB;
 			else {
-				FATAL("invalid value for %s: \"%s\"", p->name,
-					eq + 1);
+				UT_FATAL(
+					"invalid value for %s: \"%s\"",
+					p->name, eq + 1);
 			}
 		}
 
 		if (x < p->min) {
-			FATAL(
+			UT_FATAL(
 				"value for %s too small: wanted %lu..%lu, got %lu",
 				p->name, p->min, p->max, x);
 		}
 
 		if (x > p->max) {
-			FATAL(
+			UT_FATAL(
 				"value for %s too big: wanted %lu..%lu, got %lu",
 				p->name, p->min, p->max, x);
 		}
@@ -164,7 +167,7 @@ static void parse_param_arg(const char *arg)
 static void parse_args(const char **argv)
 {
 	if (! *argv)
-		FATAL("Usage: "PROG" dir [arg=val] [...]");
+		UT_FATAL("Usage: "PROG" dir [arg=val] [...]");
 	dir = *argv++;
 
 	/*
@@ -174,7 +177,9 @@ static void parse_args(const char **argv)
 	 * And, it's only for benchmarks anyway.
 	 */
 	if (*dir != '.' && !strchr(dir, '/'))
-		FATAL("implausible dir -- prefix with ./ if you want %s", dir);
+		UT_FATAL(
+			"implausible dir -- prefix with ./ if you want %s",
+			dir);
 
 	for (; *argv; argv++)
 		parse_param_arg(*argv);
@@ -216,7 +221,7 @@ static void *worker(void *arg)
 			NULL) <= 0) {
 			if (vmemcache_put(cache, key, key_size, val, 1) &&
 				errno != EEXIST) {
-				FATAL("vmemcache_put failed");
+				UT_FATAL("vmemcache_put failed");
 			}
 		}
 	}
@@ -232,12 +237,12 @@ static void run_bench()
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
 		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
-		FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
+		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
 		if (os_thread_create(&th[i], 0, worker, 0))
-			FATAL("thread creation failed: %s", strerror(errno));
+			UT_FATAL("thread creation failed: %s", strerror(errno));
 	}
 
 	uint64_t total = 0;
@@ -245,7 +250,7 @@ static void run_bench()
 	for (uint64_t i = 0; i < n_threads; i++) {
 		uint64_t t;
 		if (os_thread_join(&th[i], (void **)&t))
-			FATAL("thread join failed: %s", strerror(errno));
+			UT_FATAL("thread join failed: %s", strerror(errno));
 		total += t;
 	}
 
@@ -269,7 +274,7 @@ main(int argc, const char **argv)
 		if (n_threads > MAX_THREADS)
 			n_threads = MAX_THREADS;
 		if (!n_threads)
-			FATAL("can't obtain number of processor cores");
+			UT_FATAL("can't obtain number of processor cores");
 	}
 
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
