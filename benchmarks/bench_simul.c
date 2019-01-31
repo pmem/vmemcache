@@ -42,12 +42,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/mman.h>
 
 #include "libvmemcache.h"
 #include "test_helpers.h"
 #include "os_thread.h"
 #include "benchmark_time.h"
 #include "rand.h"
+#include "util.h"
 
 #define PROG "bench_simul"
 #define MAX_THREADS 4096
@@ -74,6 +76,7 @@ static uint64_t key_size = 16;
 static uint64_t seed = 0;
 
 static VMEMcache *cache;
+static const void *lotta_zeroes;
 
 /* case insensitive */
 static const char *enum_repl[] = {
@@ -265,8 +268,8 @@ static void *worker(void *arg)
 		char val[1];
 		if (vmemcache_get(cache, key, key_size, val, sizeof(val), 0,
 			NULL) <= 0) {
-			if (vmemcache_put(cache, key, key_size, val, 1) &&
-				errno != EEXIST) {
+			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
+				max_size) && errno != EEXIST) {
 				UT_FATAL("vmemcache_put failed");
 			}
 		}
@@ -394,6 +397,13 @@ main(int argc, const char **argv)
 		} else
 			print_units(*p->var);
 		printf("\n");
+	}
+
+	lotta_zeroes = mmap(NULL, max_size, PROT_READ,
+		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (!lotta_zeroes) {
+		UT_FATAL("couldn't grab a zero buffer: mmap failed: %s",
+			strerror(errno));
 	}
 
 	run_bench();
