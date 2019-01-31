@@ -162,7 +162,8 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_POOL_SIZE_USED], stat, pool);
 
-	ret = vmemcache_get_stat(cache, -1, &stat, sizeof(stat));
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STATS_NUM,
+					&stat, sizeof(stat));
 	if (ret != -1)
 		FATAL(
 			"vmemcache_get_stat() succeeded for incorrect statistic (-1)");
