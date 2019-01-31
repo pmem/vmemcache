@@ -78,7 +78,7 @@ bench_init(const char *path, size_t max_size, size_t fragment_size,
 	VMEMcache *cache = vmemcache_new(path, max_size, fragment_size,
 						replacement_policy);
 	if (cache == NULL)
-		FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), path);
+		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), path);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].cache = cache;
@@ -114,7 +114,8 @@ worker_thread_put(void *arg)
 		if (vmemcache_put(ctx->cache, &i, sizeof(i),
 				ctx->buffs[i % ctx->nbuffs].buff,
 				ctx->buffs[i % ctx->nbuffs].size))
-			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+			UT_FATAL("ERROR: vmemcache_put: %s",
+					vmemcache_errormsg());
 	}
 
 	benchmark_time_get(&t2);
@@ -252,7 +253,8 @@ run_bench_get(const char *path, size_t max_size, size_t fragment_size,
 		if (vmemcache_put(ctx->cache, &i, sizeof(i),
 					ctx->buffs[i % ctx->nbuffs].buff,
 					ctx->buffs[i % ctx->nbuffs].size))
-			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+			UT_FATAL("ERROR: vmemcache_put: %s",
+					vmemcache_errormsg());
 		i++;
 	}
 
@@ -331,38 +333,38 @@ main(int argc, char *argv[])
 
 	if (argc >= 4 &&
 	    (str_to_unsigned(argv[3], &n_threads) || n_threads < 1))
-		FATAL("incorrect value of n_threads: %s", argv[3]);
+		UT_FATAL("incorrect value of n_threads: %s", argv[3]);
 
 	if (argc >= 5 &&
 	    (str_to_unsigned(argv[4], &ops_count) || ops_count < 1))
-		FATAL("incorrect value of ops_count: %s", argv[4]);
+		UT_FATAL("incorrect value of ops_count: %s", argv[4]);
 
 	if (argc >= 6 &&
 	    (str_to_unsigned(argv[5], &cache_max_size) ||
 			    cache_max_size < VMEMCACHE_MIN_POOL))
-		FATAL("incorrect value of cache_max_size: %s", argv[5]);
+		UT_FATAL("incorrect value of cache_max_size: %s", argv[5]);
 
 	if (argc >= 7 &&
 	    (str_to_unsigned(argv[6], &cache_fragment_size) ||
 			    cache_fragment_size < VMEMCACHE_MIN_FRAG))
-		FATAL("incorrect value of cache_fragment_size: %s", argv[6]);
+		UT_FATAL("incorrect value of cache_fragment_size: %s", argv[6]);
 
 	if (argc >= 8 &&
 	    (str_to_unsigned(argv[7], &nbuffs) || nbuffs < 2))
-		FATAL("incorrect value of nbuffs: %s", argv[7]);
+		UT_FATAL("incorrect value of nbuffs: %s", argv[7]);
 
 	if (argc >= 9 &&
 	    (str_to_unsigned(argv[8], &min_size) ||
 			    min_size < VMEMCACHE_MIN_FRAG))
-		FATAL("incorrect value of min_size: %s", argv[8]);
+		UT_FATAL("incorrect value of min_size: %s", argv[8]);
 
 	if (argc >= 10 &&
 	    (str_to_unsigned(argv[9], &max_size) || max_size < min_size))
-		FATAL("incorrect value of max_size: %s", argv[9]);
+		UT_FATAL("incorrect value of max_size: %s", argv[9]);
 
 	if (argc == 11) {
 		if (str_to_unsigned(argv[10], &seed))
-			FATAL("incorrect value of seed: %s", argv[10]);
+			UT_FATAL("incorrect value of seed: %s", argv[10]);
 	} else {
 		seed = (unsigned)time(NULL);
 	}
@@ -382,7 +384,7 @@ main(int argc, char *argv[])
 
 	struct buffers *buffs = calloc(nbuffs, sizeof(*buffs));
 	if (buffs == NULL)
-		FATAL("out of memory");
+		UT_FATAL("out of memory");
 
 	for (unsigned i = 0; i < nbuffs; ++i) {
 		/* generate N random sizes (between A – B bytes) */
@@ -392,14 +394,14 @@ main(int argc, char *argv[])
 		/* allocate a buffer and fill it for every generated size */
 		buffs[i].buff = malloc(buffs[i].size);
 		if (buffs[i].buff == NULL)
-			FATAL("out of memory");
+			UT_FATAL("out of memory");
 
 		memset(buffs[i].buff, 0xCC, buffs[i].size);
 	}
 
 	struct context *ctx = calloc(n_threads, sizeof(*ctx));
 	if (ctx == NULL)
-		FATAL("out of memory");
+		UT_FATAL("out of memory");
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].thread_number = i;
@@ -409,7 +411,7 @@ main(int argc, char *argv[])
 
 	os_thread_t *threads = calloc(n_threads, sizeof(*threads));
 	if (threads == NULL)
-		FATAL("out of memory");
+		UT_FATAL("out of memory");
 
 	if (benchmark & BENCH_PUT)
 		run_bench_put(dir, cache_max_size, cache_fragment_size,

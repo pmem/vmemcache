@@ -48,7 +48,7 @@
 	fprintf(stderr, "\n");\
 } while (/*CONSTCOND*/0)
 
-#define FATAL(...) do {\
+#define UT_FATAL(...) do {\
 	fprintf(stderr, "FATAL ERROR at %s:%i in %s(): ",\
 			__FILE__, __LINE__, __func__);\
 	fprintf(stderr, __VA_ARGS__);\
