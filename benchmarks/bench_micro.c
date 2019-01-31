@@ -94,10 +94,6 @@ bench_init(const char *path, size_t max_size, size_t fragment_size,
 static void
 bench_fini(VMEMcache *cache)
 {
-	/* free all the memory */
-	while (vmemcache_evict(cache, NULL, 0) == 0)
-		;
-
 	vmemcache_delete(cache);
 }
 
