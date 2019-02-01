@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "libvmemcache.h"
 #include "test_helpers.h"
@@ -272,6 +273,52 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	printf("%s: PASSED\n", __func__);
 }
 
+/*
+ * on_miss_cb -- (internal) 'on miss' callback for run_test_get_on_miss
+ */
+static int
+on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
+{
+	struct context *ctx = arg;
+
+	typedef unsigned long long key_t;
+	assert(key_size == sizeof(key_t));
+
+	key_t n = *(key_t *)key;
+
+	int ret = vmemcache_put(ctx->cache, key, key_size,
+				ctx->buffs[n % ctx->nbuffs].buff,
+				ctx->buffs[n % ctx->nbuffs].size);
+	if (ret && errno != EEXIST)
+		UT_FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
+
+	return ret;
+}
+
+/*
+ * run_test_get_on_miss -- (internal) run test for vmemcache_get() with
+ *                          vmemcache_put() called in the 'on miss' callback
+ */
+static void
+run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
+{
+	free_cache(cache);
+
+	vmemcache_callback_on_miss(cache, on_miss_cb, ctx);
+
+	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].thread_routine = worker_thread_get;
+		ctx[i].ops_count = ops_per_thread;
+	}
+
+	printf("%s: STARTED\n", __func__);
+
+	run_threads(n_threads, threads, ctx);
+
+	printf("%s: PASSED\n", __func__);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -363,6 +410,7 @@ main(int argc, char *argv[])
 	run_test_put(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
+	run_test_get_on_miss(cache, n_threads, threads, ops_per_thread, ctx);
 
 	ret = 0;
 
