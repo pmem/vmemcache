@@ -54,7 +54,7 @@ struct context {
 	VMEMcache *cache;
 	struct buffers *buffs;
 	unsigned nbuffs;
-	unsigned long long ops_count;
+	unsigned ops_count;
 	void *(*thread_routine)(void *);
 };
 
