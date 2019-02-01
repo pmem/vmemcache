@@ -54,7 +54,7 @@ struct context {
 	VMEMcache *cache;
 	struct buffers *buffs;
 	unsigned nbuffs;
-	unsigned long long ops_count;
+	unsigned ops_count;
 	void *(*thread_routine)(void *);
 };
 
@@ -201,7 +201,8 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 
 	unsigned n = 0; /* number of elements put into the cache */
 	while (!cache_is_full && n < ops_per_thread) {
-		if (vmemcache_put(ctx->cache, &n, sizeof(n),
+		unsigned long long n_key = n;
+		if (vmemcache_put(cache, &n_key, sizeof(n_key),
 					ctx->buffs[n % ctx->nbuffs].buff,
 					ctx->buffs[n % ctx->nbuffs].size))
 			UT_FATAL("ERROR: vmemcache_put: %s",
