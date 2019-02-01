@@ -55,6 +55,8 @@
 #define NIB ((1 << SLICE) - 1)
 #define SLNODES (1 << SLICE)
 
+#define KEYLEN(leaf) (leaf->key.ksize + sizeof(size_t))
+
 typedef uint32_t byten_t;
 typedef unsigned char bitn_t;
 
@@ -64,11 +66,7 @@ struct critnib_node {
 	bitn_t bit;
 };
 
-struct critnib_leaf {
-	const char *key;
-	byten_t key_len;
-	void *value;
-};
+typedef struct cache_entry critnib_leaf;
 
 /*
  * is_leaf -- (internal) check tagged pointer for leafness
@@ -82,7 +80,7 @@ is_leaf(struct critnib_node *n)
 /*
  * to_leaf -- (internal) untag a leaf pointer
  */
-static inline struct critnib_leaf *
+static inline critnib_leaf *
 to_leaf(struct critnib_node *n)
 {
 	return (void *)((uint64_t)n & ~1ULL);
@@ -120,8 +118,8 @@ delete_node(struct critnib_node *n, delete_entry_t del)
 		return;
 	if (is_leaf(n)) {
 		if (del)
-			del(to_leaf(n)->value);
-		return Free(to_leaf(n));
+			del(to_leaf(n));
+		return;
 	}
 	for (int i = 0; i < SLNODES; i++)
 		delete_node(n->child[i], del);
@@ -153,15 +151,6 @@ alloc_node(struct critnib *c)
 }
 
 /*
- * alloc_leaf -- (internal) alloc a leaf
- */
-static struct critnib_leaf *
-alloc_leaf(struct critnib *c)
-{
-	return Malloc(sizeof(struct critnib_leaf));
-}
-
-/*
  * any_leaf -- (internal) find any leaf in a subtree
  *
  * We know they're all identical up to the divergence point between a prefix
@@ -184,16 +173,9 @@ any_leaf(struct critnib_node *n)
 int
 critnib_set(struct critnib *c, struct cache_entry *e)
 {
-	struct critnib_leaf *k = alloc_leaf(c);
-	if (!k)
-		return ENOMEM;
-
 	const char *key = (void *)&e->key;
-	byten_t key_len = (byten_t)(e->key.ksize + sizeof(e->key.ksize));
-	k->key = key;
-	k->key_len = key_len;
-	k->value = e;
-	k = (void *)((uint64_t)k | 1);
+	byten_t key_len = (byten_t)KEYLEN(e);
+	critnib_leaf *k = (void *)((uint64_t)e | 1);
 
 	struct critnib_node *n = c->root;
 	if (!n) {
@@ -223,14 +205,15 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 
 	ASSERT(n);
 	ASSERT(is_leaf(n));
-	struct critnib_leaf *nk = to_leaf(n);
+	critnib_leaf *nk = to_leaf(n);
+	const char *nkey = (void *)&nk->key;
 
 	/* Find the divergence point, accurate to a byte. */
-	byten_t common_len = (nk->key_len < (byten_t)key_len)
-			    ? nk->key_len : (byten_t)key_len;
+	byten_t common_len = ((byten_t)KEYLEN(nk) < key_len)
+			    ? (byten_t)KEYLEN(nk) : key_len;
 	byten_t diff;
 	for (diff = 0; diff < common_len; diff++) {
-		if (nk->key[diff] != key[diff])
+		if (nkey[diff] != key[diff])
 			break;
 	}
 
@@ -243,7 +226,7 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 	}
 
 	/* Calculate the divergence point within the single byte. */
-	char at = nk->key[diff] ^ key[diff];
+	char at = nkey[diff] ^ key[diff];
 	bitn_t sh = util_mssb_index((uint32_t)at) & (bitn_t)~(SLICE - 1);
 
 	/* Descend into the tree again. */
@@ -266,12 +249,10 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 	}
 
 	/* If not, we need to insert a new node in the middle of an edge. */
-	if (!(n = alloc_node(c))) {
-		Free(k);
+	if (!(n = alloc_node(c)))
 		return ENOMEM;
-	}
 
-	n->child[slice_index(nk->key[diff], sh)] = *parent;
+	n->child[slice_index(nkey[diff], sh)] = *parent;
 	n->child[slice_index(key[diff], sh)] = (void *)k;
 	n->byte = diff;
 	n->bit = sh;
@@ -286,7 +267,7 @@ void *
 critnib_get(struct critnib *c, const struct cache_entry *e)
 {
 	const char *key = (void *)&e->key;
-	byten_t key_len = (byten_t)(e->key.ksize + sizeof(e->key.ksize));
+	byten_t key_len = (byten_t)KEYLEN(e);
 
 	struct critnib_node *n = c->root;
 	while (n && !is_leaf(n)) {
@@ -298,14 +279,14 @@ critnib_get(struct critnib *c, const struct cache_entry *e)
 	if (!n)
 		return NULL;
 
-	struct critnib_leaf *k = to_leaf(n);
+	critnib_leaf *k = to_leaf(n);
 
 	/*
 	 * We checked only nibs at divergence points, have to re-check the
 	 * whole key.
 	 */
-	return (key_len != k->key_len || memcmp(key, k->key, key_len)) ?
-		NULL : k->value;
+	return (key_len != KEYLEN(k) || memcmp(key, (void *)&k->key,
+		key_len)) ? NULL : k;
 }
 
 /*
@@ -317,7 +298,7 @@ void *
 critnib_remove(struct critnib *c, const struct cache_entry *e)
 {
 	const char *key = (void *)&e->key;
-	byten_t key_len = (byten_t)(e->key.ksize + sizeof(e->key.ksize));
+	byten_t key_len = (byten_t)KEYLEN(e);
 
 	struct critnib_node **pp = NULL;
 	struct critnib_node *n = c->root;
@@ -335,18 +316,15 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	if (!n)
 		return NULL;
 
-	struct critnib_leaf *k = to_leaf(n);
-	if (key_len != k->key_len || memcmp(key, k->key, key_len))
+	critnib_leaf *k = to_leaf(n);
+	if (key_len != KEYLEN(k) || memcmp(key, (void *)&k->key, key_len))
 		return NULL;
-
-	void *value = k->value;
 
 	/* Remove the entry (leaf). */
 	*parent = NULL;
-	Free(k);
 
 	if (!pp) /* was root */
-		return value;
+		return k;
 
 	/* Check if after deletion the node has just a single child left. */
 	n = *pp;
@@ -354,7 +332,7 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	for (int i = 0; i < SLNODES; i++) {
 		if (n->child[i]) {
 			if (only_child) /* Nope. */
-				return value;
+				return k;
 			only_child = n->child[i];
 		}
 	}
@@ -363,5 +341,5 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	ASSERT(only_child);
 	*pp = only_child;
 	Free(n);
-	return value;
+	return k;
 }
