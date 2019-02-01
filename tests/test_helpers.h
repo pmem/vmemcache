@@ -43,12 +43,12 @@
 #include <limits.h>
 #include <errno.h>
 
-#define ERROR(...) do {\
+#define UT_ERR(...) do {\
 	fprintf(stderr, "ERROR: " __VA_ARGS__);\
 	fprintf(stderr, "\n");\
 } while (/*CONSTCOND*/0)
 
-#define FATAL(...) do {\
+#define UT_FATAL(...) do {\
 	fprintf(stderr, "FATAL ERROR at %s:%i in %s(): ",\
 			__FILE__, __LINE__, __func__);\
 	fprintf(stderr, __VA_ARGS__);\
@@ -70,12 +70,12 @@ str_to_unsigned(const char *str, unsigned *value)
 	if ((errno == ERANGE && val == ULONG_MAX) ||
 	    (errno != 0 && val == 0) ||
 	    (endptr == str) || (*endptr != '\0')) {
-		ERROR("strtoul() failed to convert the string %s", str);
+		UT_ERR("strtoul() failed to convert the string %s", str);
 		return -1;
 	}
 
 	if (val > UINT_MAX) {
-		ERROR("value %s is bigger than UINT_MAX (%u)", str, UINT_MAX);
+		UT_ERR("value %s is bigger than UINT_MAX (%u)", str, UINT_MAX);
 		return -1;
 	}
 

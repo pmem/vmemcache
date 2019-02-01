@@ -93,79 +93,79 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_PUT,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != put)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_PUT], stat, put);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_GET,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != get)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_GET], stat, get);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_HIT,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != hit)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_HIT], stat, hit);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_MISS,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != miss)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_MISS], stat, miss);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_EVICT,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != evict)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_EVICT], stat, evict);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_ENTRIES,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != entries)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_ENTRIES], stat, entries);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_DRAM_SIZE_USED,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != dram)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_DRAM_SIZE_USED], stat, dram);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_POOL_SIZE_USED,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != pool)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_POOL_SIZE_USED], stat, pool);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STATS_NUM,
 					&stat, sizeof(stat));
 	if (ret != -1)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat() succeeded for incorrect statistic (-1)");
 }
 
@@ -182,9 +182,9 @@ verify_stat_entries(VMEMcache *cache, stat_t entries)
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_ENTRIES,
 			&stat, sizeof(stat));
 	if (ret == -1)
-		FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 	if (stat != entries)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_ENTRIES], stat, entries);
 }
@@ -202,7 +202,7 @@ test_new_delete(const char *dir, const char *file,
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
 				replacement_policy);
 	if (cache == NULL)
-		FATAL("vmemcache_new: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	vmemcache_delete(cache);
 
@@ -210,7 +210,7 @@ test_new_delete(const char *dir, const char *file,
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_POOL,
 				replacement_policy);
 	if (cache == NULL)
-		FATAL("vmemcache_new: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	vmemcache_delete(cache);
 
@@ -218,40 +218,40 @@ test_new_delete(const char *dir, const char *file,
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, 0,
 				replacement_policy);
 	if (cache != NULL)
-		FATAL("vmemcache_new did not fail with fragment_size == 0");
+		UT_FATAL("vmemcache_new did not fail with fragment_size == 0");
 
 	/* TEST #4 - fragment_size == -1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, (size_t)-1,
 				replacement_policy);
 	if (cache != NULL)
-		FATAL("vmemcache_new did not fail with fragment_size == -1");
+		UT_FATAL("vmemcache_new did not fail with fragment_size == -1");
 
 	/* TEST #5 - fragment_size == VMEMCACHE_MIN_FRAG - 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG - 1,
 				replacement_policy);
 	if (cache != NULL)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_new did not fail with fragment_size == VMEMCACHE_MIN_FRAG - 1");
 
 	/* TEST #6 - fragment_size == max_size + 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_POOL + 1,
 				replacement_policy);
 	if (cache != NULL)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_new did not fail with fragment_size == max_size + 1");
 
 	/* TEST #7 - size == VMEMCACHE_MIN_POOL - 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL - 1, VMEMCACHE_MIN_FRAG,
 				replacement_policy);
 	if (cache != NULL)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_new did not fail with size == VMEMCACHE_MIN_POOL - 1");
 
 	/* TEST #8 - not a directory, but a file */
 	cache = vmemcache_new(file, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
 				replacement_policy);
 	if (cache != NULL)
-		FATAL(
+		UT_FATAL(
 			"vmemcache_new did not fail with a file instead of a directory");
 
 }
@@ -268,7 +268,7 @@ test_put_get_evict(const char *dir,
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_FRAGMENT,
 				replacement_policy);
 	if (cache == NULL)
-		FATAL("vmemcache_new: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	const char *key = "KEY";
 	size_t key_size = strlen(key) + 1;
@@ -276,7 +276,7 @@ test_put_get_evict(const char *dir,
 	size_t value_size = strlen(value) + 1;
 
 	if (vmemcache_put(cache, key, key_size, value, value_size))
-		FATAL("vmemcache_put: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
 
 	verify_stat_entries(cache, 1);
 
@@ -288,18 +288,20 @@ test_put_get_evict(const char *dir,
 	/* get the only one element */
 	ret = vmemcache_get(cache, key, key_size, vbuf, vbufsize, 0, &vsize);
 	if (ret < 0)
-		FATAL("vmemcache_get: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_get: %s", vmemcache_errormsg());
 
 	if ((size_t)ret != value_size)
-		FATAL("vmemcache_get: wrong return value: %zi (should be %zu)",
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %zu)",
 			ret, value_size);
 
 	if (vsize != value_size)
-		FATAL("vmemcache_get: wrong size of value: %zi (should be %zu)",
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %zu)",
 			vsize, value_size);
 
 	if (strncmp(vbuf, value, vsize))
-		FATAL("vmemcache_get: wrong value: %s (should be %s)",
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			vbuf, value);
 
 	/* evict the only one element */
@@ -311,17 +313,17 @@ test_put_get_evict(const char *dir,
 		ret = vmemcache_evict(cache, NULL, 0);
 		break;
 	default:
-		FATAL("unknown policy: %u", replacement_policy);
+		UT_FATAL("unknown policy: %u", replacement_policy);
 		break;
 	}
 
 	if (ret == -1)
-		FATAL("vmemcache_evict: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
 
 	/* getting the evicted element should return 0 (no such element) */
 	ret = vmemcache_get(cache, key, key_size, vbuf, vbufsize, 0, &vsize);
 	if (ret != 0)
-		FATAL("vmemcache_get did not return 0 (no such element)");
+		UT_FATAL("vmemcache_get did not return 0 (no such element)");
 
 	vmemcache_delete(cache);
 }
@@ -341,10 +343,11 @@ on_evict_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
 	ret = vmemcache_get(cache, key, key_size, ctx->vbuf, ctx->vbufsize, 0,
 				&ctx->vsize);
 	if (ret < 0)
-		FATAL("vmemcache_get");
+		UT_FATAL("vmemcache_get");
 
 	if ((size_t)ret != VSIZE)
-		FATAL("vmemcache_get: wrong return value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %i)",
 			ret, VSIZE);
 }
 
@@ -389,7 +392,7 @@ test_evict(const char *dir,
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_FRAGMENT,
 				replacement_policy);
 	if (cache == NULL)
-		FATAL("vmemcache_new: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	vmemcache_callback_on_evict(cache, on_evict_test_evict_cb, &ctx);
 	vmemcache_callback_on_miss(cache, on_miss_test_evict_cb, &ctx);
@@ -405,7 +408,7 @@ test_evict(const char *dir,
 
 		if (vmemcache_put(cache, data[i].key, KSIZE,
 					data[i].value, VSIZE))
-			FATAL("vmemcache_put: %s", vmemcache_errormsg());
+			UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
 	}
 
 	verify_stat_entries(cache, DNUM);
@@ -413,81 +416,88 @@ test_evict(const char *dir,
 	/* TEST #1 - evict the element with index #5 */
 	ret = vmemcache_evict(cache, data[5].key, KSIZE);
 	if (ret == -1)
-		FATAL("vmemcache_evict: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
 
 	if (ctx.vsize != VSIZE)
-		FATAL("vmemcache_get: wrong size of value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
 	/* check if the evicted element is #5 */
 	if (strncmp(ctx.vbuf, data[5].value, ctx.vsize))
-		FATAL("vmemcache_get: wrong value: %s (should be %s)",
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[5].value);
 
 	/* TEST #2 - evict the LRU element */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
-		FATAL("vmemcache_evict: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
 
 	if (ctx.vsize != VSIZE)
-		FATAL("vmemcache_get: wrong size of value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
 	/* check if the evicted LRU element is #0 */
 	if (strncmp(ctx.vbuf, data[0].value, ctx.vsize))
-		FATAL("vmemcache_get: wrong value: %s (should be %s)",
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[0].value);
 
 	/* TEST #3 - get the element with index #1 (to change LRU one to #2) */
 	ret = vmemcache_get(cache, data[1].key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
 	if (ret < 0)
-		FATAL("vmemcache_get");
+		UT_FATAL("vmemcache_get");
 
 	if ((size_t)ret != VSIZE)
-		FATAL("vmemcache_get: wrong return value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %i)",
 			ret, VSIZE);
 
 	if (vsize != VSIZE)
-		FATAL("vmemcache_get: wrong size of value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
 	/* check if the got element is #1 */
 	if (strncmp(vbuf, data[1].value, vsize))
-		FATAL("vmemcache_get: wrong value: %s (should be %s)",
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			vbuf, data[1].value);
 
 	/* TEST #4 - evict the LRU element (it should be #2 now) */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
-		FATAL("vmemcache_evict: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
 
 	if (ctx.vsize != VSIZE)
-		FATAL("vmemcache_get: wrong size of value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
 	/* check if the evicted LRU element is #2 */
 	if (strncmp(ctx.vbuf, data[2].value, ctx.vsize))
-		FATAL("vmemcache_get: wrong value: %s (should be %s)",
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[2].value);
 
 	/* TEST #5 - get the evicted element with index #2 */
 	ret = vmemcache_get(cache, data[2].key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
 	if (ret == -1)
-		FATAL("vmemcache_get");
+		UT_FATAL("vmemcache_get");
 
 	if (ret != 0)
-		FATAL("vmemcache_get: wrong return value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %i)",
 			ret, 0);
 
 	if (vsize != VSIZE)
-		FATAL("vmemcache_get: wrong size of value: %zi (should be %i)",
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			vsize, VSIZE);
 
 	/* check if the 'on_miss' callback got key #2 */
 	if (strncmp(ctx.vbuf, data[2].key, ctx.vsize))
-		FATAL("vmemcache_get: wrong value: %s (should be %s)",
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[2].key);
 
 	/* free all the memory */
@@ -540,7 +550,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
 				replacement_policy);
 	if (cache == NULL)
-		FATAL("vmemcache_new: %s", vmemcache_errormsg());
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	vmemcache_callback_on_evict(cache, on_evict_test_memory_leaks_cb,
 					&n_evicts);
@@ -549,7 +559,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 		size = min_size + (size_t)rand() % (max_size - min_size + 1);
 		buff = malloc(size);
 		if (buff == NULL)
-			FATAL("out of memory");
+			UT_FATAL("out of memory");
 
 		if (key_gt_1K) {
 			struct big_key bk;
@@ -563,7 +573,8 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 		}
 
 		if (ret)
-			FATAL("vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
+			UT_FATAL(
+				"vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
 				n_puts, n_evicts, vmemcache_errormsg());
 		n_puts++;
 
@@ -582,7 +593,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 	vmemcache_delete(cache);
 
 	if (n_evicts != n_puts)
-		FATAL("memory leak detected");
+		UT_FATAL("memory leak detected");
 }
 
 int
