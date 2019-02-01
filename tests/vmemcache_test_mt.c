@@ -199,7 +199,8 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 
 	unsigned n = 0; /* number of elements put into the cache */
 	while (!cache_is_full && n < ops_per_thread) {
-		if (vmemcache_put(cache, &n, sizeof(n),
+		unsigned long long n_key = n;
+		if (vmemcache_put(cache, &n_key, sizeof(n_key),
 					ctx->buffs[n % ctx->nbuffs].buff,
 					ctx->buffs[n % ctx->nbuffs].size))
 			FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
