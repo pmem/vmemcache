@@ -83,7 +83,7 @@ shard(struct index *index, size_t key_size, const char *key)
 struct index *
 vmcache_index_new(void)
 {
-	struct index *index = malloc(sizeof(struct index));
+	struct index *index = Malloc(sizeof(struct index));
 	if (!index)
 		return NULL;
 
@@ -96,7 +96,7 @@ vmcache_index_new(void)
 				util_mutex_destroy(&index->bucket[i]->lock);
 				critnib_delete(index->bucket[i], NULL);
 			}
-			free(index);
+			Free(index);
 
 			return NULL;
 		}
@@ -119,7 +119,7 @@ vmcache_index_delete(struct index *index, delete_entry_t del_entry)
 		critnib_delete(index->bucket[i], del_entry);
 	}
 
-	free(index);
+	Free(index);
 }
 
 /*
