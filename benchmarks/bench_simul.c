@@ -59,6 +59,9 @@
 
 #define NSECPSEC 1000000000
 
+/* type of statistics */
+typedef unsigned long long stat_t;
+
 static const char *dir;
 static uint64_t n_threads = 100;
 static uint64_t ops_count = 100000;
@@ -232,6 +235,37 @@ static void *worker(void *arg)
 	return (void *)(intptr_t)(t1.tv_sec * NSECPSEC + t1.tv_nsec);
 }
 
+/*
+ * print_stats -- (internal) print all statistics
+ */
+static void
+print_stats(VMEMcache *cache)
+{
+	stat_t stat_vals[VMEMCACHE_STATS_NUM];
+
+#define GET_STAT(cache, stat_vals, i_stat)\
+do {\
+	int ret = vmemcache_get_stat(cache, i_stat,\
+				&stat_vals[i_stat], sizeof(*stat_vals));\
+	if (ret == -1)\
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());\
+} while (0)
+
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_PUT);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_GET);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_HIT);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_MISS);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_EVICT);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_ENTRIES);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_DRAM_SIZE_USED);
+	GET_STAT(cache, stat_vals, VMEMCACHE_STAT_POOL_SIZE_USED);
+
+	printf("\nStatistics:\n");
+	for (int i = 0; i < VMEMCACHE_STATS_NUM; i++)
+		printf("  %-20s : %llu\n", stat_str[i], stat_vals[i]);
+	printf("\n");
+}
+
 static void run_bench()
 {
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
@@ -253,6 +287,8 @@ static void run_bench()
 			UT_FATAL("thread join failed: %s", strerror(errno));
 		total += t;
 	}
+
+	print_stats(cache);
 
 	vmemcache_delete(cache);
 

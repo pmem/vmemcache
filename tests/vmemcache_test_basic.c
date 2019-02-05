@@ -53,18 +53,6 @@
 /* type of statistics */
 typedef unsigned long long stat_t;
 
-/* names of statistics */
-static const char *stat_str[VMEMCACHE_STATS_NUM] = {
-	"PUTs",
-	"GETs",
-	"HITs",
-	"MISSes",
-	"EVICTs",
-	"CACHE_ENTRIES",
-	"DRAM_SIZE_USED",
-	"POOL_SIZE_USED"
-};
-
 /* context of callbacks */
 struct ctx_cb {
 	char vbuf[VSIZE];

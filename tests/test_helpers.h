@@ -56,6 +56,18 @@
 	abort();\
 } while (/*CONSTCOND*/0)
 
+/* names of statistics */
+static const char *stat_str[VMEMCACHE_STATS_NUM] = {
+	"puts",
+	"gets",
+	"hits",
+	"misses",
+	"evicts",
+	"cache entries",
+	"DRAM size used",
+	"pool size used"
+};
+
 /*
  * str_to_unsigned -- (internal) convert string argument to unsigned int
  */
