@@ -118,8 +118,10 @@ worker_thread_get(void *arg)
 	size_t vsize = 0;		/* real size of the object */
 
 	for (i = 0; i < ctx->ops_count; i++) {
-		vmemcache_get(ctx->cache, &i, sizeof(i),
-				vbuf, vbufsize, 0, &vsize);
+		if (vmemcache_get(ctx->cache, &i, sizeof(i),
+					vbuf, vbufsize, 0, &vsize) == -1)
+			UT_FATAL("ERROR: vmemcache_get: %s",
+					vmemcache_errormsg());
 	}
 
 	return NULL;
