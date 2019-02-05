@@ -295,6 +295,25 @@ static void run_bench()
 		total / 1000, total % 1000);
 }
 
+static void
+print_units(uint64_t x)
+{
+	if (x == -1ULL) {
+		printf("∞");
+		return;
+	}
+
+	const char *units[] = { "", "K", "M", "G", "T", "P", "E" };
+	int u = 0;
+
+	while (x && !(x % 1024)) {
+		u++;
+		x /= 1024;
+	}
+
+	printf("%lu%s", x, units[u]);
+}
+
 int
 main(int argc, const char **argv)
 {
@@ -321,7 +340,7 @@ main(int argc, const char **argv)
 			else
 				printf("enum out of range: %lu", *p->var);
 		} else
-			printf("%lu", *p->var);
+			print_units(*p->var);
 		printf("\n");
 	}
 
