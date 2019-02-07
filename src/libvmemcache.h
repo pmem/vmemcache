@@ -102,6 +102,12 @@ enum vmemcache_statistic {
 
 typedef void vmemcache_on_evict(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
+
+/*
+ * The return value of vmemcache_on_miss callback means:
+ *  == 0 - it succeeded to insert the missing key into the cache
+ *  != 0 - it failed to insert the missing key into the cache
+ */
 typedef int vmemcache_on_miss(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
 
