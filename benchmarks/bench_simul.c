@@ -111,7 +111,8 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"evicts",
 	"cache entries",
 	"DRAM size used",
-	"pool size used"
+	"pool size used",
+	"ACT"
 };
 
 /*
@@ -306,6 +307,7 @@ print_stats(VMEMcache *cache)
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_ENTRIES);
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_DRAM_SIZE_USED);
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_POOL_SIZE_USED);
+	get_stat(cache, stat_vals, VMEMCACHE_STAT_ACT);
 
 	printf("\nStatistics:\n");
 	for (int i = 0; i < VMEMCACHE_STATS_NUM; i++)

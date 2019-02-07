@@ -62,7 +62,8 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"EVICTs",
 	"CACHE_ENTRIES",
 	"DRAM_SIZE_USED",
-	"POOL_SIZE_USED"
+	"POOL_SIZE_USED",
+	"ACT"
 };
 
 /* context of callbacks */
@@ -161,6 +162,15 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_POOL_SIZE_USED], stat, pool);
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_ACT,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat == 0)
+		UT_FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be > 0)",
+			stat_str[VMEMCACHE_STAT_ACT], stat);
 
 	ret = vmemcache_get_stat(cache, VMEMCACHE_STATS_NUM,
 					&stat, sizeof(stat));

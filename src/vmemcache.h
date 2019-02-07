@@ -51,6 +51,13 @@ extern "C" {
 #define VMEMCACHE_LEVEL_VAR "VMEMCACHE_LEVEL"
 #define VMEMCACHE_FILE_VAR "VMEMCACHE_FILE"
 
+/*
+ * atomic store lval = rval
+ * 'util_atomic_store_explicit64' does not work correctly with Helgrind and DRD
+ */
+#define ATOMIC_STORE(lval, rval)\
+	util_bool_compare_and_swap64(&(lval), (lval), (rval))
+
 /* type of the statistics */
 typedef unsigned long long stat_t;
 
@@ -74,6 +81,7 @@ struct vmemcache {
 	stat_t miss_count;		/* total number of misses */
 	stat_t evict_count;		/* total number of evicts */
 	stat_t size_DRAM;		/* current size of DRAM used for keys */
+	stat_t cct;			/* cumulative cache pseudo-time */
 };
 
 struct cache_entry {
@@ -83,6 +91,7 @@ struct cache_entry {
 		struct repl_p_entry *p_entry;
 		size_t vsize;
 		VEC(, struct heap_entry) fragments;
+		stat_t updated;
 	} value;
 
 	struct key {
@@ -99,6 +108,8 @@ void vmemcache_delete_entry_cb(struct cache_entry *entry);
 
 void vmemcache_entry_acquire(struct cache_entry *entry);
 void vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry);
+
+stat_t vmemcache_get_stat_counter(VMEMcache *cache);
 
 #ifdef __cplusplus
 }

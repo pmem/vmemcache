@@ -96,7 +96,15 @@ enum vmemcache_statistic {
 	VMEMCACHE_STAT_ENTRIES,		/* current number of cache entries */
 	VMEMCACHE_STAT_DRAM_SIZE_USED,	/* current size of DRAM used for keys */
 	VMEMCACHE_STAT_POOL_SIZE_USED,	/* current size of memory pool */
-					/*    used for values */
+					/*    used for values          */
+	VMEMCACHE_STAT_ACT,		/* Average Cache pseudo-Time (ACT) - */
+					/*  - average pseudo-time            */
+					/*    (number of puts and gets)      */
+					/*    spent by evicted entries       */
+					/*    in the cache.                  */
+					/*    If there were no evicts,       */
+					/*    ACT equals 0.                  */
+
 	VMEMCACHE_STATS_NUM		/* total number of statistics */
 };
 

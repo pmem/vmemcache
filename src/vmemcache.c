@@ -219,6 +219,15 @@ vmemcache_populate_fragments(struct cache_entry *entry,
 }
 
 /*
+ * vmemcache_get_stat_counter -- get the statistic pseudo-time counter
+ */
+stat_t
+vmemcache_get_stat_counter(VMEMcache *cache)
+{
+	return cache->put_count + cache->get_count;
+}
+
+/*
  * vmemcache_put -- put an element into the vmemcache
  */
 int
@@ -263,6 +272,8 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 	}
 
 	vmemcache_populate_fragments(entry, value, value_size);
+
+	ATOMIC_STORE(entry->value.updated, vmemcache_get_stat_counter(cache));
 
 	if (vmcache_index_insert(cache->index, entry)) {
 		LOG(1, "inserting to the index failed");
@@ -404,6 +415,7 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	}
 
 	util_fetch_and_add64(&cache->get_count, 1);
+	ATOMIC_STORE(entry->value.updated, vmemcache_get_stat_counter(cache));
 
 	cache->repl->ops->repl_p_use(cache->repl->head, &entry->value.p_entry);
 
@@ -464,6 +476,8 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 	}
 
 	util_fetch_and_add64(&cache->evict_count, 1);
+	util_fetch_and_add64(&cache->cct,
+		vmemcache_get_stat_counter(cache) - entry->value.updated);
 
 	if (cache->on_evict != NULL)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
@@ -554,6 +568,10 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 		break;
 	case VMEMCACHE_STAT_POOL_SIZE_USED:
 		*val = vmcache_get_heap_used_size(cache->heap);
+		break;
+	case VMEMCACHE_STAT_ACT:
+		*val = (cache->evict_count) ?
+				cache->cct / cache->evict_count : 0;
 		break;
 	default:
 		ERR("unknown value of statistic: %u", stat);
