@@ -72,8 +72,10 @@ static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
 static uint64_t key_size = 16;
 static uint64_t seed = 0;
+static uint64_t junk_start = 0;
 
 static VMEMcache *cache;
+static int cache_is_full = 0;
 
 /* case insensitive */
 static const char *enum_repl[] = {
@@ -99,6 +101,7 @@ static struct param_t {
 	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
 	{ "key_size", &key_size, 1, SIZE_GB, NULL },
 	{ "seed", &seed, 0, -1ULL, NULL },
+	{ "junk_start", &junk_start, 0, 1, NULL },
 	{ 0 },
 };
 
@@ -313,12 +316,32 @@ print_stats(VMEMcache *cache)
 	printf("\n");
 }
 
+/*
+ * on_evict_cb -- (internal) 'on evict' callback for run_test_get
+ */
+static void
+on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
+{
+	cache_is_full = 1;
+}
+
 static void run_bench()
 {
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
 		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
+
+	if (junk_start) {
+		vmemcache_callback_on_evict(cache, on_evict_cb, NULL);
+		uint64_t ndummies = 0;
+		while (!cache_is_full) {
+			ndummies++;
+			vmemcache_put(cache, &ndummies, sizeof(ndummies),
+				worker, 256);
+		}
+		vmemcache_callback_on_evict(cache, NULL, NULL);
+	}
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
