@@ -270,7 +270,8 @@ static void *worker(void *arg)
 			NULL) <= 0) {
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
 				max_size) && errno != EEXIST) {
-				UT_FATAL("vmemcache_put failed");
+				UT_FATAL("vmemcache_put failed: %s",
+					strerror(errno));
 			}
 		}
 	}
