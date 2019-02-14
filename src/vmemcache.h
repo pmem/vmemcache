@@ -67,6 +67,8 @@ struct vmemcache {
 	void *arg_evict;		/* argument for callback on evict */
 	vmemcache_on_miss *on_miss;	/* callback on miss */
 	void *arg_miss;			/* argument for callback on miss */
+	unsigned index_only:1;		/* bench: disable allocations */
+	unsigned no_memcpy:1;		/* bench: don't copy actual data */
 
 	/* statistics */
 	stat_t put_count;		/* total number of puts */
