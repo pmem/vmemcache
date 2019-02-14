@@ -262,7 +262,10 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		left_to_allocate -= he.size;
 	}
 
-	vmemcache_populate_fragments(entry, value, value_size);
+	if (cache->no_memcpy)
+		entry->value.vsize = value_size;
+	else
+		vmemcache_populate_fragments(entry, value, value_size);
 
 	if (vmcache_index_insert(cache->index, entry)) {
 		LOG(1, "inserting to the index failed");
@@ -294,7 +297,7 @@ error_exit:
  */
 static size_t
 vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
-				struct cache_entry *entry)
+				struct cache_entry *entry, int no_memcpy)
 {
 	struct heap_entry he;
 	size_t copied = 0;
@@ -321,7 +324,8 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 		if (len > left_to_copy)
 			len = left_to_copy;
 
-		memcpy(vbuf, (char *)he.ptr + off, len);
+		if (!no_memcpy)
+			memcpy(vbuf, (char *)he.ptr + off, len);
 
 		vbufsize -= len;
 		vbuf = (char *)vbuf + len;
@@ -407,7 +411,8 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 
 	cache->repl->ops->repl_p_use(cache->repl->head, &entry->value.p_entry);
 
-	size_t read = vmemcache_populate_value(vbuf, vbufsize, offset, entry);
+	size_t read = vmemcache_populate_value(vbuf, vbufsize, offset, entry,
+		cache->no_memcpy);
 	if (vsize)
 		*vsize = entry->value.vsize;
 
