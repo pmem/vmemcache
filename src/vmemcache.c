@@ -535,10 +535,10 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 		*val = cache->put_count;
 		break;
 	case VMEMCACHE_STAT_GET:
-		*val = cache->get_count;
+		*val = cache->get_count + cache->miss_count;
 		break;
 	case VMEMCACHE_STAT_HIT:
-		*val = cache->get_count - cache->miss_count;
+		*val = cache->get_count;
 		break;
 	case VMEMCACHE_STAT_MISS:
 		*val = cache->miss_count;
