@@ -100,6 +100,12 @@ enum vmemcache_statistic {
 	VMEMCACHE_STATS_NUM		/* total number of statistics */
 };
 
+enum vmemcache_config {
+	/* these will corrupt the data, good only for benchmarking */
+	VMEMCACHE_CFG_INDEX_ONLY,	/* disable anything but indexing */
+	VMEMCACHE_CFG_NO_MEMCPY,	/* alloc but don't copy data */
+};
+
 typedef void vmemcache_on_evict(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
 typedef int vmemcache_on_miss(VMEMcache *cache,
@@ -142,6 +148,9 @@ int vmemcache_get_stat(VMEMcache *cache,
 	enum vmemcache_statistic stat,
 	void *value,
 	size_t value_size);
+
+void vmemcache_config_set(VMEMcache *cache, enum vmemcache_config cfg,
+				size_t val);
 
 #ifndef _WIN32
 const char *vmemcache_errormsg(void);

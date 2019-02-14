@@ -564,6 +564,25 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 	return 0;
 }
 
+/*
+ * vmemcache_config_set -- alter a configuration parameter
+ */
+void
+vmemcache_config_set(VMEMcache *cache, enum vmemcache_config cfg,
+				uint64_t val)
+{
+	switch (cfg) {
+	case VMEMCACHE_CFG_INDEX_ONLY:
+		cache->index_only = !!val;
+		break;
+	case VMEMCACHE_CFG_NO_MEMCPY:
+		cache->no_memcpy = !!val;
+		break;
+	default:
+		ERR("invalid config parameter: %u", cfg);
+	}
+}
+
 #ifndef _WIN32
 /*
  * vmemcache_new -- create a vmemcache
