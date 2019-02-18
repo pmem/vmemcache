@@ -101,6 +101,7 @@ static struct param_t {
 	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
 	{ "key_size", &key_size, 1, SIZE_GB, NULL },
 	{ "seed", &seed, 0, -1ULL, NULL },
+	/* 100% fill the cache with bogus entries at the start */
 	{ "junk_start", &junk_start, 0, 1, NULL },
 	{ 0 },
 };
