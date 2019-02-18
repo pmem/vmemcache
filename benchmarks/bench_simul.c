@@ -70,6 +70,7 @@ static uint64_t max_size  = 8 * SIZE_MB;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
+static uint64_t key_diversity = 3;
 static uint64_t key_size = 16;
 static uint64_t seed = 0;
 
@@ -97,6 +98,7 @@ static struct param_t {
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB, NULL },
 	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
+	{ "key_diversity", &key_diversity, 1, 63, NULL },
 	{ "key_size", &key_size, 1, SIZE_GB, NULL },
 	{ "seed", &seed, 0, -1ULL, NULL },
 	{ 0 },
@@ -257,7 +259,7 @@ static void *worker(void *arg)
 	benchmark_time_get(&t1);
 
 	for (uint64_t count = 0; count < ops_count; count++) {
-		uint64_t obj = n_lowest_bits(rnd64_r(&rng), 3);
+		uint64_t obj = n_lowest_bits(rnd64_r(&rng), (int)key_diversity);
 
 		char key[key_size + 1];
 		fill_key(key, obj);
