@@ -103,6 +103,7 @@ enum vmemcache_statistic {
 enum vmemcache_bench_cfg {
 	/* these will corrupt the data, good only for benchmarking */
 	VMEMCACHE_BENCH_INDEX_ONLY,	/* disable anything but indexing */
+	VMEMCACHE_BENCH_NO_ALLOC,	/* index+repl but no alloc */
 	VMEMCACHE_BENCH_NO_MEMCPY,	/* alloc but don't copy data */
 };
 

@@ -69,6 +69,7 @@ typedef unsigned long long stat_t;
 
 enum simul_type {
 	ST_INDEX,
+	ST_REPL,
 	ST_ALLOC,
 	ST_FULL,
 };
@@ -103,6 +104,7 @@ static const char *enum_repl[] = {
 
 static const char *enum_type[] = {
 	"index",
+	"repl",
 	"alloc",
 	"full",
 	0
