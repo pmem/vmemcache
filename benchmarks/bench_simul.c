@@ -42,12 +42,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/mman.h>
 
 #include "libvmemcache.h"
 #include "test_helpers.h"
 #include "os_thread.h"
 #include "benchmark_time.h"
 #include "rand.h"
+#include "util.h"
 
 #define PROG "bench_simul"
 #define MAX_THREADS 4096
@@ -66,7 +68,7 @@ static const char *dir;
 static uint64_t n_threads = 100;
 static uint64_t ops_count = 100000;
 static uint64_t min_size  = 8;
-static uint64_t max_size  = 8 * SIZE_MB;
+static uint64_t max_size  = 8 * SIZE_KB;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
@@ -77,6 +79,7 @@ static uint64_t junk_start = 0;
 
 static VMEMcache *cache;
 static int cache_is_full = 0;
+static const void *lotta_zeroes;
 
 /* case insensitive */
 static const char *enum_repl[] = {
@@ -271,9 +274,10 @@ static void *worker(void *arg)
 		char val[1];
 		if (vmemcache_get(cache, key, key_size, val, sizeof(val), 0,
 			NULL) <= 0) {
-			if (vmemcache_put(cache, key, key_size, val, 1) &&
-				errno != EEXIST) {
-				UT_FATAL("vmemcache_put failed");
+			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
+				max_size) && errno != EEXIST) {
+				UT_FATAL("vmemcache_put failed: %s",
+					strerror(errno));
 			}
 		}
 	}
@@ -423,6 +427,13 @@ main(int argc, const char **argv)
 		} else
 			print_units(*p->var);
 		printf("\n");
+	}
+
+	lotta_zeroes = mmap(NULL, max_size, PROT_READ,
+		MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+	if (!lotta_zeroes) {
+		UT_FATAL("couldn't grab a zero buffer: mmap failed: %s",
+			strerror(errno));
 	}
 
 	run_bench();
