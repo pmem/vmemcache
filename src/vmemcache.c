@@ -392,7 +392,7 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 		util_fetch_and_add64(&cache->miss_count, 1);
 
 		if (cache->on_miss == NULL ||
-		    (*cache->on_miss)(cache, key, ksize, cache->arg_miss) == 0)
+		    (*cache->on_miss)(cache, key, ksize, cache->arg_miss))
 			return 0;
 
 		ret = vmcache_index_get(cache->index, key, ksize, &entry);
