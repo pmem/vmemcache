@@ -247,13 +247,26 @@ test_new_delete(const char *dir, const char *file,
 		UT_FATAL(
 			"vmemcache_new did not fail with size == VMEMCACHE_MIN_POOL - 1");
 
-	/* TEST #8 - not a directory, but a file */
+	/* TEST #8 - size == 0 */
+	cache = vmemcache_new(dir, 0, VMEMCACHE_MIN_FRAG,
+				replacement_policy);
+	if (cache != NULL)
+		UT_FATAL(
+			"vmemcache_new did not fail with size == 0");
+
+	/* TEST #9 - size == -1 */
+	cache = vmemcache_new(dir, (size_t)-1, VMEMCACHE_MIN_FRAG,
+				replacement_policy);
+	if (cache != NULL)
+		UT_FATAL(
+			"vmemcache_new did not fail with size == -1");
+
+	/* TEST #10 - not a directory, but a file */
 	cache = vmemcache_new(file, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a file instead of a directory");
-
 }
 
 /*
