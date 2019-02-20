@@ -239,6 +239,9 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
 
+	if (cache->index_only)
+		goto put_index;
+
 	size_t left_to_allocate = value_size;
 
 	while (left_to_allocate > 0) {
@@ -262,15 +265,21 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		left_to_allocate -= he.size;
 	}
 
-	vmemcache_populate_fragments(entry, value, value_size);
+	if (cache->no_memcpy)
+		entry->value.vsize = value_size;
+	else
+		vmemcache_populate_fragments(entry, value, value_size);
 
+put_index:
 	if (vmcache_index_insert(cache->index, entry)) {
 		LOG(1, "inserting to the index failed");
 		goto error_exit;
 	}
 
-	cache->repl->ops->repl_p_insert(cache->repl->head, entry,
+	if (!cache->index_only) {
+		cache->repl->ops->repl_p_insert(cache->repl->head, entry,
 					&entry->value.p_entry);
+	}
 
 	util_fetch_and_add64(&cache->put_count, 1);
 
@@ -294,7 +303,7 @@ error_exit:
  */
 static size_t
 vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
-				struct cache_entry *entry)
+				struct cache_entry *entry, int no_memcpy)
 {
 	struct heap_entry he;
 	size_t copied = 0;
@@ -321,7 +330,8 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 		if (len > left_to_copy)
 			len = left_to_copy;
 
-		memcpy(vbuf, (char *)he.ptr + off, len);
+		if (!no_memcpy)
+			memcpy(vbuf, (char *)he.ptr + off, len);
 
 		vbufsize -= len;
 		vbuf = (char *)vbuf + len;
@@ -383,6 +393,7 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 		size_t vbufsize, size_t offset, size_t *vsize)
 {
 	struct cache_entry *entry;
+	size_t read = 0;
 
 	int ret = vmcache_index_get(cache->index, key, ksize, &entry);
 	if (ret < 0)
@@ -405,12 +416,17 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 
 	util_fetch_and_add64(&cache->get_count, 1);
 
+	if (cache->index_only)
+		goto get_index;
+
 	cache->repl->ops->repl_p_use(cache->repl->head, &entry->value.p_entry);
 
-	size_t read = vmemcache_populate_value(vbuf, vbufsize, offset, entry);
+	read = vmemcache_populate_value(vbuf, vbufsize, offset, entry,
+		cache->no_memcpy);
 	if (vsize)
 		*vsize = entry->value.vsize;
 
+get_index:
 	vmemcache_entry_release(cache, entry);
 
 	return (ssize_t)read;

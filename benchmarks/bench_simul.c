@@ -67,6 +67,12 @@
 /* type of statistics */
 typedef unsigned long long stat_t;
 
+enum simul_type {
+	ST_INDEX,
+	ST_ALLOC,
+	ST_FULL,
+};
+
 static const char *dir;
 static uint64_t n_threads = 100;
 static uint64_t ops_count = 100000;
@@ -75,6 +81,7 @@ static uint64_t max_size  = 8 * SIZE_KB;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
+static uint64_t type = ST_FULL;
 static uint64_t key_diversity = 3;
 static uint64_t key_size = 16;
 static uint64_t seed = 0;
@@ -94,6 +101,13 @@ static const char *enum_repl[] = {
 	0
 };
 
+static const char *enum_type[] = {
+	"index",
+	"alloc",
+	"full",
+	0
+};
+
 static struct param_t {
 	const char *name;
 	uint64_t *var;
@@ -109,6 +123,7 @@ static struct param_t {
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB, NULL },
 	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
+	{ "type", &type, ST_INDEX, ST_FULL, enum_type },
 	{ "key_diversity", &key_diversity, 1, 63, NULL },
 	{ "key_size", &key_size, 1, SIZE_GB, NULL },
 	{ "seed", &seed, 0, -1ULL, NULL },
@@ -469,6 +484,11 @@ static void run_bench()
 		}
 		vmemcache_callback_on_evict(cache, NULL, NULL);
 	}
+
+	vmemcache_bench_set(cache, VMEMCACHE_BENCH_INDEX_ONLY,
+		type <= ST_INDEX);
+	vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY,
+		type < ST_FULL);
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
