@@ -42,6 +42,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
 #include <sys/mman.h>
 
 #include "libvmemcache.h"
@@ -61,6 +62,8 @@
 
 #define NSECPSEC 1000000000
 
+#define PUT_TAG (1ULL << 63)
+
 /* type of statistics */
 typedef unsigned long long stat_t;
 
@@ -76,10 +79,12 @@ static uint64_t key_diversity = 3;
 static uint64_t key_size = 16;
 static uint64_t seed = 0;
 static uint64_t junk_start = 0;
+static uint64_t latency_samples = 0;
 
 static VMEMcache *cache;
 static int cache_is_full = 0;
 static const void *lotta_zeroes;
+static uint64_t *latencies = NULL;
 
 /* case insensitive */
 static const char *enum_repl[] = {
@@ -108,6 +113,7 @@ static struct param_t {
 	{ "seed", &seed, 0, -1ULL, NULL },
 	/* 100% fill the cache with bogus entries at the start */
 	{ "junk_start", &junk_start, 0, 1, NULL },
+	{ "latency_samples", &latency_samples, 0, SIZE_GB, NULL },
 	{ 0 },
 };
 
@@ -257,10 +263,21 @@ fill_key(char *key, uint64_t r)
 	memcpy(key, &rest, len);
 }
 
+static inline uint64_t getticks(void)
+{
+	struct timespec tv;
+	clock_gettime(CLOCK_MONOTONIC, &tv);
+	return (uint64_t)tv.tv_sec * NSECPSEC + (uint64_t)tv.tv_nsec;
+}
+
 static void *worker(void *arg)
 {
 	rng_t rng;
 	randomize_r(&rng, seed ? seed + (uintptr_t)arg : 0);
+
+	uint64_t *lat = NULL, opt;
+	if (latencies)
+		lat = latencies + ops_count * (uintptr_t)arg;
 
 	benchmark_time_t t1, t2;
 	benchmark_time_get(&t1);
@@ -271,6 +288,9 @@ static void *worker(void *arg)
 		char key[key_size + 1];
 		fill_key(key, obj);
 
+		if (lat)
+			opt = getticks();
+
 		char val[1];
 		if (vmemcache_get(cache, key, key_size, val, sizeof(val), 0,
 			NULL) <= 0) {
@@ -279,6 +299,11 @@ static void *worker(void *arg)
 				UT_FATAL("vmemcache_put failed: %s",
 					strerror(errno));
 			}
+
+			if (lat)
+				*lat++ = (getticks() - opt) | PUT_TAG;
+		} else if (lat) {
+			*lat++ = getticks() - opt;
 		}
 	}
 
@@ -332,12 +357,73 @@ on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 	cache_is_full = 1;
 }
 
+static int cmp_u64(const void *a, const void *b)
+{
+	uint64_t l = *(uint64_t *)a;
+	uint64_t r = *(uint64_t *)b;
+
+	if (l < r)
+		return -1;
+	if (l > r)
+		return 1;
+	return 0;
+}
+
+static void print_ntiles(uint64_t *t, uint64_t n)
+{
+	if (!n) {
+		printf("-\n");
+		return;
+	}
+
+	/* special case: if only one value is called for, give median */
+	if (latency_samples == 1) {
+		printf("%llu\n", t[n / 2] & ~PUT_TAG);
+		return;
+	}
+
+	/* otherwise, give minimum, evenly spaced values, then maximum */
+	for (uint64_t i = 0; i < latency_samples; i++) {
+		printf(i ? ";%llu" : "%llu", t[i * (n - 1) /
+			(latency_samples - 1)] & ~PUT_TAG);
+	}
+	printf("\n");
+}
+
+static void dump_latencies()
+{
+	qsort(latencies, n_threads * ops_count, sizeof(uint64_t), cmp_u64);
+
+	/* sentinel */
+	latencies[ops_count * n_threads] = -1ULL;
+
+	uint64_t *latm = latencies;
+	for (; !(*latm & PUT_TAG); latm++)
+		;
+
+	uint64_t nhits = (uint64_t)(latm - latencies);
+	uint64_t nmiss = n_threads * ops_count - nhits;
+
+	print_ntiles(latencies, nhits);
+	print_ntiles(latm, nmiss);
+}
+
 static void run_bench()
 {
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
 		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
+
+	if (latency_samples) {
+		latencies = malloc((ops_count * n_threads + 1) *
+			sizeof(uint64_t));
+		if (!latencies)
+			UT_FATAL("can't malloc latency ledger");
+
+		/* sentinel */
+		latencies[ops_count * n_threads] = -1ULL;
+	}
 
 	if (junk_start) {
 		char junk[256];
@@ -370,6 +456,9 @@ static void run_bench()
 
 	print_stats(cache);
 
+	if (latencies)
+		dump_latencies();
+
 	vmemcache_delete(cache);
 
 	printf("Total time: %lu.%09lu s\n",
@@ -378,6 +467,8 @@ static void run_bench()
 	total /= ops_count;
 	printf("Avg time per op: %lu.%03lu μs\n",
 		total / 1000, total % 1000);
+
+	free(latencies);
 }
 
 static void
