@@ -80,6 +80,7 @@ static uint64_t key_size = 16;
 static uint64_t seed = 0;
 static uint64_t junk_start = 0;
 static uint64_t latency_samples = 0;
+static const char *latency_file = NULL;
 
 static VMEMcache *cache;
 static int cache_is_full = 0;
@@ -114,6 +115,7 @@ static struct param_t {
 	/* 100% fill the cache with bogus entries at the start */
 	{ "junk_start", &junk_start, 0, 1, NULL },
 	{ "latency_samples", &latency_samples, 0, SIZE_GB, NULL },
+	{ "latency_file", NULL, 0, 0, NULL },
 	{ 0 },
 };
 
@@ -178,6 +180,17 @@ static uint64_t parse_enum_param(const char *val, const char *name,
 }
 
 /*
+ * parse_other_param -- params with custom behaviour
+ */
+static void parse_other_param(const char *val, const char *name)
+{
+	if (strcmp(name, "latency_file"))
+		UT_FATAL("unknown other_param");
+
+	latency_file = val;
+}
+
+/*
  * parse_param_arg -- parse a single name=value arg
  */
 static void parse_param_arg(const char *arg)
@@ -193,6 +206,11 @@ static void parse_param_arg(const char *arg)
 		if (strncmp(p->name, arg, (size_t)(eq - arg)) ||
 			p->name[eq - arg]) {
 			continue;
+		}
+
+		if (!p->var) {
+			parse_other_param(eq + 1, p->name);
+			return;
 		}
 
 		uint64_t x = p->enums ?
@@ -369,29 +387,39 @@ static int cmp_u64(const void *a, const void *b)
 	return 0;
 }
 
-static void print_ntiles(uint64_t *t, uint64_t n)
+static void print_ntiles(FILE *f, uint64_t *t, uint64_t n)
 {
 	if (!n) {
-		printf("-\n");
+		fprintf(f, "-\n");
 		return;
 	}
 
 	/* special case: if only one value is called for, give median */
 	if (latency_samples == 1) {
-		printf("%llu\n", t[n / 2] & ~PUT_TAG);
+		fprintf(f, "%llu\n", t[n / 2] & ~PUT_TAG);
 		return;
 	}
 
 	/* otherwise, give minimum, evenly spaced values, then maximum */
 	for (uint64_t i = 0; i < latency_samples; i++) {
-		printf(i ? ";%llu" : "%llu", t[i * (n - 1) /
+		fprintf(f, i ? ";%llu" : "%llu", t[i * (n - 1) /
 			(latency_samples - 1)] & ~PUT_TAG);
 	}
-	printf("\n");
+	fprintf(f, "\n");
 }
 
 static void dump_latencies()
 {
+	FILE *f = stdout;
+
+	if (latency_file) {
+		f = fopen(latency_file, "w");
+		if (!f) {
+			UT_FATAL("can't create latency file: %s",
+				strerror(errno));
+		}
+	}
+
 	qsort(latencies, n_threads * ops_count, sizeof(uint64_t), cmp_u64);
 
 	/* sentinel */
@@ -404,8 +432,11 @@ static void dump_latencies()
 	uint64_t nhits = (uint64_t)(latm - latencies);
 	uint64_t nmiss = n_threads * ops_count - nhits;
 
-	print_ntiles(latencies, nhits);
-	print_ntiles(latm, nmiss);
+	print_ntiles(f, latencies, nhits);
+	print_ntiles(f, latm, nmiss);
+
+	if (latency_file)
+		fclose(f);
 }
 
 static void run_bench()
@@ -505,6 +536,9 @@ main(int argc, const char **argv)
 
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
 	for (struct param_t *p = params; p->name; p++) {
+		if (!p->var)
+			continue;
+
 		printf("  %-20s : ", p->name);
 		if (p->enums) {
 			uint64_t nvalid = 0;
