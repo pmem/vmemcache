@@ -42,6 +42,7 @@ LIBVMEMCACHE_1.0 {
 		vmemcache_callback_on_evict;
 		vmemcache_callback_on_miss;
 		vmemcache_get_stat;
+		vmemcache_bench_set;
 		vmemcache_errormsg;
 	local:
 		*;

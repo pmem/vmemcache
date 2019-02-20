@@ -100,6 +100,12 @@ enum vmemcache_statistic {
 	VMEMCACHE_STATS_NUM		/* total number of statistics */
 };
 
+enum vmemcache_bench_cfg {
+	/* these will corrupt the data, good only for benchmarking */
+	VMEMCACHE_BENCH_INDEX_ONLY,	/* disable anything but indexing */
+	VMEMCACHE_BENCH_NO_MEMCPY,	/* alloc but don't copy data */
+};
+
 typedef void vmemcache_on_evict(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
 typedef int vmemcache_on_miss(VMEMcache *cache,
@@ -149,6 +155,10 @@ const char *vmemcache_errormsg(void);
 const char *vmemcache_errormsgU(void);
 const wchar_t *vmemcache_errormsgW(void);
 #endif
+
+/* UNSTABLE INTEFACE -- DO NOT USE! */
+void vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
+	size_t val);
 
 #ifdef __cplusplus
 }

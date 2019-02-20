@@ -564,6 +564,25 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 	return 0;
 }
 
+/*
+ * vmemcache_bench_set -- alter a benchmark parameter
+ */
+void
+vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
+				size_t val)
+{
+	switch (cfg) {
+	case VMEMCACHE_BENCH_INDEX_ONLY:
+		cache->index_only = !!val;
+		break;
+	case VMEMCACHE_BENCH_NO_MEMCPY:
+		cache->no_memcpy = !!val;
+		break;
+	default:
+		ERR("invalid config parameter: %u", cfg);
+	}
+}
+
 #ifndef _WIN32
 /*
  * vmemcache_new -- create a vmemcache
