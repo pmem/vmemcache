@@ -267,6 +267,23 @@ test_new_delete(const char *dir, const char *file,
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a file instead of a directory");
+
+	/* TEST #11 - NULL directory path */
+	cache = vmemcache_new(NULL, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
+				replacement_policy);
+	if (cache != NULL)
+		UT_FATAL(
+			"vmemcache_new did not fail with a NULL directory path");
+
+	/* TEST #12 - nonexistent directory path */
+	char nonexistent[PATH_MAX];
+	strcpy(nonexistent, dir);
+	strcat(nonexistent, "/nonexistent_dir");
+	cache = vmemcache_new(nonexistent, VMEMCACHE_MIN_POOL,
+				VMEMCACHE_MIN_FRAG, replacement_policy);
+	if (cache != NULL)
+		UT_FATAL(
+			"vmemcache_new did not fail with a nonexistent directory path");
 }
 
 /*
