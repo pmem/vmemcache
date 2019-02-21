@@ -74,11 +74,18 @@ enum simul_type {
 	ST_FULL,
 };
 
+enum size_dist {
+	SD_LINEAR,
+	SD_A,
+	SD_B,
+};
+
 static const char *dir;
 static uint64_t n_threads = 0;
 static uint64_t ops_count = 100000;
 static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_KB;
+static uint64_t size_distrib = SD_B;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
@@ -111,6 +118,13 @@ static const char *enum_type[] = {
 	0
 };
 
+static const char *enum_size_distrib[] = {
+	"linear",
+	"a",
+	"b",
+	0
+};
+
 static struct param_t {
 	const char *name;
 	uint64_t *var;
@@ -122,6 +136,7 @@ static struct param_t {
 	{ "ops_count", &ops_count, 1, -1ULL, NULL },
 	{ "min_size", &min_size, 1, -1ULL, NULL },
 	{ "max_size", &max_size, 1, -1ULL, NULL },
+	{ "size_distrib", &size_distrib, SD_LINEAR, SD_B, enum_size_distrib },
 	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL, NULL },
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB, NULL },
@@ -300,6 +315,49 @@ fill_key(char *key, uint64_t r)
 	memcpy(key, &rest, len);
 }
 
+/* 64-bit randomness -> float [0..1) */
+static double
+rnddouble(uint64_t x)
+{
+	return (double)x / (65536.0 * 65536 * 65536 * 65536);
+}
+
+/* linear [0..1) -> exp/etc distributed [0..1) */
+static double
+rndlength(uint64_t id)
+{
+	switch (size_distrib) {
+
+	case SD_LINEAR:
+		return rnddouble(id);
+
+	case SD_A:
+	{
+		/* polynomial (x⁴) */
+		double x = rnddouble(id);
+		return x * x * x * x;
+	}
+
+	case SD_B:
+	{
+		/* piecewise-linear exponential */
+		uint64_t magnitude = id >> (64 - 5); /* 0..31 */
+
+		/* Pick a power of two. */
+		uint64_t y = 1ULL << magnitude;
+
+		/* Fill lower bits randomly. */
+		uint64_t x = y | ((y - 1) & id);
+
+		return (double)x / (65536.0 * 65536);
+	}
+
+	default:
+		/* someone scribbled over our memory...? */
+		UT_FATAL("invalid enum for size distrib");
+	}
+}
+
 static inline uint64_t getticks(void)
 {
 	struct timespec tv;
@@ -334,8 +392,14 @@ static void *worker(void *arg)
 
 		if (vmemcache_get(cache, key, key_size, get_buffer, get_size, 0,
 			NULL) <= 0) {
+
+			uint64_t size = min_size
+				+ (uint64_t)((double)(max_size - min_size + 1)
+				* rndlength(hash64(obj)));
+			UT_ASSERTin(size, min_size, max_size);
+
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
-				max_size) && errno != EEXIST) {
+				size) && errno != EEXIST) {
 				UT_FATAL("vmemcache_put failed: %s",
 					strerror(errno));
 			}
@@ -562,6 +626,9 @@ main(int argc, const char **argv)
 		if (!n_threads)
 			UT_FATAL("can't obtain number of processor cores");
 	}
+
+	if (min_size > max_size)
+		UT_FATAL("min_size > max_size");
 
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
 	for (struct param_t *p = params; p->name; p++) {
