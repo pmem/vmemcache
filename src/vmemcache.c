@@ -239,7 +239,7 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
 
-	if (cache->index_only)
+	if (cache->index_only || cache->no_alloc)
 		goto put_index;
 
 	size_t left_to_allocate = value_size;
@@ -420,6 +420,9 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 		goto get_index;
 
 	cache->repl->ops->repl_p_use(cache->repl->head, &entry->value.p_entry);
+
+	if (cache->no_alloc)
+		goto get_index;
 
 	read = vmemcache_populate_value(vbuf, vbufsize, offset, entry,
 		cache->no_memcpy);
