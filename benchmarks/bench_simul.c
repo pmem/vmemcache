@@ -73,11 +73,18 @@ enum simul_type {
 	ST_FULL,
 };
 
+enum size_dist {
+	SD_LINEAR,
+	SD_POLY,
+	SD_EXP,
+};
+
 static const char *dir;
 static uint64_t n_threads = 100;
 static uint64_t ops_count = 100000;
 static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_KB;
+static uint64_t size_distrib = SD_POLY;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
@@ -108,6 +115,13 @@ static const char *enum_type[] = {
 	0
 };
 
+static const char *enum_size_distrib[] = {
+	"linear",
+	"poly",
+	"exp",
+	0
+};
+
 static struct param_t {
 	const char *name;
 	uint64_t *var;
@@ -119,6 +133,7 @@ static struct param_t {
 	{ "ops_count", &ops_count, 1, -1ULL, NULL },
 	{ "min_size", &min_size, 1, -1ULL, NULL },
 	{ "max_size", &max_size, 1, -1ULL, NULL },
+	{ "size_distrib", &size_distrib, SD_LINEAR, SD_EXP, enum_size_distrib },
 	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL, NULL },
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB, NULL },
@@ -296,6 +311,34 @@ fill_key(char *key, uint64_t r)
 	memcpy(key, &rest, len);
 }
 
+/* 64-bit randomness -> float [0..1) */
+static double rnddouble(uint64_t x)
+{
+	return (double)x / (65536.0 * 65536 * 65536 * 65536);
+}
+
+/* linear [0..1) -> exp/etc distributed [0..1) */
+static double rndlength(uint64_t id)
+{
+	double x = rnddouble(id);
+
+	switch (size_distrib) {
+
+	case SD_LINEAR:
+		return x;
+
+	case SD_POLY:
+		return x * x * x * x;
+
+	case SD_EXP:
+		UT_FATAL("exp distribution: not implemented");
+
+	default:
+		/* someone scribbled over our memory...? */
+		UT_FATAL("invalid enum for size distrib");
+	}
+}
+
 static inline uint64_t getticks(void)
 {
 	struct timespec tv;
@@ -327,6 +370,15 @@ static void *worker(void *arg)
 		char val[1];
 		if (vmemcache_get(cache, key, key_size, val, sizeof(val), 0,
 			NULL) <= 0) {
+
+			uint64_t size = min_size
+				+ (uint64_t)((double)(max_size - min_size + 1)
+				* rndlength(hash64(obj)));
+			if (size < min_size || size > max_size) {
+				UT_FATAL("rolled size %zu out of [%zu, %zu]",
+					size, min_size, max_size);
+			}
+
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
 				max_size) && errno != EEXIST) {
 				UT_FATAL("vmemcache_put failed: %s",
@@ -553,6 +605,9 @@ main(int argc, const char **argv)
 		if (!n_threads)
 			UT_FATAL("can't obtain number of processor cores");
 	}
+
+	if (min_size > max_size)
+		UT_FATAL("min_size > max_size");
 
 	printf("Parameters:\n  %-20s : %s\n", "dir", dir);
 	for (struct param_t *p = params; p->name; p++) {
