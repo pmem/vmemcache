@@ -82,6 +82,7 @@ static uint64_t max_size  = 8 * SIZE_KB;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
 static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
+static uint64_t get_size = 1;
 static uint64_t type = ST_FULL;
 static uint64_t key_diversity = 3;
 static uint64_t key_size = 16;
@@ -125,6 +126,7 @@ static struct param_t {
 	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
 		4 * SIZE_GB, NULL },
 	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
+	{ "get_size", &get_size, 1, 4 * SIZE_GB, NULL },
 	{ "type", &type, ST_INDEX, ST_FULL, enum_type },
 	{ "key_diversity", &key_diversity, 1, 63, NULL },
 	{ "key_size", &key_size, 1, SIZE_GB, NULL },
@@ -310,6 +312,10 @@ static void *worker(void *arg)
 	rng_t rng;
 	randomize_r(&rng, seed ? seed + (uintptr_t)arg : 0);
 
+	void *get_buffer = malloc(get_size);
+	if (!get_buffer)
+		UT_FATAL("couldn't allocate get_buffer");
+
 	uint64_t *lat = NULL, opt;
 	if (latencies)
 		lat = latencies + ops_count * (uintptr_t)arg;
@@ -326,8 +332,7 @@ static void *worker(void *arg)
 		if (lat)
 			opt = getticks();
 
-		char val[1];
-		if (vmemcache_get(cache, key, key_size, val, sizeof(val), 0,
+		if (vmemcache_get(cache, key, key_size, get_buffer, get_size, 0,
 			NULL) <= 0) {
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
 				max_size) && errno != EEXIST) {
@@ -344,6 +349,8 @@ static void *worker(void *arg)
 
 	benchmark_time_get(&t2);
 	benchmark_time_diff(&t1, &t1, &t2);
+
+	free(get_buffer);
 
 	return (void *)(intptr_t)(t1.tv_sec * NSECPSEC + t1.tv_nsec);
 }
