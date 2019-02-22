@@ -75,7 +75,7 @@ enum simul_type {
 };
 
 static const char *dir;
-static uint64_t n_threads = 100;
+static uint64_t n_threads = 0;
 static uint64_t ops_count = 100000;
 static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_KB;
