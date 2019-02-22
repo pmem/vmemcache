@@ -75,7 +75,7 @@ enum simul_type {
 };
 
 static const char *dir;
-static uint64_t n_threads = 100;
+static uint64_t n_threads = 0;
 static uint64_t ops_count = 100000;
 static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_KB;
@@ -84,7 +84,7 @@ static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
 static uint64_t get_size = 1;
 static uint64_t type = ST_FULL;
-static uint64_t key_diversity = 3;
+static uint64_t key_diversity = 5;
 static uint64_t key_size = 16;
 static uint64_t seed = 0;
 static uint64_t junk_start = 0;
