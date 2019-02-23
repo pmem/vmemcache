@@ -61,6 +61,9 @@ endif()
 
 set(CMAKE_C_STANDARD 99)
 
+include(CheckSymbolExists)
+CHECK_SYMBOL_EXISTS(getentropy unistd.h HAVE_GETENTROPY)
+
 # Checks whether flag is supported by current C compiler and appends
 # it to the relevant cmake variable.
 # 1st argument is a flag
@@ -201,3 +204,5 @@ enable_testing()
 add_subdirectory(src)
 add_subdirectory(tests)
 add_subdirectory(benchmarks)
+
+configure_file(config.h.in "${CMAKE_SOURCE_DIR}/config.h")
