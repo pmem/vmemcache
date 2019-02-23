@@ -58,3 +58,6 @@ target_include_directories(bench_simul PRIVATE
 
 target_link_libraries(bench_simul PRIVATE vmemcache)
 target_link_libraries(bench_simul PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+if (HAVE_GETENTROPY)
+	target_compile_definitions(bench_simul PRIVATE HAVE_GETENTROPY)
+endif()

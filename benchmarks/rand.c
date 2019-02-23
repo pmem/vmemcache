@@ -101,8 +101,10 @@ void
 randomize_r(rng_t *state, uint64_t seed)
 {
 	if (!seed) {
+#ifdef HAVE_GETENTROPY
 		if (!getentropy(state, sizeof(rng_t)))
 			return; /* nofail, but ENOSYS on kernel < 3.16 */
+#endif
 		seed = (uint64_t)getpid();
 	}
 
