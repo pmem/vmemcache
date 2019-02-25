@@ -473,13 +473,11 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 			return -1;
 		}
 
-		if (!__sync_bool_compare_and_swap(&entry->value.evicting,
-							0, 1)) {
-			ERR(
-				"vmemcache_evict: the element with the given key is being evicted just now!");
-			errno = EBUSY;
-			goto exit_release;
-		}
+		if (!__sync_bool_compare_and_swap(&entry->value.evicting, 0, 1))
+			/*
+			 * Element with the given key is being evicted just now.
+			 */
+			return 0;
 	}
 
 	util_fetch_and_add64(&cache->evict_count, 1);
