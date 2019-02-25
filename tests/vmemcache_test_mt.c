@@ -369,9 +369,9 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 		UT_FATAL("wrong number of puts: %llu (should be: %llu",
 				puts, nops);
 
-	if (gets != nops)
+	if (gets != nops + misses)
 		UT_FATAL("wrong number of gets: %llu (should be: %llu",
-				gets, nops);
+				gets, nops + misses);
 
 	if (misses != nops)
 		UT_FATAL("wrong number of misses: %llu (should be: %llu",

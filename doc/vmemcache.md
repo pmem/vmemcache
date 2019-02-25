@@ -194,12 +194,8 @@ Obtains a piece of statistics about the cache. The *stat* may be:
 	count of gets
  + **VMEMCACHE_STAT_HIT**
 	count of gets that received data from the cache
-	FIXME - broken
  + **VMEMCACHE_STAT_MISS**
 	count of gets that were not present in the cache
-	FIXME - broken
-	PROPOSED: this number might be distinct from gets - hits, because of
-	callbacks producing data?
  + **VMEMCACHE_STAT_EVICT**
 	count of evictions
  + **VMEMCACHE_STAT_ENTRIES**
