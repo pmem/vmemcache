@@ -56,6 +56,12 @@
 	abort();\
 } while (/*CONSTCOND*/0)
 
+#define UT_ASSERTin(x, min, max) do if ((x) < (min) || (x) > (max)) {\
+	UT_FATAL("ASSERT FAILED : " #x " = %zu not in [%zu,%zu]", (x),\
+		(uint64_t)(min), (uint64_t)(max));\
+} while (/*CONSTCOND*/0)
+
+
 /*
  * str_to_unsigned -- (internal) convert string argument to unsigned int
  */
