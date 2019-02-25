@@ -225,6 +225,12 @@ int
 vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 				const void *value, size_t value_size)
 {
+	if (value_size > cache->size) {
+		ERR("value larger than entire cache");
+		errno = ENOSPC;
+		return -1;
+	}
+
 	struct cache_entry *entry;
 	struct heap_entry he;
 
