@@ -249,6 +249,8 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		if (HEAP_ENTRY_IS_NULL(he)) {
 			if (vmemcache_evict(cache, NULL, 0)) {
 				LOG(1, "vmemcache_evict() failed");
+				if (errno == ESRCH)
+					errno = ENOSPC;
 				goto error_exit;
 			}
 			continue;
