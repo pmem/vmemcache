@@ -540,8 +540,8 @@ test_evict(const char *dir,
 	/* check statistics */
 	verify_stats(cache,
 			DNUM, /* put */
-			3 - ctx.miss_count + ctx.evict_count, /* get */
-			3 - 2 * ctx.miss_count + ctx.evict_count, /* hit */
+			3 + ctx.evict_count, /* get */
+			3 + ctx.evict_count - ctx.miss_count, /* hit */
 			ctx.miss_count, ctx.evict_count, 0, 0, 0);
 
 	vmemcache_delete(cache);
