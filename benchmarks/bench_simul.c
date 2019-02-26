@@ -102,6 +102,7 @@ static VMEMcache *cache;
 static int cache_is_full = 0;
 static const void *lotta_zeroes;
 static uint64_t *latencies = NULL;
+static uint64_t vsize_seed;
 
 /* case insensitive */
 static const char *enum_repl[] = {
@@ -386,7 +387,7 @@ run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 
 			uint64_t size = min_size
 				+ (uint64_t)((double)(max_size - min_size + 1)
-				* rndlength(hash64(obj)));
+				* rndlength(hash64(obj ^ vsize_seed)));
 			UT_ASSERTin(size, min_size, max_size);
 
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
@@ -540,6 +541,10 @@ static void dump_latencies()
 
 static void run_bench()
 {
+	rng_t rng;
+	randomize_r(&rng, seed);
+	vsize_seed = rnd64_r(&rng);
+
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
 		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
