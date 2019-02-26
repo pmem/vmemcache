@@ -530,6 +530,9 @@ test_evict(const char *dir,
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[2].key);
 
+	/* TEST #6 - null output arguments */
+	vmemcache_get(cache, data[2].key, KSIZE, NULL, VSIZE, 0, NULL);
+
 	/* free all the memory */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
@@ -537,8 +540,8 @@ test_evict(const char *dir,
 	/* check statistics */
 	verify_stats(cache,
 			DNUM, /* put */
-			2 - ctx.miss_count + ctx.evict_count, /* get */
-			2 - 2 * ctx.miss_count + ctx.evict_count, /* hit */
+			3 - ctx.miss_count + ctx.evict_count, /* get */
+			3 - 2 * ctx.miss_count + ctx.evict_count, /* hit */
 			ctx.miss_count, ctx.evict_count, 0, 0, 0);
 
 	vmemcache_delete(cache);

@@ -305,6 +305,9 @@ static size_t
 vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 				struct cache_entry *entry, int no_memcpy)
 {
+	if (!vbuf)
+		return 0;
+
 	struct heap_entry he;
 	size_t copied = 0;
 	size_t left_to_copy = entry->value.vsize;
