@@ -478,10 +478,12 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 
 		if (!__sync_bool_compare_and_swap(&entry->value.evicting,
 							0, 1)) {
-			ERR(
-				"vmemcache_evict: the element with the given key is being evicted just now!");
-			errno = EBUSY;
-			goto exit_release;
+			/*
+			 * Element with the given key is being evicted just now.
+			 * Release the reference from vmcache_index_get().
+			 */
+			vmemcache_entry_release(cache, entry);
+			return 0;
 		}
 	}
 
