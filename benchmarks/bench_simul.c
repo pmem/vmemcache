@@ -83,6 +83,7 @@ enum size_dist {
 static const char *dir;
 static uint64_t n_threads = 0;
 static uint64_t ops_count = 100000;
+static uint64_t warm_up   = 100000;
 static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_KB;
 static uint64_t size_distrib = SD_B;
@@ -134,6 +135,7 @@ static struct param_t {
 } params[] = {
 	{ "n_threads", &n_threads, 0 /* n_procs */, MAX_THREADS, NULL },
 	{ "ops_count", &ops_count, 1, -1ULL, NULL },
+	{ "warm_up", &warm_up, 0, -1ULL, NULL },
 	{ "min_size", &min_size, 1, -1ULL, NULL },
 	{ "max_size", &max_size, 1, -1ULL, NULL },
 	{ "size_distrib", &size_distrib, SD_LINEAR, SD_B, enum_size_distrib },
@@ -372,7 +374,7 @@ run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 {
 	uint64_t opt;
 
-	for (uint64_t count = 0; count < ops_count; count++) {
+	for (uint64_t count = 0; count < ops; count++) {
 		uint64_t obj = n_lowest_bits(rnd64_r(rng), (int)key_diversity);
 
 		char key[key_size + 1];
@@ -404,6 +406,12 @@ run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 	}
 }
 
+static void __attribute__((noinline))
+run_warm_up(rng_t *rng, void *get_buffer)
+{
+	run_ops(warm_up, rng, NULL, get_buffer);
+}
+
 static void *worker(void *arg)
 {
 	rng_t rng;
@@ -416,6 +424,8 @@ static void *worker(void *arg)
 	uint64_t *lat = NULL;
 	if (latencies)
 		lat = latencies + ops_count * (uintptr_t)arg;
+
+	run_warm_up(&rng, get_buffer);
 
 	benchmark_time_t t1, t2;
 	benchmark_time_get(&t1);
