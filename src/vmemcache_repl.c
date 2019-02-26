@@ -267,7 +267,7 @@ static void *
 repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
 	struct repl_p_entry *entry;
-	void *data;
+	void *data = NULL;
 
 	util_mutex_lock(&head->lock);
 
@@ -276,21 +276,18 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	else
 		entry = TAILQ_FIRST(&head->first);
 
-	if (entry == NULL) {
-		util_mutex_unlock(&head->lock);
-		return NULL;
-	}
+	if (entry == NULL)
+		goto exit_unlock;
 
 	TAILQ_REMOVE(&head->first, entry, node);
 
 	ASSERTne(entry->ptr_entry, NULL);
 	*(entry->ptr_entry) = NULL;
 
-	util_mutex_unlock(&head->lock);
-
 	data = entry->data;
-
 	Free(entry);
 
+exit_unlock:
+	util_mutex_unlock(&head->lock);
 	return data;
 }
