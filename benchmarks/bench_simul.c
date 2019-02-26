@@ -165,6 +165,8 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"pool size used"
 };
 
+static void print_stats(VMEMcache *cache);
+
 /*
  * parse_uint_param -- parse an uint, accepting suffixes
  */
@@ -400,6 +402,7 @@ static void *worker(void *arg)
 
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
 				size) && errno != EEXIST) {
+				print_stats(cache);
 				UT_FATAL("vmemcache_put failed: %s",
 						vmemcache_errormsg());
 			}
