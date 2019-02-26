@@ -498,10 +498,7 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 	/* release the element */
 	vmemcache_entry_release(cache, entry);
 
-	if (vmcache_index_remove(cache, entry)) {
-		LOG(1, "removing from the index failed");
-		goto exit_release;
-	}
+	vmcache_index_remove(cache, entry);
 
 	return 0;
 
