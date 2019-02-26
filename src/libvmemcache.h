@@ -130,7 +130,7 @@ VMEMcache *vmemcache_newW(const wchar_t *path, size_t max_size,
 		enum vmemcache_replacement_policy replacement_policy);
 #endif
 
-void vmemcache_delete(VMEMcache *c);
+void vmemcache_delete(VMEMcache *cache);
 
 void vmemcache_callback_on_evict(VMEMcache *cache,
 	vmemcache_on_evict *evict, void *arg);
