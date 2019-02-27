@@ -307,10 +307,6 @@ main(int argc, char **argv)
 
 	int ret = put_until_timeout(vc, &p);
 
-	/* XXX: should be done by vmemcache_delete */
-	while (vmemcache_evict(vc, NULL, 0) == 0)
-		;
-
 	vmemcache_delete(vc);
 
 	return ret;
