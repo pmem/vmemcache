@@ -365,24 +365,13 @@ static inline uint64_t getticks(void)
 	return (uint64_t)tv.tv_sec * NSECPSEC + (uint64_t)tv.tv_nsec;
 }
 
-static void *worker(void *arg)
+static void
+run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 {
-	rng_t rng;
-	randomize_r(&rng, seed ? seed + (uintptr_t)arg : 0);
-
-	void *get_buffer = malloc(get_size);
-	if (!get_buffer)
-		UT_FATAL("couldn't allocate get_buffer");
-
-	uint64_t *lat = NULL, opt;
-	if (latencies)
-		lat = latencies + ops_count * (uintptr_t)arg;
-
-	benchmark_time_t t1, t2;
-	benchmark_time_get(&t1);
+	uint64_t opt;
 
 	for (uint64_t count = 0; count < ops_count; count++) {
-		uint64_t obj = n_lowest_bits(rnd64_r(&rng), (int)key_diversity);
+		uint64_t obj = n_lowest_bits(rnd64_r(rng), (int)key_diversity);
 
 		char key[key_size + 1];
 		fill_key(key, obj);
@@ -410,6 +399,25 @@ static void *worker(void *arg)
 			*lat++ = getticks() - opt;
 		}
 	}
+}
+
+static void *worker(void *arg)
+{
+	rng_t rng;
+	randomize_r(&rng, seed ? seed + (uintptr_t)arg : 0);
+
+	void *get_buffer = malloc(get_size);
+	if (!get_buffer)
+		UT_FATAL("couldn't allocate get_buffer");
+
+	uint64_t *lat = NULL;
+	if (latencies)
+		lat = latencies + ops_count * (uintptr_t)arg;
+
+	benchmark_time_t t1, t2;
+	benchmark_time_get(&t1);
+
+	run_ops(ops_count, &rng, lat, get_buffer);
 
 	benchmark_time_get(&t2);
 	benchmark_time_diff(&t1, &t1, &t2);
