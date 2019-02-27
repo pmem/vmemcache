@@ -2,6 +2,7 @@
 *.cmake
 *~
 *.so
+*.3
 core
 Makefile
 CMakeCache.txt
