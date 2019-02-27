@@ -533,6 +533,18 @@ test_evict(const char *dir,
 	/* TEST #6 - null output arguments */
 	vmemcache_get(cache, data[2].key, KSIZE, NULL, VSIZE, 0, NULL);
 
+	/* TEST #7 - too large put */
+	if (!vmemcache_put(cache, data[2].key, KSIZE, vbuf,
+		VMEMCACHE_MIN_POOL + 1)) {
+		UT_FATAL("vmemcache_put: too large put didn't fail");
+	}
+
+	if (errno != ENOSPC) {
+		UT_FATAL(
+			"vmemcache_put: too large put returned \"%s\" \"%s\" instead of ENOSPC",
+			strerror(errno), vmemcache_errormsg());
+	}
+
 	/* free all the memory */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
