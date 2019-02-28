@@ -279,7 +279,7 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 /*
  * on_miss_cb -- (internal) 'on miss' callback for run_test_get_on_miss
  */
-static int
+static void
 on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 {
 	struct context *ctx = arg;
@@ -294,8 +294,6 @@ on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 				ctx->buffs[n % ctx->nbuffs].size);
 	if (ret && errno != EEXIST)
 		UT_FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
-
-	return ret;
 }
 
 /*

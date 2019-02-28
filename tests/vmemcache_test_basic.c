@@ -384,7 +384,7 @@ on_evict_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
 /*
  * on_miss_test_evict_cb -- (internal) 'on miss' callback for test_evict
  */
-static int
+static void
 on_miss_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
 		void *arg)
 {
@@ -396,8 +396,6 @@ on_miss_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
 
 	memcpy(ctx->vbuf, key, size);
 	ctx->vsize = size;
-
-	return 1;
 }
 
 /*
