@@ -468,7 +468,8 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 			get_req.key = NULL;
 		}
 
-		return 0;
+		errno = ENOENT;
+		return -1;
 	}
 
 	if (cache->index_only)
