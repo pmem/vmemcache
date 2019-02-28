@@ -444,6 +444,7 @@ test_evict(const char *dir,
 	verify_stat_entries(cache, DNUM);
 
 	/* TEST #1 - evict the element with index #5 */
+	/* stats: evict:1 (get:1 hit:1) */
 	ret = vmemcache_evict(cache, data[5].key, KSIZE);
 	if (ret == -1)
 		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
@@ -459,6 +460,7 @@ test_evict(const char *dir,
 			ctx.vbuf, data[5].value);
 
 	/* TEST #2 - evict the LRU element */
+	/* stats: evict:1 (get:1 hit:1) */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
 		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
@@ -474,6 +476,7 @@ test_evict(const char *dir,
 			ctx.vbuf, data[0].value);
 
 	/* TEST #3 - get the element with index #1 (to change LRU one to #2) */
+	/* stats: get:1 hit:1 */
 	ret = vmemcache_get(cache, data[1].key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
 	if (ret < 0)
@@ -495,6 +498,7 @@ test_evict(const char *dir,
 			vbuf, data[1].value);
 
 	/* TEST #4 - evict the LRU element (it should be #2 now) */
+	/* stats: evict:1 (get:1 hit:1) */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
 		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
@@ -510,6 +514,7 @@ test_evict(const char *dir,
 			ctx.vbuf, data[2].value);
 
 	/* TEST #5 - get the evicted element with index #2 */
+	/* stats: get:1 miss:1 */
 	ret = vmemcache_get(cache, data[2].key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
 	if (ret == -1)
@@ -531,6 +536,7 @@ test_evict(const char *dir,
 			ctx.vbuf, data[2].key);
 
 	/* TEST #6 - null output arguments */
+	/* stats: get:1 hit:1 */
 	vmemcache_get(cache, data[2].key, KSIZE, NULL, VSIZE, 0, NULL);
 
 	/* TEST #7 - too large put */
@@ -546,15 +552,19 @@ test_evict(const char *dir,
 	}
 
 	/* free all the memory */
+	/* stats: evict:DNUM+1 -3 already evicted, miss:1 */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
 
 	/* check statistics */
 	verify_stats(cache,
 			DNUM, /* put */
-			3 - ctx.miss_count + ctx.evict_count, /* get */
-			3 - 2 * ctx.miss_count + ctx.evict_count, /* hit */
-			ctx.miss_count, ctx.evict_count, 0, 0, 0);
+			3 + ctx.evict_count, /* get */
+			1 + ctx.evict_count, /* hit */
+			ctx.miss_count,
+			ctx.evict_count, 0, 0, 0);
+	UT_ASSERTeq(ctx.miss_count, 2);
+	UT_ASSERTeq(ctx.evict_count, DNUM);
 
 	vmemcache_delete(cache);
 }
