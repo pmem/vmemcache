@@ -169,14 +169,13 @@ meantime.
 
 
 ```
-int vmemcache_on_miss(VMEMcache *cache,
+void vmemcache_on_miss(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
 ```
 
 Called when a *get* query fails, to provide an opportunity to insert the
-missing key. If the callback returns zero, upon return the query will
-be retried (just once - no more calls if it fails again). Note that it's
-possible that the entry will be evicted between the insert and get.
+missing key. If the callback calls *put* for that specific key, the *get*
+will return its value, even if it did not fit into the cache.
 
 
 ##### Misc #####
