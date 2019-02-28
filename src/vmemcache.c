@@ -406,6 +406,8 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	struct cache_entry *entry;
 	size_t read = 0;
 
+	util_fetch_and_add64(&cache->get_count, 1);
+
 	int ret = vmcache_index_get(cache->index, key, ksize, &entry);
 	if (ret < 0)
 		return -1;
@@ -424,8 +426,6 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 		if (entry == NULL)
 			return 0;
 	}
-
-	util_fetch_and_add64(&cache->get_count, 1);
 
 	if (cache->index_only)
 		goto get_index;
