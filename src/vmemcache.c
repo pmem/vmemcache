@@ -455,7 +455,12 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 			get_req.key = NULL;
 		}
 
-		return 0;
+		errno = ENOENT;
+		/*
+		 * Needed for errormsg but wastes 13% of time.  FIXME.
+		 * ERR("cache entry not found");
+		 */
+		return -1;
 	}
 
 	if (cache->index_only)
