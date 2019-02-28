@@ -50,6 +50,19 @@
 #include "valgrind_internal.h"
 
 /*
+ * Arguments to currently running get request, during a callback.
+ */
+static __thread struct {
+	const char *key;
+	size_t ksize;
+	void *vbuf;
+	size_t vbufsize;
+	size_t offset;
+	size_t *vsize;
+} get_req = { 0 };
+
+
+/*
  * vmemcache_newU -- (internal) create a vmemcache
  */
 #ifndef _WIN32
@@ -218,6 +231,28 @@ vmemcache_populate_fragments(struct cache_entry *entry,
 	entry->value.vsize = value_size;
 }
 
+static void
+put_satisfy_get(const void *key, size_t ksize,
+		const void *value, size_t value_size)
+{
+	if (get_req.ksize != ksize || memcmp(get_req.key, key, ksize))
+		return; /* not our key */
+
+	get_req.key = NULL; /* mark request as satisfied */
+
+	if (get_req.offset >= value_size) {
+		get_req.vbufsize = 0;
+	} else {
+		if (get_req.vbufsize > value_size - get_req.offset)
+			get_req.vbufsize = value_size - get_req.offset;
+		if (get_req.vbuf)
+			memcpy(get_req.vbuf, value, get_req.vbufsize);
+	}
+
+	if (get_req.vsize)
+		*get_req.vsize = value_size;
+}
+
 /*
  * vmemcache_put -- put an element into the vmemcache
  */
@@ -225,6 +260,9 @@ int
 vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 				const void *value, size_t value_size)
 {
+	if (get_req.key)
+		put_satisfy_get(key, ksize, value, value_size);
+
 	if (value_size > cache->size) {
 		ERR("value larger than entire cache");
 		errno = ENOSPC;
@@ -415,16 +453,22 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	if (entry == NULL) { /* cache miss */
 		util_fetch_and_add64(&cache->miss_count, 1);
 
-		if (cache->on_miss == NULL ||
-		    (*cache->on_miss)(cache, key, ksize, cache->arg_miss))
-			return 0;
+		if (cache->on_miss) {
+			get_req.key = key;
+			get_req.ksize = ksize;
+			get_req.vbuf = vbuf;
+			get_req.vbufsize = vbufsize;
+			get_req.offset = offset;
+			get_req.vsize = vsize;
 
-		ret = vmcache_index_get(cache->index, key, ksize, &entry);
-		if (ret < 0)
-			return -1;
+			(*cache->on_miss)(cache, key, ksize, cache->arg_miss);
 
-		if (entry == NULL)
-			return 0;
+			if (!get_req.key)
+				return (ssize_t)get_req.vbufsize;
+			get_req.key = NULL;
+		}
+
+		return 0;
 	}
 
 	if (cache->index_only)
