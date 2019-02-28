@@ -385,7 +385,7 @@ run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 			opt = getticks();
 
 		if (vmemcache_get(cache, key, key_size, get_buffer, get_size, 0,
-			NULL) <= 0) {
+			NULL) < 0) {
 
 			uint64_t size = min_size
 				+ (uint64_t)((double)(max_size - min_size + 1)
