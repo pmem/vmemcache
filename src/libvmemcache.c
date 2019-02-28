@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, Intel Corporation
+ * Copyright 2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,16 @@ static inline
 const char *
 vmemcache_errormsgU(void)
 {
+	/*
+	 * Avoid expensive error string manipulation on very common error
+	 * messages.
+	 */
+	switch (errno) {
+	case ENOENT:
+		return "entry not found in cache";
+	case ESRCH:
+		return "no entry eligible for eviction found";
+	}
 	return out_get_errormsg();
 }
 
@@ -97,6 +107,7 @@ vmemcache_errormsg(void)
 const wchar_t *
 vmemcache_errormsgW(void)
 {
+#error not implemented
 	return out_get_errormsgW();
 }
 
