@@ -78,6 +78,16 @@ static inline
 const char *
 vmemcache_errormsgU(void)
 {
+	/*
+	 * avoid expensive error string manipulation on very common error
+	 * messages
+	 */
+	switch (errno) {
+	case ENOENT:
+		return "entry not found in cache";
+	case ESRCH:
+		return "no entry eligible for eviction found";
+	}
 	return out_get_errormsg();
 }
 
@@ -97,6 +107,7 @@ vmemcache_errormsg(void)
 const wchar_t *
 vmemcache_errormsgW(void)
 {
+#error not implemented
 	return out_get_errormsgW();
 }
 
