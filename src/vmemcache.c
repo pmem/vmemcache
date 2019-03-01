@@ -226,7 +226,6 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 				const void *value, size_t value_size)
 {
 	struct cache_entry *entry;
-	struct heap_entry he;
 
 	entry = Zalloc(sizeof(struct cache_entry) + ksize);
 	if (entry == NULL) {
@@ -244,25 +243,20 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 
 	size_t left_to_allocate = value_size;
 
-	while (left_to_allocate > 0) {
-		he = vmcache_alloc(cache->heap, left_to_allocate);
-		if (HEAP_ENTRY_IS_NULL(he)) {
+	while (left_to_allocate != 0) {
+		ssize_t allocated = vmcache_alloc(cache->heap, left_to_allocate,
+		    &entry->value.fragments);
+		if (allocated < 0) {
+			goto error_exit;
+		} else if (allocated == 0) {
 			if (vmemcache_evict(cache, NULL, 0)) {
 				LOG(1, "vmemcache_evict() failed");
 				goto error_exit;
 			}
-			continue;
+		} else {
+			left_to_allocate -=
+				MIN((size_t)allocated, left_to_allocate);
 		}
-
-		if (VEC_PUSH_BACK(&entry->value.fragments, he)) {
-			LOG(1, "out of memory");
-			goto error_exit;
-		}
-
-		if (left_to_allocate <= he.size)
-			break;
-
-		left_to_allocate -= he.size;
 	}
 
 	if (cache->no_memcpy)
@@ -286,9 +280,7 @@ put_index:
 	return 0;
 
 error_exit:
-	VEC_FOREACH(he, &entry->value.fragments) {
-		vmcache_free(cache->heap, he);
-	}
+	vmcache_free(cache->heap, &entry->value.fragments);
 
 	VEC_DELETE(&entry->value.fragments);
 	Free(entry);
@@ -372,10 +364,7 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 	VALGRIND_ANNOTATE_HAPPENS_AFTER(&entry->value.refcount);
 	VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(&entry->value.refcount);
 
-	struct heap_entry he;
-	VEC_FOREACH(he, &entry->value.fragments) {
-		vmcache_free(cache->heap, he);
-	}
+	vmcache_free(cache->heap, &entry->value.fragments);
 
 	VEC_DELETE(&entry->value.fragments);
 

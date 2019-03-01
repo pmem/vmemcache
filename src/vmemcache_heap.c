@@ -34,7 +34,6 @@
  * vmemcache_heap.c -- implementation of simple vmemcache linear allocator
  */
 
-#include "vmemcache.h"
 #include "vmemcache_heap.h"
 #include "vec.h"
 #include "sys_util.h"
@@ -89,50 +88,66 @@ vmcache_heap_destroy(struct heap *heap)
 /*
  * vmcache_alloc -- allocate memory (take it from the queue)
  */
-struct heap_entry
-vmcache_alloc(struct heap *heap, size_t size)
+ssize_t
+vmcache_alloc(struct heap *heap, size_t size, struct fragment_vec *vec)
 {
 	LOG(3, "heap %p size %zu", heap, size);
 
 	struct heap_entry he = {NULL, 0};
 
 	size = ALIGN_UP(size, heap->fragment_size);
+	size_t to_allocate = size;
 
 	util_mutex_lock(&heap->lock);
 
-	if (VEC_POP_BACK(&heap->entries, &he) != 0)
-		goto error_no_mem;
+	do {
+		if (VEC_POP_BACK(&heap->entries, &he) != 0)
+			break;
 
-	if (he.size > size) {
-		struct heap_entry f;
-		f.ptr = (void *)((uintptr_t)he.ptr + size);
-		f.size = he.size - size;
-		VEC_PUSH_BACK(&heap->entries, f);
+		if (he.size > to_allocate) {
+			struct heap_entry f;
+			f.ptr = (void *)((uintptr_t)he.ptr + to_allocate);
+			f.size = he.size - to_allocate;
+			VEC_PUSH_BACK(&heap->entries, f);
 
-		he.size = size;
-	}
+			he.size = to_allocate;
+		}
 
-	__sync_fetch_and_add(&heap->size_used, he.size);
+		if (VEC_PUSH_BACK(vec, he) != 0) {
+			ERR("!cannot grow fragment vector");
+			goto err_push_back;
+		}
 
-error_no_mem:
+		to_allocate -= he.size;
+		__sync_fetch_and_add(&heap->size_used, he.size);
+	} while (to_allocate != 0);
+
 	util_mutex_unlock(&heap->lock);
 
-	return he;
+	return (ssize_t)(size - to_allocate);
+
+err_push_back:
+	util_mutex_unlock(&heap->lock);
+
+	return -1;
 }
 
 /*
  * vmcache_free -- free memory (give it back to the queue)
  */
 void
-vmcache_free(struct heap *heap, struct heap_entry he)
+vmcache_free(struct heap *heap, struct fragment_vec *vec)
 {
-	LOG(3, "heap %p he.ptr %p he.size %zu", heap, he.ptr, he.size);
+	LOG(3, "heap %p vec %p", heap, vec);
 
 	util_mutex_lock(&heap->lock);
 
-	__sync_fetch_and_sub(&heap->size_used, he.size);
-
-	VEC_PUSH_BACK(&heap->entries, he);
+	struct heap_entry he = {NULL, 0};
+	VEC_FOREACH(he, vec) {
+		VEC_PUSH_BACK(&heap->entries, he);
+		__sync_fetch_and_sub(&heap->size_used, he.size);
+	}
+	VEC_CLEAR(vec);
 
 	util_mutex_unlock(&heap->lock);
 }
