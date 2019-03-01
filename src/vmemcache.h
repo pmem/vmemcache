@@ -41,7 +41,7 @@
 #include <stddef.h>
 
 #include "libvmemcache.h"
-#include "vec.h"
+#include "vmemcache_heap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,9 +50,6 @@ extern "C" {
 #define VMEMCACHE_PREFIX "libvmemcache"
 #define VMEMCACHE_LEVEL_VAR "VMEMCACHE_LEVEL"
 #define VMEMCACHE_FILE_VAR "VMEMCACHE_FILE"
-
-/* type of the statistics */
-typedef unsigned long long stat_t;
 
 struct index;
 struct repl_p;
@@ -85,7 +82,7 @@ struct cache_entry {
 		int evicting;
 		struct repl_p_entry *p_entry;
 		size_t vsize;
-		VEC(, struct heap_entry) fragments;
+		struct fragment_vec fragments;
 	} value;
 
 	struct key {
