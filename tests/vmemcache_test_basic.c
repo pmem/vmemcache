@@ -473,7 +473,7 @@ test_evict(const char *dir,
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			ctx.vbuf, data[0].value);
 
-	/* TEST #3 - get the element with index #1 (to change LRU one to #2) */
+	/* TEST #3 - get the element with index #1 */
 	/* stats: get:1 hit:1 */
 	ret = vmemcache_get(cache, data[1].key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
@@ -495,7 +495,18 @@ test_evict(const char *dir,
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
 			vbuf, data[1].value);
 
-	/* TEST #4 - evict the LRU element (it should be #2 now) */
+	struct kv lru;
+	switch (replacement_policy) {
+	case VMEMCACHE_REPLACEMENT_LRU:
+		lru = data[1];
+		break;
+	default:
+		UT_FATAL("unsupported policy for this test: %u",
+			replacement_policy);
+		break;
+	}
+
+	/* TEST #4 - evict the LRU element */
 	/* stats: evict:1 (get:1 hit:1) */
 	ret = vmemcache_evict(cache, NULL, 0);
 	if (ret == -1)
@@ -506,26 +517,24 @@ test_evict(const char *dir,
 			"vmemcache_get: wrong size of value: %zi (should be %i)",
 			ctx.vsize, VSIZE);
 
-	/* check if the evicted LRU element is #2 */
-	if (strncmp(ctx.vbuf, data[2].value, ctx.vsize))
+	/* compare value of the evicted LRU element */
+	if (strncmp(ctx.vbuf, lru.value, ctx.vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
-			ctx.vbuf, data[2].value);
+			ctx.vbuf, lru.value);
 
-	/* TEST #5 - get the evicted element with index #2 */
+	/* TEST #5 - get the evicted element */
 	/* stats: get:1 miss:1 */
-	ret = vmemcache_get(cache, data[2].key, KSIZE, vbuf, VSIZE,
-			0, &vsize);
-
+	ret = vmemcache_get(cache, lru.key, KSIZE, vbuf, VSIZE, 0, &vsize);
 	if (ret != -1)
 		UT_FATAL("vmemcache_get succeeded when it shouldn't");
 
 	if (errno != ENOENT)
 		UT_FATAL("vmemcache_get: errno %d should be ENOENT", errno);
 
-	/* check if the 'on_miss' callback got key #2 */
-	if (strncmp(ctx.vbuf, data[2].key, ctx.vsize))
+	/* check if the 'on_miss' callback got the evicted element */
+	if (strncmp(ctx.vbuf, lru.key, ctx.vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
-			ctx.vbuf, data[2].key);
+			ctx.vbuf, lru.key);
 
 	/* TEST #6 - null output arguments */
 	/* stats: get:1 hit:1 */
@@ -552,10 +561,10 @@ test_evict(const char *dir,
 	verify_stats(cache,
 			DNUM, /* put */
 			3 + ctx.evict_count, /* get */
-			1 + ctx.evict_count, /* hit */
+			2 + ctx.evict_count, /* hit */
 			ctx.miss_count,
 			ctx.evict_count, 0, 0, 0);
-	UT_ASSERTeq(ctx.miss_count, 2);
+	UT_ASSERTeq(ctx.miss_count, 1);
 	UT_ASSERTeq(ctx.evict_count, DNUM);
 
 	vmemcache_delete(cache);
