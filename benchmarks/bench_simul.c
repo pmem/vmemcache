@@ -470,9 +470,19 @@ print_stats(VMEMcache *cache)
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_DRAM_SIZE_USED);
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_POOL_SIZE_USED);
 
+	float pool_used_percent =
+			(100 * (float)stat_vals[VMEMCACHE_STAT_POOL_SIZE_USED])
+				/ (float)cache_size;
+	float hits_percent =
+			(100 * (float)stat_vals[VMEMCACHE_STAT_HIT])
+				/ (float)stat_vals[VMEMCACHE_STAT_GET];
+
 	printf("\nStatistics:\n");
 	for (int i = 0; i < VMEMCACHE_STATS_NUM; i++)
 		printf("  %-20s : %llu\n", stat_str[i], stat_vals[i]);
+	printf("  %-20s : %.2f %%\n", "pool size used [%]", pool_used_percent);
+	printf("  %-20s : %.2f %%\n", "hits [%]", hits_percent);
+
 	printf("\n");
 }
 
