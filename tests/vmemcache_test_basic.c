@@ -350,10 +350,10 @@ test_put_get_evict(const char *dir,
 	if (ret == -1)
 		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
 
-	/* getting the evicted element should return 0 (no such element) */
+	/* getting the evicted element should return -1 (no such element) */
 	ret = vmemcache_get(cache, key, key_size, vbuf, vbufsize, 0, &vsize);
-	if (ret != 0)
-		UT_FATAL("vmemcache_get did not return 0 (no such element)");
+	if (ret != -1 || errno != ENOENT)
+		UT_FATAL("vmemcache_get did not return -1 (no such element)");
 
 	vmemcache_delete(cache);
 }
@@ -515,18 +515,12 @@ test_evict(const char *dir,
 	/* stats: get:1 miss:1 */
 	ret = vmemcache_get(cache, data[2].key, KSIZE, vbuf, VSIZE,
 			0, &vsize);
-	if (ret == -1)
-		UT_FATAL("vmemcache_get");
 
-	if (ret != 0)
-		UT_FATAL(
-			"vmemcache_get: wrong return value: %zi (should be %i)",
-			ret, 0);
+	if (ret != -1)
+		UT_FATAL("vmemcache_get succeeded when it shouldn't");
 
-	if (vsize != VSIZE)
-		UT_FATAL(
-			"vmemcache_get: wrong size of value: %zi (should be %i)",
-			vsize, VSIZE);
+	if (errno != ENOENT)
+		UT_FATAL("vmemcache_get: errno %d should be ENOENT", errno);
 
 	/* check if the 'on_miss' callback got key #2 */
 	if (strncmp(ctx.vbuf, data[2].key, ctx.vsize))

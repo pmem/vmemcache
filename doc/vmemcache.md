@@ -126,10 +126,9 @@ for *vbufsize* bytes, optionally skipping *offset* bytes at the start.
 No matter if the copy was truncated or not, its true size is stored into
 *vsize*; *vsize* remains unmodified if the key was not found.
 
-Return value is -1 on error, 0 if the key was not found, or number of bytes
-successfully copied otherwise. Note that 0 may be legitimately returned
-even if the key was found (reading past end, zero-sized value, etc) -
-check *vsize* to tell that apart.
+Return value is number of bytes successfully copied, or -1 on error.
+In particular, if there's no entry for the given *key* in the cache,
+the errno will be ENOENT.
 
 
 ```
@@ -224,7 +223,7 @@ be:
  + **EEXIST**
 	(put) entry for that key already exists
  + **ENOENT**
-	(evict) no entry for that key
+	(evict, get) no entry for that key
  + **ESRCH**
 	(evict) couldn't find an evictable entry
  + **ENOSPC**
