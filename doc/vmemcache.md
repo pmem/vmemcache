@@ -214,8 +214,7 @@ Retrieves a human-friendly description of the last error.
 
 ##### Errors #####
 
-On an error, a machine-usable description is passed in `errno`. It may
-be:
+On an error, a machine-usable description is passed in `errno`. It may be:
  + **EINVAL**
 	nonsensical/invalid parameter
  + **ENOMEM**
@@ -225,6 +224,8 @@ be:
  + **ENOENT**
 	(evict, get) no entry for that key
  + **ESRCH**
-	(evict) couldn't find an evictable entry
+	(evict) could not find an evictable entry
+ + **EAGAIN**
+	(evict) an entry was used and could not be evicted, please try again
  + **ENOSPC**
 	(create, put) not enough space in the memory pool
