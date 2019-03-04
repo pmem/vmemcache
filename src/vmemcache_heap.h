@@ -38,6 +38,10 @@
 #define VMEMCACHE_HEAP_H 1
 
 #include <stddef.h>
+#include "vec.h"
+
+/* type of the statistics */
+typedef unsigned long long stat_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,13 +54,15 @@ struct heap_entry {
 	size_t size;
 };
 
+VEC(fragment_vec, struct heap_entry);
+
 struct heap;
 
 struct heap *vmcache_heap_create(void *addr, size_t size, size_t fragment_size);
 void vmcache_heap_destroy(struct heap *heap);
 
-struct heap_entry vmcache_alloc(struct heap *heap, size_t size);
-void vmcache_free(struct heap *heap, struct heap_entry he);
+ssize_t vmcache_alloc(struct heap *heap, size_t size, struct fragment_vec *vec);
+void vmcache_free(struct heap *heap, struct fragment_vec *vec);
 
 stat_t vmcache_get_heap_used_size(struct heap *heap);
 
