@@ -411,6 +411,9 @@ static void __attribute__((noinline))
 run_warm_up(rng_t *rng, void *get_buffer)
 {
 	run_ops(warm_up, rng, NULL, get_buffer);
+
+	/* Prevent tail call optimizations (to force stack frame, for perf). */
+	getpid();
 }
 
 static void *worker(void *arg)
