@@ -39,6 +39,7 @@
 
 #include <stdio.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
@@ -54,6 +55,11 @@
 	fprintf(stderr, __VA_ARGS__);\
 	fprintf(stderr, "\n");\
 	abort();\
+} while (/*CONSTCOND*/0)
+
+#define UT_ASSERTeq(x, y) do if ((x) != (y)) {\
+	UT_FATAL("ASSERT FAILED : " #x " (%zu) ≠ %zu",\
+		(uint64_t)(x), (uint64_t)(y));\
 } while (/*CONSTCOND*/0)
 
 #define UT_ASSERTin(x, min, max) do if ((x) < (min) || (x) > (max)) {\
