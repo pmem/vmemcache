@@ -249,6 +249,8 @@ typedef enum {
  */
 #define util_bool_compare_and_swap32 __sync_bool_compare_and_swap
 #define util_bool_compare_and_swap64 __sync_bool_compare_and_swap
+#define util_val_compare_and_swap32 __sync_val_compare_and_swap
+#define util_val_compare_and_swap64 __sync_val_compare_and_swap
 #define util_fetch_and_add32 __sync_fetch_and_add
 #define util_fetch_and_add64 __sync_fetch_and_add
 #define util_fetch_and_sub32 __sync_fetch_and_sub
