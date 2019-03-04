@@ -518,6 +518,7 @@ test_evict(const char *dir,
 
 	if (ret != -1)
 		UT_FATAL("vmemcache_get succeeded when it shouldn't");
+
 	if (errno != ENOENT)
 		UT_FATAL("vmemcache_get: errno %d should be ENOENT", errno);
 
