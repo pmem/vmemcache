@@ -585,11 +585,14 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 	char *buff;
 	size_t size;
 	int ret;
+	ssize_t get_ret;
+	struct big_key bk;
 
 	srand((unsigned)time(NULL));
 
 	stat_t n_puts = 0;
 	stat_t n_evicts = 0;
+	stat_t n_gets = 0;
 
 	size_t min_size = VMEMCACHE_MIN_FRAG / 2;
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
@@ -609,7 +612,6 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 			UT_FATAL("out of memory");
 
 		if (key_gt_1K) {
-			struct big_key bk;
 			memset(bk.buf, 42 /* arbitrary */, sizeof(bk.buf));
 			bk.n_puts = n_puts;
 
@@ -623,6 +625,19 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 			UT_FATAL(
 				"vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
 				n_puts, n_evicts, vmemcache_errormsg());
+
+		if (key_gt_1K)
+			get_ret = vmemcache_get(cache, &bk, sizeof(bk),
+							buff, size, 0, NULL);
+		else
+			get_ret = vmemcache_get(cache, &n_puts, sizeof(n_puts),
+							buff, size, 0, NULL);
+
+		if (get_ret == -1)
+			UT_FATAL("vmemcache_get(n_gets: %llu): %s",
+				n_gets, vmemcache_errormsg());
+
+		n_gets++;
 		n_puts++;
 
 		free(buff);
@@ -635,7 +650,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 		;
 
 	/* check statistics */
-	verify_stats(cache, n_puts, 0, 0, 0, n_evicts, 0, 0, 0);
+	verify_stats(cache, n_puts, n_gets, n_gets, 0, n_evicts, 0, 0, 0);
 
 	vmemcache_delete(cache);
 
