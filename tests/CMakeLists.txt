@@ -82,7 +82,7 @@ function(test name file tracer location)
 		${GLOBAL_TEST_ARGS}
 		-DTEST_NAME=${name}
 		-DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}
+		-DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR}/${file}-${tracer}-${location}
 		-DCONFIG=$<CONFIG>
 		-DTRACER=${tracer}
 		-DTEST_POOL_LOCATION=${TEST_POOL_LOCATION}
