@@ -582,14 +582,19 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 			enum vmemcache_replacement_policy replacement_policy)
 {
 	VMEMcache *cache;
-	char *buff;
+	char *vbuf;
+	char *get_buf;
 	size_t size;
+	size_t vsize;
 	int ret;
+	ssize_t get_ret;
+	struct big_key bk;
 
 	srand((unsigned)time(NULL));
 
 	stat_t n_puts = 0;
 	stat_t n_evicts = 0;
+	stat_t n_gets = 0;
 
 	size_t min_size = VMEMCACHE_MIN_EXTENT / 2;
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
@@ -604,28 +609,61 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 
 	while (n_evicts < 1000) {
 		size = min_size + (size_t)rand() % (max_size - min_size + 1);
-		buff = malloc(size);
-		if (buff == NULL)
+
+		vbuf = malloc(size);
+		if (vbuf == NULL)
 			UT_FATAL("out of memory");
+		memset(vbuf, 42, size - 1);
+		vbuf[size - 1] = '\0';
 
 		if (key_gt_1K) {
-			struct big_key bk;
 			memset(bk.buf, 42 /* arbitrary */, sizeof(bk.buf));
 			bk.n_puts = n_puts;
 
-			ret = vmemcache_put(cache, &bk, sizeof(bk), buff, size);
+			ret = vmemcache_put(cache, &bk, sizeof(bk), vbuf, size);
 		} else {
 			ret = vmemcache_put(cache, &n_puts, sizeof(n_puts),
-						buff, size);
+						vbuf, size);
 		}
 
 		if (ret)
 			UT_FATAL(
 				"vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
 				n_puts, n_evicts, vmemcache_errormsg());
-		n_puts++;
 
-		free(buff);
+		get_buf = malloc(size);
+		if (get_buf == NULL)
+			UT_FATAL("out of memory");
+		if (key_gt_1K)
+			get_ret = vmemcache_get(cache, &bk, sizeof(bk), get_buf,
+							size, 0, &vsize);
+		else
+			get_ret = vmemcache_get(cache, &n_puts, sizeof(n_puts),
+							get_buf, size, 0,
+							&vsize);
+		if (get_ret < 0)
+			UT_FATAL("vmemcache_get: %s", vmemcache_errormsg());
+
+		if ((size_t)get_ret != size)
+			UT_FATAL(
+				"vmemcache_get: wrong return value: %zi (should be %zu)",
+				get_ret, size);
+
+		if (size != vsize)
+			UT_FATAL(
+				"vmemcache_get: wrong size of value: %zi (should be %zu)",
+				vsize, size);
+
+		if (strcmp(vbuf, get_buf))
+			UT_FATAL(
+				"vmemcache_get: wrong value: %s (should be %s)",
+				get_buf, vbuf);
+
+		free(vbuf);
+		free(get_buf);
+
+		n_gets++;
+		n_puts++;
 	}
 
 	verify_stat_entries(cache, n_puts - n_evicts);
@@ -635,7 +673,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 		;
 
 	/* check statistics */
-	verify_stats(cache, n_puts, 0, 0, 0, n_evicts, 0, 0, 0);
+	verify_stats(cache, n_puts, n_gets, n_gets, 0, n_evicts, 0, 0, 0);
 
 	vmemcache_delete(cache);
 
