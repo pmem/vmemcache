@@ -168,6 +168,12 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"pool size used"
 };
 
+static struct {
+	os_cond_t cond;
+	os_mutex_t mutex;
+	uint64_t wanted;
+} ready;
+
 static void print_stats(VMEMcache *cache);
 
 /*
@@ -431,6 +437,13 @@ static void *worker(void *arg)
 
 	run_warm_up(&rng, get_buffer);
 
+	os_mutex_lock(&ready.mutex);
+	if (--ready.wanted)
+		os_cond_wait(&ready.cond, &ready.mutex);
+	else
+		os_cond_broadcast(&ready.cond);
+	os_mutex_unlock(&ready.mutex);
+
 	benchmark_time_t t1, t2;
 	benchmark_time_get(&t1);
 
@@ -567,6 +580,10 @@ static void run_bench()
 	rng_t rng;
 	randomize_r(&rng, seed);
 	vsize_seed = rnd64_r(&rng);
+
+	os_cond_init(&ready.cond);
+	os_mutex_init(&ready.mutex);
+	ready.wanted = n_threads;
 
 	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
 		(enum vmemcache_replacement_policy)repl_policy);
