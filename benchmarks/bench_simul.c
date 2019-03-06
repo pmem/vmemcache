@@ -440,8 +440,13 @@ static void *worker(void *arg)
 	os_mutex_lock(&ready.mutex);
 	if (--ready.wanted)
 		os_cond_wait(&ready.cond, &ready.mutex);
-	else
+	else {
+		/* If warm_up disabled memcpy, re-enable it. */
+		vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY,
+			type < ST_FULL);
+
 		os_cond_broadcast(&ready.cond);
+	}
 	os_mutex_unlock(&ready.mutex);
 
 	benchmark_time_t t1, t2;
@@ -616,8 +621,8 @@ static void run_bench()
 
 	vmemcache_bench_set(cache, VMEMCACHE_BENCH_INDEX_ONLY,
 		type <= ST_INDEX);
-	vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY,
-		type < ST_FULL);
+	/* memcpy is enabled after warm_up */
+	vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY, 1);
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
