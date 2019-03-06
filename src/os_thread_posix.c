@@ -288,7 +288,6 @@ os_spin_trylock(os_spinlock_t *lock)
 }
 #endif
 
-#if 0
 /*
  * os_cond_init -- pthread_cond_init abstraction layer
  */
@@ -347,7 +346,6 @@ os_cond_wait(os_cond_t *__restrict cond,
 	return pthread_cond_wait((pthread_cond_t *)cond,
 		(pthread_mutex_t *)mutex);
 }
-#endif
 
 /*
  * os_thread_create -- pthread_create abstraction layer
