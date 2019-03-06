@@ -631,6 +631,19 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 	return 0;
 }
 
+static void
+prefault(VMEMcache *cache)
+{
+	char *p = cache->addr;
+	char *limit = (char *)cache->addr + cache->size;
+
+	while (p < limit) {
+		*(volatile char *)p = *p;
+
+		p += 4096; /* once per page is enough */
+	}
+}
+
 /*
  * vmemcache_bench_set -- alter a benchmark parameter
  */
@@ -644,6 +657,9 @@ vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
 		break;
 	case VMEMCACHE_BENCH_NO_MEMCPY:
 		cache->no_memcpy = !!val;
+		break;
+	case VMEMCACHE_BENCH_PREFAULT:
+		prefault(cache);
 		break;
 	default:
 		ERR("invalid config parameter: %u", cfg);

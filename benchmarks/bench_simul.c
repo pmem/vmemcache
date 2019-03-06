@@ -625,6 +625,9 @@ static void run_bench()
 		type <= ST_INDEX);
 	/* memcpy is enabled after warm_up */
 	vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY, 1);
+	/* but if there's any warm_up, touch the space once */
+	if (warm_up)
+		vmemcache_bench_set(cache, VMEMCACHE_BENCH_PREFAULT, 1);
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
