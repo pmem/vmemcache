@@ -42,6 +42,9 @@
 #include "out.h"
 #include "sys/queue.h"
 #include "sys_util.h"
+#include "ringbuf.h"
+
+#define LEN_RING_BUF (1 << 12)
 
 struct repl_p_entry {
 	TAILQ_ENTRY(repl_p_entry) node;
@@ -52,6 +55,7 @@ struct repl_p_entry {
 struct repl_p_head {
 	os_mutex_t lock;
 	TAILQ_HEAD(head, repl_p_entry) first;
+	struct ringbuf *ringbuf;
 };
 
 /* forward declarations of replacement policy operations */
@@ -196,9 +200,39 @@ repl_p_lru_new(struct repl_p_head **head)
 
 	util_mutex_init(&h->lock);
 	TAILQ_INIT(&h->first);
+	h->ringbuf = ringbuf_new(LEN_RING_BUF);
 	*head = h;
 
 	return 0;
+}
+
+/*
+ * dequeue_all -- (internal) dequeue all repl_p entries,
+ *                           it MUST be run under a lock
+ */
+static void
+dequeue_all(struct repl_p_head *head)
+{
+	struct repl_p_entry *e;
+	int counter = 0;
+
+	do {
+		e = ringbuf_trydequeue_s(head->ringbuf,
+						sizeof(struct repl_p_entry));
+		if (e == NULL)
+			break;
+
+		TAILQ_MOVE_TO_TAIL(&head->first, e, node);
+
+		/* unlock the entry, so that it can be used again */
+		util_atomic_store_explicit64(e->ptr_entry, e,
+						memory_order_relaxed);
+		/*
+		 * We are limiting the number of iterations,
+		 * so that this loop ends for sure, because other thread
+		 * can insert new elements to the ring buffer in the same time.
+		 */
+	} while (++counter < LEN_RING_BUF);
 }
 
 /*
@@ -207,6 +241,9 @@ repl_p_lru_new(struct repl_p_head **head)
 static void
 repl_p_lru_delete(struct repl_p_head *head)
 {
+	dequeue_all(head);
+	ringbuf_delete(head->ringbuf);
+
 	while (!TAILQ_EMPTY(&head->first)) {
 		struct repl_p_entry *entry = TAILQ_FIRST(&head->first);
 		TAILQ_REMOVE(&head->first, entry, node);
@@ -232,7 +269,18 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 
 	ASSERTne(ptr_entry, NULL);
 	entry->ptr_entry = ptr_entry;
-	*(entry->ptr_entry) = entry;
+
+	/*
+	 * 'util_bool_compare_and_swap64' must always succeed here,
+	 * because this entry with ptr_entry=NULL has been considered as busy
+	 * so it has never been used so far. This is the first time we set
+	 * the 'entry->ptr_entry' to 'entry'.
+	 */
+	int rv = util_bool_compare_and_swap64(entry->ptr_entry, NULL, entry);
+	if (rv == 0) {
+		FATAL(
+			"repl_p_lru_insert(): failed to initialize pointer to the LRU list");
+	}
 
 	util_mutex_lock(&head->lock);
 
@@ -250,14 +298,27 @@ repl_p_lru_insert(struct repl_p_head *head, void *element,
 static void
 repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
+	struct repl_p_entry *entry;
+
 	ASSERTne(ptr_entry, NULL);
 
-	util_mutex_lock(&head->lock);
+	entry = *ptr_entry;
+	if (entry == NULL)
+		return;
 
-	if (*ptr_entry != NULL)
-		TAILQ_MOVE_TO_TAIL(&head->first, *ptr_entry, node);
+	/*
+	 * Try to lock the entry by setting 'ptr_entry' to NULL
+	 * and enqueue it to the ring buffer,
+	 * so that it cannot be used nor evicted.
+	 */
+	if (!util_bool_compare_and_swap64(ptr_entry, entry, NULL))
+		return;
 
-	util_mutex_unlock(&head->lock);
+	while (ringbuf_tryenqueue(head->ringbuf, entry) != 0) {
+		util_mutex_lock(&head->lock);
+		dequeue_all(head);
+		util_mutex_unlock(&head->lock);
+	}
 }
 
 /*
@@ -267,30 +328,60 @@ static void *
 repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
 	struct repl_p_entry *entry;
-	void *data;
+	void *data = NULL;
+	int is_LRU = 0;
 
 	util_mutex_lock(&head->lock);
 
-	if (ptr_entry != NULL)
-		entry = *ptr_entry;
-	else
-		entry = TAILQ_FIRST(&head->first);
+	if (TAILQ_EMPTY(&head->first)) {
+		errno = ESRCH;
+		goto exit_unlock;
+	}
 
-	if (entry == NULL) {
-		util_mutex_unlock(&head->lock);
-		return NULL;
+	if (ptr_entry == NULL) {
+		is_LRU = 1;
+		ptr_entry = TAILQ_FIRST(&head->first)->ptr_entry;
+	}
+
+	/*
+	 * Try to lock the entry by setting 'ptr_entry' to NULL,
+	 * so that it cannot be used nor evicted in other threads.
+	 */
+	entry = *ptr_entry;
+	if (entry == NULL ||
+	    !util_bool_compare_and_swap64(ptr_entry, entry, NULL)) {
+
+		/*
+		 * The first try failed. The entry can be locked
+		 * and enqueued in the ring buffer, so let's flush
+		 * the ring buffer and try again.
+		 */
+		dequeue_all(head);
+
+		/*
+		 * If the entry was assigned as the LRU entry,
+		 * let's assign it again, because the LRU entry
+		 * most likely has been changed in dequeue_all().
+		 */
+		if (is_LRU)
+			ptr_entry = TAILQ_FIRST(&head->first)->ptr_entry;
+
+		/* try to lock the entry again */
+		entry = *ptr_entry;
+		if (entry == NULL ||
+		    !util_bool_compare_and_swap64(ptr_entry, entry, NULL)) {
+			/* the entry was locked by another thread again */
+			errno = EAGAIN;
+			goto exit_unlock;
+		}
 	}
 
 	TAILQ_REMOVE(&head->first, entry, node);
 
-	ASSERTne(entry->ptr_entry, NULL);
-	*(entry->ptr_entry) = NULL;
-
-	util_mutex_unlock(&head->lock);
-
 	data = entry->data;
-
 	Free(entry);
 
+exit_unlock:
+	util_mutex_unlock(&head->lock);
 	return data;
 }

@@ -498,7 +498,6 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 							NULL);
 			if (entry == NULL) {
 				ERR("no element to evict");
-				errno = ESRCH;
 				return -1;
 			}
 
