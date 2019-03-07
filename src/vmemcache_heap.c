@@ -40,7 +40,7 @@
 
 struct heap {
 	os_mutex_t lock;
-	size_t fragment_size;
+	size_t extent_size;
 	VEC(, struct heap_entry) entries;
 
 	/* statistic - current size of memory pool used for values */
@@ -51,7 +51,7 @@ struct heap {
  * vmcache_heap_create -- create vmemcache heap
  */
 struct heap *
-vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
+vmcache_heap_create(void *addr, size_t size, size_t extent_size)
 {
 	LOG(3, "addr %p size %zu", addr, size);
 
@@ -65,7 +65,7 @@ vmcache_heap_create(void *addr, size_t size, size_t fragment_size)
 	}
 
 	util_mutex_init(&heap->lock);
-	heap->fragment_size = fragment_size;
+	heap->extent_size = extent_size;
 	VEC_INIT(&heap->entries);
 	VEC_PUSH_BACK(&heap->entries, whole_heap);
 
@@ -92,13 +92,13 @@ vmcache_heap_destroy(struct heap *heap)
  * otherwise -1 is returned.
  */
 ssize_t
-vmcache_alloc(struct heap *heap, size_t size, struct fragment_vec *vec)
+vmcache_alloc(struct heap *heap, size_t size, struct extent_vec *vec)
 {
 	LOG(3, "heap %p size %zu", heap, size);
 
 	struct heap_entry he = {NULL, 0};
 
-	size = ALIGN_UP(size, heap->fragment_size);
+	size = ALIGN_UP(size, heap->extent_size);
 	size_t to_allocate = size;
 
 	util_mutex_lock(&heap->lock);
@@ -117,7 +117,7 @@ vmcache_alloc(struct heap *heap, size_t size, struct fragment_vec *vec)
 		}
 
 		if (VEC_PUSH_BACK(vec, he) != 0) {
-			ERR("!cannot grow fragment vector");
+			ERR("!cannot grow extent vector");
 			goto err_push_back;
 		}
 
@@ -140,7 +140,7 @@ err_push_back:
  * vmcache_free -- free memory (give it back to the queue)
  */
 void
-vmcache_free(struct heap *heap, struct fragment_vec *vec)
+vmcache_free(struct heap *heap, struct extent_vec *vec)
 {
 	LOG(3, "heap %p vec %p", heap, vec);
 

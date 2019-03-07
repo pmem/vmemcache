@@ -42,8 +42,8 @@
 #include "libvmemcache.h"
 #include "test_helpers.h"
 
-#define VMEMCACHE_FRAGMENT 16
-#define LEN (VMEMCACHE_FRAGMENT)
+#define VMEMCACHE_EXTENT 16
+#define LEN (VMEMCACHE_EXTENT)
 #define KSIZE LEN /* key size */
 #define VSIZE LEN /* value size */
 #define DNUM 10 /* number of data */
@@ -198,15 +198,15 @@ test_new_delete(const char *dir, const char *file,
 {
 	VMEMcache *cache;
 
-	/* TEST #1 - minimum values of max_size and fragment_size */
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
+	/* TEST #1 - minimum values of max_size and extent_size */
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	vmemcache_delete(cache);
 
-	/* TEST #2 - fragment_size = max_size = VMEMCACHE_MIN_POOL */
+	/* TEST #2 - extent_size = max_size = VMEMCACHE_MIN_POOL */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_POOL,
 				replacement_policy);
 	if (cache == NULL)
@@ -214,62 +214,62 @@ test_new_delete(const char *dir, const char *file,
 
 	vmemcache_delete(cache);
 
-	/* TEST #3 - fragment_size == 0 */
+	/* TEST #3 - extent_size == 0 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, 0,
 				replacement_policy);
 	if (cache != NULL)
-		UT_FATAL("vmemcache_new did not fail with fragment_size == 0");
+		UT_FATAL("vmemcache_new did not fail with extent_size == 0");
 
-	/* TEST #4 - fragment_size == -1 */
+	/* TEST #4 - extent_size == -1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, (size_t)-1,
 				replacement_policy);
 	if (cache != NULL)
-		UT_FATAL("vmemcache_new did not fail with fragment_size == -1");
+		UT_FATAL("vmemcache_new did not fail with extent_size == -1");
 
-	/* TEST #5 - fragment_size == VMEMCACHE_MIN_FRAG - 1 */
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG - 1,
+	/* TEST #5 - extent_size == VMEMCACHE_MIN_EXTENT - 1 */
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT - 1,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
-			"vmemcache_new did not fail with fragment_size == VMEMCACHE_MIN_FRAG - 1");
+			"vmemcache_new did not fail with extent_size == VMEMCACHE_MIN_EXTENT - 1");
 
-	/* TEST #6 - fragment_size == max_size + 1 */
+	/* TEST #6 - extent_size == max_size + 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_POOL + 1,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
-			"vmemcache_new did not fail with fragment_size == max_size + 1");
+			"vmemcache_new did not fail with extent_size == max_size + 1");
 
 	/* TEST #7 - size == VMEMCACHE_MIN_POOL - 1 */
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL - 1, VMEMCACHE_MIN_FRAG,
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL - 1, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with size == VMEMCACHE_MIN_POOL - 1");
 
 	/* TEST #8 - size == 0 */
-	cache = vmemcache_new(dir, 0, VMEMCACHE_MIN_FRAG,
+	cache = vmemcache_new(dir, 0, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with size == 0");
 
 	/* TEST #9 - size == -1 */
-	cache = vmemcache_new(dir, (size_t)-1, VMEMCACHE_MIN_FRAG,
+	cache = vmemcache_new(dir, (size_t)-1, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with size == -1");
 
 	/* TEST #10 - not a directory, but a file */
-	cache = vmemcache_new(file, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
+	cache = vmemcache_new(file, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a file instead of a directory");
 
 	/* TEST #11 - NULL directory path */
-	cache = vmemcache_new(NULL, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
+	cache = vmemcache_new(NULL, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
@@ -280,7 +280,7 @@ test_new_delete(const char *dir, const char *file,
 	strcpy(nonexistent, dir);
 	strcat(nonexistent, "/nonexistent_dir");
 	cache = vmemcache_new(nonexistent, VMEMCACHE_MIN_POOL,
-				VMEMCACHE_MIN_FRAG, replacement_policy);
+				VMEMCACHE_MIN_EXTENT, replacement_policy);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a nonexistent directory path");
@@ -295,7 +295,7 @@ test_put_get_evict(const char *dir,
 {
 	VMEMcache *cache;
 
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_FRAGMENT,
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_EXTENT,
 				replacement_policy);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
@@ -310,8 +310,8 @@ test_put_get_evict(const char *dir,
 
 	verify_stat_entries(cache, 1);
 
-	char vbuf[VMEMCACHE_FRAGMENT]; /* user-provided buffer */
-	size_t vbufsize = VMEMCACHE_FRAGMENT; /* size of vbuf */
+	char vbuf[VMEMCACHE_EXTENT]; /* user-provided buffer */
+	size_t vbufsize = VMEMCACHE_EXTENT; /* size of vbuf */
 	size_t vsize = 0; /* real size of the object */
 	ssize_t ret;
 
@@ -417,7 +417,7 @@ test_evict(const char *dir,
 		char value[VSIZE];
 	} data[DNUM];
 
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_FRAGMENT,
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_EXTENT,
 				replacement_policy);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
@@ -591,10 +591,10 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 	stat_t n_puts = 0;
 	stat_t n_evicts = 0;
 
-	size_t min_size = VMEMCACHE_MIN_FRAG / 2;
+	size_t min_size = VMEMCACHE_MIN_EXTENT / 2;
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
 
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_FRAG,
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
 				replacement_policy);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());

@@ -73,7 +73,7 @@ extern "C" {
 #define VMEMCACHE_MINOR_VERSION 1
 
 #define VMEMCACHE_MIN_POOL ((size_t)(1024 * 1024)) /* minimum pool size: 1MB */
-#define VMEMCACHE_MIN_FRAG ((size_t)8) /* minimum fragment size: 8B */
+#define VMEMCACHE_MIN_EXTENT ((size_t)8) /* minimum extent size: 8B */
 
 /*
  * opaque type, internal to libvmemcache
@@ -114,14 +114,14 @@ typedef void vmemcache_on_miss(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
 
 #ifndef _WIN32
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t segment_size,
+VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy);
 #else
 VMEMcache *vmemcache_newU(const char *path, size_t max_size,
-		size_t segment_size,
+		size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy);
 VMEMcache *vmemcache_newW(const wchar_t *path, size_t max_size,
-		size_t segment_size,
+		size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy);
 #endif
 

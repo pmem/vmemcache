@@ -57,7 +57,7 @@ typedef struct {
 
 typedef struct {
 	size_t pool_size;
-	size_t segment_size;
+	size_t extent_size;
 	size_t val_max;
 	char dir[PATH_MAX];
 	long seconds;
@@ -66,7 +66,7 @@ typedef struct {
 static const char *usage_str = "usage: %s "
 	"-d <dir> "
 	"[-p <pool_size>] "
-	"[-s <segment_size>] "
+	"[-s <extent_size>] "
 	"[-v <val_max_factor>] "
 	"[-t <timeout_seconds>] "
 	"[-m <timeout_minutes>] "
@@ -77,16 +77,16 @@ static const char *usage_str = "usage: %s "
  * get_rand_size - (internal) generate random size value
  */
 static size_t
-get_rand_size(size_t val_max, size_t segment_size)
+get_rand_size(size_t val_max, size_t extent_size)
 {
 	size_t val_size =
-	    (1 + (size_t) rand() / (RAND_MAX / (val_max / segment_size) + 1)) *
-	    segment_size;
+	    (1 + (size_t) rand() / (RAND_MAX / (val_max / extent_size) + 1)) *
+	    extent_size;
 
 	assert(val_size <= val_max);
-	assert(val_size >= segment_size);
-	assert(val_size % segment_size == 0 &&
-		"put value size must be a multiple of segment size");
+	assert(val_size >= extent_size);
+	assert(val_size % extent_size == 0 &&
+		"put value size must be a multiple of extent size");
 
 	return val_size;
 }
@@ -150,7 +150,7 @@ parse_args(int argc, char **argv)
 {
 	test_params p = {
 		.pool_size = VMEMCACHE_MIN_POOL,
-		.segment_size = 16,
+		.extent_size = 16,
 		.val_max = 0,
 		.dir = "",
 		.seconds = 0,
@@ -172,8 +172,8 @@ parse_args(int argc, char **argv)
 				(size_t)parse_ull("pool size", argv[0]);
 			break;
 		case 's':
-			p.segment_size =
-				(size_t)parse_ull("segment size", argv[0]);
+			p.extent_size =
+				(size_t)parse_ull("extent size", argv[0]);
 			break;
 		case 'v':
 			val_max_factor =
@@ -206,7 +206,7 @@ parse_args(int argc, char **argv)
 	if (p.seconds <= 0)
 		argerror("timeout must be greater than 0\n", argv[0]);
 
-	p.val_max = val_max_factor * p.segment_size;
+	p.val_max = val_max_factor * p.extent_size;
 
 	return p;
 }
@@ -249,7 +249,7 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 		}
 
 		/* generate value */
-		val_size = get_rand_size(p->val_max, p->segment_size);
+		val_size = get_rand_size(p->val_max, p->extent_size);
 
 		/* put */
 		int ret = vmemcache_put(vc, key, (size_t)len, &val, val_size);
@@ -301,7 +301,7 @@ main(int argc, char **argv)
 {
 	test_params p = parse_args(argc, argv);
 
-	VMEMcache *vc = vmemcache_new(p.dir, p.pool_size, p.segment_size, 1);
+	VMEMcache *vc = vmemcache_new(p.dir, p.pool_size, p.extent_size, 1);
 	if (vc == NULL)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), p.dir);
 

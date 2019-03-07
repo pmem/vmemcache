@@ -54,15 +54,15 @@ struct heap_entry {
 	size_t size;
 };
 
-VEC(fragment_vec, struct heap_entry);
+VEC(extent_vec, struct heap_entry);
 
 struct heap;
 
-struct heap *vmcache_heap_create(void *addr, size_t size, size_t fragment_size);
+struct heap *vmcache_heap_create(void *addr, size_t size, size_t extent_size);
 void vmcache_heap_destroy(struct heap *heap);
 
-ssize_t vmcache_alloc(struct heap *heap, size_t size, struct fragment_vec *vec);
-void vmcache_free(struct heap *heap, struct fragment_vec *vec);
+ssize_t vmcache_alloc(struct heap *heap, size_t size, struct extent_vec *vec);
+void vmcache_free(struct heap *heap, struct extent_vec *vec);
 
 stat_t vmcache_get_heap_used_size(struct heap *heap);
 

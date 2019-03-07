@@ -71,11 +71,11 @@ struct context {
  * bench_init -- (internal) initialize benchmark
  */
 static VMEMcache *
-bench_init(const char *path, size_t max_size, size_t fragment_size,
+bench_init(const char *path, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy,
 		unsigned n_threads, struct context *ctx)
 {
-	VMEMcache *cache = vmemcache_new(path, max_size, fragment_size,
+	VMEMcache *cache = vmemcache_new(path, max_size, extent_size,
 						replacement_policy);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), path);
@@ -196,12 +196,12 @@ print_bench_results(const char *op_name, unsigned n_threads,
  * run_test_put -- (internal) run test for vmemcache_put()
  */
 static void
-run_bench_put(const char *path, size_t max_size, size_t fragment_size,
+run_bench_put(const char *path, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
-	VMEMcache *cache = bench_init(path, max_size, fragment_size,
+	VMEMcache *cache = bench_init(path, max_size, extent_size,
 					replacement_policy, n_threads, ctx);
 
 	unsigned ops_per_thread = ops_count / n_threads;
@@ -237,12 +237,12 @@ on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
  * run_bench_get -- (internal) run test for vmemcache_get()
  */
 static void
-run_bench_get(const char *path, size_t max_size, size_t fragment_size,
+run_bench_get(const char *path, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
-	VMEMcache *cache = bench_init(path, max_size, fragment_size,
+	VMEMcache *cache = bench_init(path, max_size, extent_size,
 					replacement_policy, n_threads, ctx);
 
 	int cache_is_full = 0;
@@ -279,15 +279,15 @@ run_bench_get(const char *path, size_t max_size, size_t fragment_size,
 }
 
 #define USAGE_STRING \
-"usage: %s <directory> [benchmark] [threads] [ops_count] [cache_max_size] [cache_fragment_size] [nbuffs] [min_size] [max_size] [seed]\n"\
+"usage: %s <directory> [benchmark] [threads] [ops_count] [cache_max_size] [cache_extent_size] [nbuffs] [min_size] [max_size] [seed]\n"\
 "       [benchmark] - can be: all (default), put or get\n"\
 "       Default values of parameters:\n"\
 "       - benchmark           = all (put and get)\n"\
 "       - threads             = %u\n"\
 "       - ops_count           = %u\n"\
 "       - cache_max_size      = %u\n"\
-"       - cache_fragment_size = %u\n"\
-"       - nbuffs               = %u\n"\
+"       - cache_extent_size   = %u\n"\
+"       - nbuffs              = %u\n"\
 "       - min_size            = %u\n"\
 "       - max_size            = %u\n"\
 "       - seed                = <random value>\n"
@@ -303,14 +303,14 @@ main(int argc, char *argv[])
 	unsigned n_threads = 10;
 	unsigned ops_count = 100000;
 	unsigned cache_max_size = VMEMCACHE_MIN_POOL;
-	unsigned cache_fragment_size = VMEMCACHE_MIN_FRAG;
+	unsigned cache_extent_size = VMEMCACHE_MIN_EXTENT;
 	unsigned nbuffs = 10;
 	unsigned min_size = 128;
 	unsigned max_size = MAX_VALUE_SIZE;
 
 	if (argc < 2 || argc > 11) {
 		fprintf(stderr, USAGE_STRING, argv[0], n_threads, ops_count,
-			cache_max_size, cache_fragment_size,
+			cache_max_size, cache_extent_size,
 			nbuffs, min_size, max_size);
 		exit(-1);
 	}
@@ -345,9 +345,9 @@ main(int argc, char *argv[])
 		UT_FATAL("incorrect value of cache_max_size: %s", argv[5]);
 
 	if (argc >= 7 &&
-	    (str_to_unsigned(argv[6], &cache_fragment_size) ||
-			    cache_fragment_size < VMEMCACHE_MIN_FRAG))
-		UT_FATAL("incorrect value of cache_fragment_size: %s", argv[6]);
+	    (str_to_unsigned(argv[6], &cache_extent_size) ||
+			    cache_extent_size < VMEMCACHE_MIN_EXTENT))
+		UT_FATAL("incorrect value of cache_extent_size: %s", argv[6]);
 
 	if (argc >= 8 &&
 	    (str_to_unsigned(argv[7], &nbuffs) || nbuffs < 2))
@@ -355,7 +355,7 @@ main(int argc, char *argv[])
 
 	if (argc >= 9 &&
 	    (str_to_unsigned(argv[8], &min_size) ||
-			    min_size < VMEMCACHE_MIN_FRAG))
+			    min_size < VMEMCACHE_MIN_EXTENT))
 		UT_FATAL("incorrect value of min_size: %s", argv[8]);
 
 	if (argc >= 10 &&
@@ -374,7 +374,7 @@ main(int argc, char *argv[])
 	printf("   n_threads           : %u\n", n_threads);
 	printf("   ops_count           : %u\n", ops_count);
 	printf("   cache_max_size      : %u\n", cache_max_size);
-	printf("   cache_fragment_size : %u\n", cache_fragment_size);
+	printf("   cache_extent_size   : %u\n", cache_extent_size);
 	printf("   nbuffs              : %u\n", nbuffs);
 	printf("   min_size            : %u\n", min_size);
 	printf("   max_size            : %u\n", max_size);
@@ -414,12 +414,12 @@ main(int argc, char *argv[])
 		UT_FATAL("out of memory");
 
 	if (benchmark & BENCH_PUT)
-		run_bench_put(dir, cache_max_size, cache_fragment_size,
+		run_bench_put(dir, cache_max_size, cache_extent_size,
 				VMEMCACHE_REPLACEMENT_LRU,
 				n_threads, threads, ops_count, ctx);
 
 	if (benchmark & BENCH_GET)
-		run_bench_get(dir, cache_max_size, cache_fragment_size,
+		run_bench_get(dir, cache_max_size, cache_extent_size,
 				VMEMCACHE_REPLACEMENT_LRU,
 				n_threads, threads, ops_count, ctx);
 
