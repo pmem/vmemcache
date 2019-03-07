@@ -82,7 +82,7 @@ struct cache_entry {
 		int evicting;
 		struct repl_p_entry *p_entry;
 		size_t vsize;
-		struct fragment_vec fragments;
+		struct extent_vec extents;
 	} value;
 
 	struct key {

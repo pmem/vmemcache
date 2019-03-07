@@ -427,7 +427,8 @@ main(int argc, char *argv[])
 	srand(seed);
 
 	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
-				VMEMCACHE_MIN_FRAG, VMEMCACHE_REPLACEMENT_LRU);
+						VMEMCACHE_MIN_EXTENT,
+						VMEMCACHE_REPLACEMENT_LRU);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
 
