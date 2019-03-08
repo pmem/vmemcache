@@ -88,7 +88,7 @@ static uint64_t min_size  = 8;
 static uint64_t max_size  = 8 * SIZE_KB;
 static uint64_t size_distrib = SD_B;
 static uint64_t cache_size = VMEMCACHE_MIN_POOL;
-static uint64_t cache_fragment_size = VMEMCACHE_MIN_FRAG;
+static uint64_t cache_extent_size = VMEMCACHE_MIN_EXTENT;
 static uint64_t repl_policy = VMEMCACHE_REPLACEMENT_LRU;
 static uint64_t get_size = 1;
 static uint64_t type = ST_FULL;
@@ -141,7 +141,7 @@ static struct param_t {
 	{ "max_size", &max_size, 1, -1ULL, NULL },
 	{ "size_distrib", &size_distrib, SD_LINEAR, SD_B, enum_size_distrib },
 	{ "cache_size", &cache_size, VMEMCACHE_MIN_POOL, -1ULL, NULL },
-	{ "cache_fragment_size", &cache_fragment_size, VMEMCACHE_MIN_FRAG,
+	{ "cache_extent_size", &cache_extent_size, VMEMCACHE_MIN_EXTENT,
 		4 * SIZE_GB, NULL },
 	{ "repl_policy", &repl_policy, 1, 1, enum_repl },
 	{ "get_size", &get_size, 1, 4 * SIZE_GB, NULL },
@@ -568,7 +568,7 @@ static void run_bench()
 	randomize_r(&rng, seed);
 	vsize_seed = rnd64_r(&rng);
 
-	cache = vmemcache_new(dir, cache_size, cache_fragment_size,
+	cache = vmemcache_new(dir, cache_size, cache_extent_size,
 		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);

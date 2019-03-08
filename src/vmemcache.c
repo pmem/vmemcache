@@ -69,11 +69,11 @@ static __thread struct {
 static inline
 #endif
 VMEMcache *
-vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
+vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy)
 {
-	LOG(3, "dir %s max_size %zu fragment_size %zu replacement_policy %d",
-		dir, max_size, fragment_size, replacement_policy);
+	LOG(3, "dir %s max_size %zu extent_size %zu replacement_policy %d",
+		dir, max_size, extent_size, replacement_policy);
 
 	if (max_size < VMEMCACHE_MIN_POOL) {
 		ERR("size %zu smaller than %zu", max_size, VMEMCACHE_MIN_POOL);
@@ -81,17 +81,17 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 		return NULL;
 	}
 
-	if (fragment_size < VMEMCACHE_MIN_FRAG) {
-		ERR("fragment size %zu smaller than %zu bytes",
-			fragment_size, VMEMCACHE_MIN_FRAG);
+	if (extent_size < VMEMCACHE_MIN_EXTENT) {
+		ERR("extent size %zu smaller than %zu bytes",
+			extent_size, VMEMCACHE_MIN_EXTENT);
 		errno = EINVAL;
 		return NULL;
 	}
 
-	if (fragment_size > max_size) {
+	if (extent_size > max_size) {
 		ERR(
-			"fragment size %zu larger than maximum file size: %zu bytes",
-			fragment_size, max_size);
+			"extent size %zu larger than maximum file size: %zu bytes",
+			extent_size, max_size);
 		errno = EINVAL;
 		return NULL;
 	}
@@ -154,7 +154,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t fragment_size,
 	}
 
 	cache->heap = vmcache_heap_create(cache->addr, cache->size,
-						fragment_size);
+						extent_size);
 	if (cache->heap == NULL) {
 		LOG(1, "heap initialization failed");
 		goto error_unmap;
@@ -192,7 +192,7 @@ error_free_cache:
 void
 vmemcache_delete_entry_cb(struct cache_entry *entry)
 {
-	VEC_DELETE(&entry->value.fragments);
+	VEC_DELETE(&entry->value.extents);
 	Free(entry);
 }
 
@@ -210,17 +210,17 @@ vmemcache_delete(VMEMcache *cache)
 }
 
 /*
- * vmemcache_populate_fragments -- (internal) copies content of value
+ * vmemcache_populate_extents -- (internal) copies content of value
  *                                  to heap entries
  */
 static void
-vmemcache_populate_fragments(struct cache_entry *entry,
+vmemcache_populate_extents(struct cache_entry *entry,
 				const void *value, size_t value_size)
 {
 	struct heap_entry he;
 	size_t size_left = value_size;
 
-	VEC_FOREACH(he, &entry->value.fragments) {
+	VEC_FOREACH(he, &entry->value.extents) {
 		ASSERT(size_left > 0);
 		size_t len = (he.size < size_left) ? he.size : size_left;
 		memcpy(he.ptr, value, len);
@@ -289,7 +289,7 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 
 	while (left_to_allocate != 0) {
 		ssize_t allocated = vmcache_alloc(cache->heap, left_to_allocate,
-			&entry->value.fragments);
+			&entry->value.extents);
 		if (allocated < 0) {
 			goto error_exit;
 		}
@@ -306,7 +306,7 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 	if (cache->no_memcpy)
 		entry->value.vsize = value_size;
 	else
-		vmemcache_populate_fragments(entry, value, value_size);
+		vmemcache_populate_extents(entry, value, value_size);
 
 put_index:
 	if (vmcache_index_insert(cache->index, entry)) {
@@ -324,9 +324,9 @@ put_index:
 	return 0;
 
 error_exit:
-	vmcache_free(cache->heap, &entry->value.fragments);
+	vmcache_free(cache->heap, &entry->value.extents);
 
-	VEC_DELETE(&entry->value.fragments);
+	VEC_DELETE(&entry->value.extents);
 	Free(entry);
 
 	return -1;
@@ -348,7 +348,7 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 	size_t copied = 0;
 	size_t left_to_copy = entry->value.vsize;
 
-	VEC_FOREACH(he, &entry->value.fragments) {
+	VEC_FOREACH(he, &entry->value.extents) {
 		if (offset > he.size) {
 			offset -= he.size;
 			continue;
@@ -411,9 +411,9 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 	VALGRIND_ANNOTATE_HAPPENS_AFTER(&entry->value.refcount);
 	VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(&entry->value.refcount);
 
-	vmcache_free(cache->heap, &entry->value.fragments);
+	vmcache_free(cache->heap, &entry->value.extents);
 
-	VEC_DELETE(&entry->value.fragments);
+	VEC_DELETE(&entry->value.extents);
 
 	util_fetch_and_sub64(&cache->size_DRAM, malloc_usable_size(entry));
 
@@ -655,10 +655,10 @@ vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
  * vmemcache_new -- create a vmemcache
  */
 VMEMcache *
-vmemcache_new(const char *path, size_t max_size, size_t fragment_size,
+vmemcache_new(const char *path, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy)
 {
-	return vmemcache_newU(path, max_size, fragment_size,
+	return vmemcache_newU(path, max_size, extent_size,
 				replacement_policy);
 }
 #else
@@ -666,14 +666,14 @@ vmemcache_new(const char *path, size_t max_size, size_t fragment_size,
  * vmemcache_newW -- create a vmemcache
  */
 VMEMcache *
-vmemcache_newW(const wchar_t *path, size_t max_size, size_t fragment_size,
+vmemcache_newW(const wchar_t *path, size_t max_size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy)
 {
 	char *upath = util_toUTF8(path);
 	if (upath == NULL)
 		return NULL;
 
-	VMEMcache *ret = vmemcache_newU(upath, path, max_size, fragment_size,
+	VMEMcache *ret = vmemcache_newU(upath, path, max_size, extent_size,
 					replacement_policy);
 
 	util_free_UTF8(upath);

@@ -46,7 +46,7 @@ header: PMDK
 ```c
 #include <libvmemcache.h>
 
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t segment_size,
+VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
 	enum vmemcache_replacement_policy replacement_policy);
 void vmemcache_delete(VMEMcache *cache);
 
@@ -82,7 +82,7 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
 ##### Creation #####
 
 ```
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t segment_size,
+VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
 	enum vmemcache_replacement_policy replacement_policy);
 ```
 
@@ -94,7 +94,7 @@ The cache will be created in the given *path*, which may be:
 Its size is given as *max_size*, although it is rounded **up** towards a
 whole page size alignment (4KB on x86, 64KB on ppc, 4/16/64KB on arm64).
 
-*segment_size* affects allowed fragmentation of the cache. Reducing it
+*extent_size* affects allowed fragmentation of the cache. Reducing it
 improves cache space utilization, increasing it improves performance.
 
 *replacement_policy* may be:
