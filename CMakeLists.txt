@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -58,6 +58,8 @@ if(PKG_CONFIG_FOUND)
 else()
 	find_package(VALGRIND QUIET)
 endif()
+
+find_program(PANDOC NAMES pandoc)
 
 set(CMAKE_C_STANDARD 99)
 
@@ -204,3 +206,6 @@ enable_testing()
 add_subdirectory(src)
 add_subdirectory(tests)
 add_subdirectory(benchmarks)
+if (PANDOC)
+	add_subdirectory(doc)
+endif()
