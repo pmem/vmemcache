@@ -1,7 +1,7 @@
 ---
 layout: manual
 Content-Style: 'text/css'
-title: VMEMCACHE
+title: _MP(VMEMCACHE.3)
 collection: vmemcache
 header: PMDK
 ...
