@@ -150,7 +150,7 @@ parse_args(int argc, char **argv)
 {
 	test_params p = {
 		.pool_size = VMEMCACHE_MIN_POOL,
-		.extent_size = 16,
+		.extent_size = VMEMCACHE_MIN_EXTENT,
 		.val_max = 0,
 		.dir = "",
 		.seconds = 0,

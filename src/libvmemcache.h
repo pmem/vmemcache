@@ -73,7 +73,7 @@ extern "C" {
 #define VMEMCACHE_MINOR_VERSION 1
 
 #define VMEMCACHE_MIN_POOL ((size_t)(1024 * 1024)) /* minimum pool size: 1MB */
-#define VMEMCACHE_MIN_EXTENT ((size_t)8) /* minimum extent size: 8B */
+#define VMEMCACHE_MIN_EXTENT ((size_t)256) /* minimum size of extent: 256B */
 
 /*
  * opaque type, internal to libvmemcache
