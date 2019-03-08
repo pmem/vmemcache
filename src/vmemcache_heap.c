@@ -38,14 +38,115 @@
 #include "vec.h"
 #include "sys_util.h"
 
+#define IS_ALLOCATED 1
+#define IS_FREE 0
+
+/* size of a header and a footer */
+#define HEADER_SIZE (sizeof(size_t))
+
+/* flag: this extent is allocated */
+#define FLAG_ALLOCATED ((size_t)1 << (8 * HEADER_SIZE - 1))
+
+/* value of the header ('ptr' should not be in brackets) */
+#define HEADER(ptr) (*(size_t *)((uintptr_t)ptr))
+
+/* do an arithmetic on the 'void' pointer ('ptr' should not be in brackets) */
+#define VOID_PTR(ptr) ((void *)((uintptr_t)ptr))
+
+#define HEADER_VALUE(size, is_allocated) \
+	(is_allocated) ? ((size) | FLAG_ALLOCATED) : (size)
+
 struct heap {
 	os_mutex_t lock;
+	void *addr;
+	size_t size;
 	size_t extent_size;
 	VEC(, struct heap_entry) entries;
 
 	/* statistic - current size of memory pool used for values */
 	stat_t size_used;
 };
+
+/*
+ * vmcache_heap_write_headers -- write headers of the heap extent
+ */
+static inline void
+vmcache_heap_write_headers(struct heap_entry *he, int is_allocated)
+{
+	size_t header_value = HEADER_VALUE(he->size, is_allocated);
+
+	/* save the header */
+	HEADER(he->ptr) = header_value;
+
+	/* save the footer */
+	HEADER(he->ptr + he->size - HEADER_SIZE) = header_value;
+}
+
+/*
+ * vmcache_heap_verify_headers -- verify headers of the heap extent
+ */
+static inline void
+vmcache_heap_verify_headers(struct heap_entry *he, int is_allocated)
+{
+	size_t header_value = HEADER_VALUE(he->size, is_allocated);
+
+	/* verify the header */
+	ASSERTeq(HEADER(he->ptr), header_value);
+
+	/* verify the footer */
+	ASSERTeq(HEADER(he->ptr + he->size - HEADER_SIZE), header_value);
+}
+
+/*
+ * vmcache_heap_insert -- mark the heap entry as free and insert it to the heap
+ */
+static inline int
+vmcache_heap_insert(struct heap *heap, struct heap_entry *he)
+{
+	vmcache_heap_write_headers(he, IS_FREE);
+
+	if (VEC_PUSH_BACK(&heap->entries, *he)) {
+		ERR("!cannot grow the heap's vector");
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * vmcache_heap_get -- get the free heap entry from the heap
+ */
+static inline int
+vmcache_heap_get(struct heap *heap, struct heap_entry *he)
+{
+	if (VEC_POP_BACK(&heap->entries, he) != 0)
+		return -1;
+
+	vmcache_heap_verify_headers(he, IS_FREE);
+
+	return 0;
+}
+
+/*
+ * vmcache_heap_vec_insert -- mark the heap entry as allocated
+ *                            and insert it to the vector of extents
+ */
+static inline int
+vmcache_heap_vec_insert(struct extent_vec *vec, struct heap_entry *he)
+{
+	vmcache_heap_write_headers(he, IS_ALLOCATED);
+
+	/* update pointer and size */
+	he->ptr = VOID_PTR(he->ptr + HEADER_SIZE);
+	he->size -= 2 * HEADER_SIZE;
+
+	if (VEC_PUSH_BACK(vec, *he) != 0) {
+		ERR("!cannot grow extent vector");
+		return -1;
+	}
+
+	return 0;
+}
 
 /*
  * vmcache_heap_create -- create vmemcache heap
@@ -55,7 +156,6 @@ vmcache_heap_create(void *addr, size_t size, size_t extent_size)
 {
 	LOG(3, "addr %p size %zu", addr, size);
 
-	struct heap_entry whole_heap = {addr, size};
 	struct heap *heap;
 
 	heap = Zalloc(sizeof(struct heap));
@@ -65,9 +165,15 @@ vmcache_heap_create(void *addr, size_t size, size_t extent_size)
 	}
 
 	util_mutex_init(&heap->lock);
+
+	heap->addr = addr;
+	heap->size = size;
 	heap->extent_size = extent_size;
 	VEC_INIT(&heap->entries);
-	VEC_PUSH_BACK(&heap->entries, whole_heap);
+
+	/* insert the whole_heap extent */
+	struct heap_entry whole_heap = {addr, size};
+	vmcache_heap_insert(heap, &whole_heap);
 
 	return heap;
 }
@@ -97,43 +203,95 @@ vmcache_alloc(struct heap *heap, size_t size, struct extent_vec *vec)
 	LOG(3, "heap %p size %zu", heap, size);
 
 	struct heap_entry he = {NULL, 0};
-
-	size = ALIGN_UP(size, heap->extent_size);
 	size_t to_allocate = size;
+	size_t allocated = 0;
 
 	util_mutex_lock(&heap->lock);
 
 	do {
-		if (VEC_POP_BACK(&heap->entries, &he) != 0)
+		if (vmcache_heap_get(heap, &he))
 			break;
 
-		if (he.size > to_allocate) {
-			struct heap_entry f;
-			f.ptr = (void *)((uintptr_t)he.ptr + to_allocate);
-			f.size = he.size - to_allocate;
-			VEC_PUSH_BACK(&heap->entries, f);
+		size_t alloc_size = roundup(to_allocate + 2 * HEADER_SIZE,
+						heap->extent_size);
 
-			he.size = to_allocate;
+		if (he.size >= alloc_size + heap->extent_size) {
+			struct heap_entry f;
+			f.ptr = VOID_PTR(he.ptr + alloc_size);
+			f.size = he.size - alloc_size;
+
+			vmcache_heap_insert(heap, &f);
+
+			he.size = alloc_size;
 		}
 
-		if (VEC_PUSH_BACK(vec, he) != 0) {
-			ERR("!cannot grow extent vector");
-			goto err_push_back;
+		if (vmcache_heap_vec_insert(vec, &he)) {
+			util_mutex_unlock(&heap->lock);
+			return -1;
+		}
+
+		/* size without headers */
+		allocated += he.size;
+
+		if (to_allocate <= he.size) {
+			to_allocate = 0;
+			break;
 		}
 
 		to_allocate -= he.size;
-	} while (to_allocate != 0);
 
-	__sync_fetch_and_add(&heap->size_used, size - to_allocate);
+	} while (to_allocate > 0);
+
+	__sync_fetch_and_add(&heap->size_used, allocated);
 
 	util_mutex_unlock(&heap->lock);
 
 	return (ssize_t)(size - to_allocate);
+}
 
-err_push_back:
-	util_mutex_unlock(&heap->lock);
+/*
+ * vmcache_heap_merge -- (internal) merge memory extents
+ */
+static void
+vmcache_heap_merge(struct heap *heap, struct heap_entry *he)
+{
+	LOG(3, "heap %p he %p", heap, he);
 
-	return -1;
+	struct heap_entry prev, next, *el;
+
+	/* merge with the previous one (lower address) */
+	if ((uintptr_t)he->ptr >= (uintptr_t)heap->addr + HEADER_SIZE) {
+		prev.size = HEADER(he->ptr - HEADER_SIZE);
+		if ((prev.size & FLAG_ALLOCATED) == 0) {
+			prev.ptr = VOID_PTR(he->ptr - prev.size);
+
+			VEC_FOREACH_BY_PTR(el, &heap->entries) {
+				if (el->ptr == prev.ptr) {
+					he->ptr = prev.ptr;
+					he->size += prev.size;
+					VEC_ERASE_BY_PTR(&heap->entries, el);
+					break;
+				}
+			}
+		}
+	}
+
+	/* merge with the next one (higher address) */
+	if ((uintptr_t)he->ptr + he->size <
+				(uintptr_t)heap->addr + heap->size) {
+
+		next.ptr = VOID_PTR(he->ptr + he->size);
+		next.size = HEADER(next.ptr);
+		if ((next.size & FLAG_ALLOCATED) == 0) {
+			VEC_FOREACH_BY_PTR(el, &heap->entries) {
+				if (el->ptr == next.ptr) {
+					he->size += next.size;
+					VEC_ERASE_BY_PTR(&heap->entries, el);
+					break;
+				}
+			}
+		}
+	}
 }
 
 /*
@@ -150,9 +308,18 @@ vmcache_free(struct heap *heap, struct extent_vec *vec)
 
 	struct heap_entry he = {NULL, 0};
 	VEC_FOREACH(he, vec) {
-		VEC_PUSH_BACK(&heap->entries, he);
+		/* size without headers */
 		freed += he.size;
+
+		/* update pointer and size */
+		he.ptr = VOID_PTR(he.ptr - HEADER_SIZE);
+		he.size += 2 * HEADER_SIZE;
+
+		vmcache_heap_verify_headers(&he, IS_ALLOCATED);
+		vmcache_heap_merge(heap, &he);
+		vmcache_heap_insert(heap, &he);
 	}
+
 	VEC_CLEAR(vec);
 
 	__sync_fetch_and_sub(&heap->size_used, freed);
