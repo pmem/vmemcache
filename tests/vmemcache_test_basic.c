@@ -42,7 +42,7 @@
 #include "libvmemcache.h"
 #include "test_helpers.h"
 
-#define VMEMCACHE_EXTENT 16
+#define VMEMCACHE_EXTENT ((int)VMEMCACHE_MIN_EXTENT)
 #define LEN (VMEMCACHE_EXTENT)
 #define KSIZE LEN /* key size */
 #define VSIZE LEN /* value size */
