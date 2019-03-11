@@ -219,6 +219,8 @@ parse_args(int argc, char **argv)
 static int
 put_until_timeout(VMEMcache *vc, const test_params *p)
 {
+	int ret = -1;
+
 	on_evict_info info = { false };
 	vmemcache_callback_on_evict(vc, on_evict, &info);
 
@@ -232,7 +234,10 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 	long seed = time(NULL);
 	srand((unsigned)seed);
 
-	char val;
+	char *val = malloc(p->val_max);
+	if (val == NULL)
+		return -1;
+
 	size_t val_size;
 	size_t used_size;
 	char key[MAX_KEYSIZE];
@@ -245,25 +250,25 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 		len = sprintf(key, "%zu", keynum);
 		if (len < 0) {
 			fprintf(stderr, "sprintf return value: %d\n", len);
-			return 1;
+			goto exit_free;
 		}
 
 		/* generate value */
 		val_size = get_rand_size(p->val_max, p->extent_size);
 
 		/* put */
-		int ret = vmemcache_put(vc, key, (size_t)len, &val, val_size);
+		int ret = vmemcache_put(vc, key, (size_t)len, val, val_size);
 		if (ret != 0) {
 			fprintf(stderr, "vmemcache_put: %s\n",
 					vmemcache_errormsg());
-			return 1;
+			goto exit_free;
 		}
 
 		if (vmemcache_get_stat(vc, VMEMCACHE_STAT_POOL_SIZE_USED,
 					&used_size, sizeof(used_size)) != 0) {
 			fprintf(stderr, "vmemcache_get_stat: %s\n",
 					vmemcache_errormsg());
-			return 1;
+			goto exit_free;
 		}
 
 		/*
@@ -283,17 +288,22 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 			fprintf(stderr,
 				"insufficient space utilization. ratio: %.3f: seed %ld\n",
 				ratio, seed);
-			return 1;
+			goto exit_free;
 		}
 
 		++keynum;
 	}
 
+	ret = 0;
+
 	/* print the last csv line if already not printed */
 	if (!print_ratio)
 		printf("%zu,%.3f\n", keynum - 1, ratio);
 
-	return 0;
+exit_free:
+	free(val);
+
+	return ret;
 }
 
 int
