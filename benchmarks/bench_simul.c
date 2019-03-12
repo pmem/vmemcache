@@ -165,7 +165,8 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"evicts",
 	"cache entries",
 	"DRAM size used",
-	"pool size used"
+	"pool size used",
+	"heap entries"
 };
 
 static struct {
@@ -492,6 +493,7 @@ print_stats(VMEMcache *cache)
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_ENTRIES);
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_DRAM_SIZE_USED);
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_POOL_SIZE_USED);
+	get_stat(cache, stat_vals, VMEMCACHE_STAT_HEAP_ENTRIES);
 
 	float pool_used_percent =
 			(100 * (float)stat_vals[VMEMCACHE_STAT_POOL_SIZE_USED])
