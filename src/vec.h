@@ -117,13 +117,13 @@ vec_reserve(void *vec, size_t ncapacity, size_t s)
 #define VEC_ERASE_BY_POS(vec, pos) do {\
 	if ((pos) != ((vec)->size - 1))\
 		(vec)->buffer[(pos)] = VEC_BACK(vec);\
-	VEC_POP_BACK(vec);\
+	VEC_DEC_BACK(vec);\
 } while (0)
 
 #define VEC_ERASE_BY_PTR(vec, element) do {\
 	if ((element) != &VEC_BACK(vec))\
 		*(element) = VEC_BACK(vec);\
-	VEC_POP_BACK(vec);\
+	VEC_DEC_BACK(vec);\
 } while (0)
 
 #define VEC_INSERT(vec, element)\
