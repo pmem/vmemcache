@@ -35,7 +35,6 @@
  */
 
 #include "test_helpers.h"
-#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <libvmemcache.h>
@@ -73,23 +72,6 @@ static const char *usage_str = "usage: %s "
 	"[-o <timeout_hours>] "
 	"[-h]\n";
 
-/*
- * get_rand_size - (internal) generate random size value
- */
-static size_t
-get_rand_size(size_t val_max, size_t extent_size)
-{
-	size_t val_size =
-	    (1 + (size_t) rand() / (RAND_MAX / (val_max / extent_size) + 1)) *
-	    extent_size;
-
-	assert(val_size <= val_max);
-	assert(val_size >= extent_size);
-	assert(val_size % extent_size == 0 &&
-		"put value size must be a multiple of extent size");
-
-	return val_size;
-}
 
 /*
  * on_evict - (internal) on evict callback function
@@ -249,7 +231,7 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 		}
 
 		/* generate value */
-		val_size = get_rand_size(p->val_max, p->extent_size);
+		val_size = get_granular_rand_size(p->val_max, p->extent_size);
 
 		/* put */
 		int ret = vmemcache_put(vc, key, (size_t)len, &val, val_size);

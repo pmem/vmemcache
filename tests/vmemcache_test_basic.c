@@ -74,6 +74,15 @@ struct ctx_cb {
 	stat_t evict_count;
 };
 
+/* test_put_in_evict callback context */
+struct put_evict_cb {
+	char *vbuf;
+	size_t vsize;
+	stat_t n_puts;
+	stat_t n_evicts;
+	stat_t max_evicts;
+};
+
 /* key bigger than 1kB */
 struct big_key {
 	char buf[SIZE_1K];
@@ -643,6 +652,68 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 		UT_FATAL("memory leak detected");
 }
 
+/*
+ * oon_evict_test_put_in_evict_cb -- (internal) 'on evict' callback
+ * for test_put_in_evict
+ */
+static void
+on_evict_test_put_in_evict_cb(VMEMcache *cache, const void *key,
+				size_t key_size, void *arg)
+{
+	struct put_evict_cb *ctx = arg;
+	ctx->n_evicts++;
+
+	stat_t new_key = ctx->n_puts + ctx->max_evicts + ctx->n_evicts;
+	int ret = vmemcache_put(cache, &new_key, sizeof(new_key),
+					ctx->vbuf, ctx->vsize);
+
+	if (ret && errno != ENOSPC)
+		UT_FATAL("vmemcache_put: %s, key: %d, errno: %d (should be %d)",
+			vmemcache_errormsg(), *(int *)key, errno, ENOSPC);
+}
+
+/*
+ * test_put_in_evict -- (internal) test valid library behaviour for making
+ * a put in 'on evict' callback function
+ */
+static void
+test_put_in_evict(const char *dir, enum vmemcache_replacement_policy policy)
+{
+	srand((unsigned)time(NULL));
+
+	size_t min_size = VMEMCACHE_MIN_EXTENT / 2;
+	size_t max_size = VMEMCACHE_MIN_POOL / 16;
+
+	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
+		VMEMCACHE_MIN_EXTENT, policy);
+	if (cache == NULL)
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+
+	struct put_evict_cb ctx = {NULL, VSIZE, 0, 0, 500};
+	vmemcache_callback_on_evict(cache, on_evict_test_put_in_evict_cb,
+					&ctx);
+
+	while (ctx.n_evicts < ctx.max_evicts) {
+		ctx.n_puts++;
+		ctx.vsize = get_granular_rand_size(max_size, min_size);
+		ctx.vbuf = malloc(ctx.vsize);
+		if (ctx.vbuf == NULL)
+			UT_FATAL("out of memory");
+
+		int ret = vmemcache_put(cache, &ctx.n_puts, sizeof(ctx.n_puts),
+					ctx.vbuf, ctx.vsize);
+		if (ret)
+			UT_FATAL("vmemcache_put(n_puts: %llu): %s",
+						ctx.n_puts,
+						vmemcache_errormsg());
+
+		free(ctx.vbuf);
+	}
+
+	vmemcache_delete(cache);
+}
+
+
 int
 main(int argc, char *argv[])
 {
@@ -666,6 +737,8 @@ main(int argc, char *argv[])
 
 	/* '1' means: key size > 1kB */
 	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU);
+
+	test_put_in_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
 
 	return 0;
 }
