@@ -622,6 +622,9 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 	case VMEMCACHE_STAT_POOL_SIZE_USED:
 		*val = vmcache_get_heap_used_size(cache->heap);
 		break;
+	case VMEMCACHE_STAT_HEAP_ENTRIES:
+		*val = vmcache_get_heap_entries_count(cache->heap);
+		break;
 	default:
 		ERR("unknown value of statistic: %u", stat);
 		errno = EINVAL;

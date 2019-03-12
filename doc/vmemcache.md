@@ -203,6 +203,8 @@ Obtains a piece of statistics about the cache. The *stat* may be:
 	CLARIFY/RENAME: doesn't include index, repl nor allocator
  + **VMEMCACHE_STAT_POOL_SIZE_USED**
 	current usage of data pool
+ + **VMEMCACHE_STAT_HEAP_ENTRIES**
+	current number of heap entries
 
 
 ```

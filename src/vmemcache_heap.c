@@ -347,3 +347,12 @@ vmcache_get_heap_used_size(struct heap *heap)
 {
 	return heap->size_used;
 }
+
+/*
+ * vmcache_get_heap_entries_count -- get the 'heap_entries_count' statistic
+ */
+stat_t
+vmcache_get_heap_entries_count(struct heap *heap)
+{
+	return (stat_t)VEC_SIZE(&heap->entries);
+}
