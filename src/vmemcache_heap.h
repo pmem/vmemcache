@@ -65,6 +65,7 @@ ssize_t vmcache_alloc(struct heap *heap, size_t size, struct extent_vec *vec);
 void vmcache_free(struct heap *heap, struct extent_vec *vec);
 
 stat_t vmcache_get_heap_used_size(struct heap *heap);
+stat_t vmcache_get_heap_entries_count(struct heap *heap);
 
 #ifdef __cplusplus
 }

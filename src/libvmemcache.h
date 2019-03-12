@@ -97,6 +97,7 @@ enum vmemcache_statistic {
 	VMEMCACHE_STAT_DRAM_SIZE_USED,	/* current size of DRAM used for keys */
 	VMEMCACHE_STAT_POOL_SIZE_USED,	/* current size of memory pool */
 					/*    used for values */
+	VMEMCACHE_STAT_HEAP_ENTRIES,	/* current number of heap entries */
 	VMEMCACHE_STATS_NUM		/* total number of statistics */
 };
 
