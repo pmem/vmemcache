@@ -373,7 +373,7 @@ static inline uint64_t getticks(void)
 static void
 run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 {
-	uint64_t opt;
+	uint64_t opt, opt_tag;
 
 	for (uint64_t count = 0; count < ops; count++) {
 		uint64_t obj = n_lowest_bits(rnd64_r(rng), (int)key_diversity);
@@ -399,11 +399,13 @@ run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 						vmemcache_errormsg());
 			}
 
-			if (lat)
-				*lat++ = (getticks() - opt) | PUT_TAG;
-		} else if (lat) {
-			*lat++ = getticks() - opt;
+			opt_tag = PUT_TAG;
+		} else {
+			opt_tag = 0;
 		}
+
+		if (lat)
+			*lat++ = (getticks() - opt) | opt_tag;
 	}
 }
 
