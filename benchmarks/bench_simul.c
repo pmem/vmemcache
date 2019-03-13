@@ -168,6 +168,12 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"pool size used"
 };
 
+static struct {
+	os_cond_t cond;
+	os_mutex_t mutex;
+	uint64_t wanted;
+} ready;
+
 static void print_stats(VMEMcache *cache);
 
 /*
@@ -433,6 +439,18 @@ static void *worker(void *arg)
 
 	run_warm_up(&rng, get_buffer);
 
+	os_mutex_lock(&ready.mutex);
+	if (--ready.wanted)
+		os_cond_wait(&ready.cond, &ready.mutex);
+	else {
+		/* If warm_up disabled memcpy, re-enable it. */
+		vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY,
+			type < ST_FULL);
+
+		os_cond_broadcast(&ready.cond);
+	}
+	os_mutex_unlock(&ready.mutex);
+
 	benchmark_time_t t1, t2;
 	benchmark_time_get(&t1);
 
@@ -570,6 +588,10 @@ static void run_bench()
 	randomize_r(&rng, seed);
 	vsize_seed = rnd64_r(&rng);
 
+	os_cond_init(&ready.cond);
+	os_mutex_init(&ready.mutex);
+	ready.wanted = n_threads;
+
 	cache = vmemcache_new(dir, cache_size, cache_extent_size,
 		(enum vmemcache_replacement_policy)repl_policy);
 	if (!cache)
@@ -601,8 +623,11 @@ static void run_bench()
 
 	vmemcache_bench_set(cache, VMEMCACHE_BENCH_INDEX_ONLY,
 		type <= ST_INDEX);
-	vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY,
-		type < ST_FULL);
+	/* memcpy is enabled after warm_up */
+	vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY, 1);
+	/* but if there's any warm_up, touch the space once */
+	if (warm_up)
+		vmemcache_bench_set(cache, VMEMCACHE_BENCH_PREFAULT, 1);
 
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
