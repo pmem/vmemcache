@@ -111,6 +111,9 @@ set(SOURCES_MT
 set(SOURCES_UTLIIZATION
 	vmemcache_test_utilization.c)
 
+set(SOURCES_EXAMPLE
+	example.c)
+
 set(LIBS_BASIC
 	vmemcache)
 
@@ -121,6 +124,9 @@ set(LIBS_MT
 set(LIBS_UTLIIZATION
 	vmemcache
 	m)
+
+set(LIBS_EXAMPLE
+	vmemcache)
 
 add_link_executable(vmemcache_test_basic
 		"${SOURCES_BASIC}"
@@ -133,6 +139,10 @@ add_link_executable(vmemcache_test_mt
 add_link_executable(vmemcache_test_utilization
 		"${SOURCES_UTLIIZATION}"
 		"${LIBS_UTLIIZATION}")
+
+add_link_executable(example
+		"${SOURCES_EXAMPLE}"
+		"${LIBS_EXAMPLE}")
 
 if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-basic" test-basic none fs)
@@ -165,3 +175,5 @@ if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
 	test("DDAX-test-utilization" test-utilization none ddax)
 	test("DDAX-test-utilization-memcheck" test-utilization memcheck ddax)
 endif()
+
+test("example" test-example none fs)
