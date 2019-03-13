@@ -1,0 +1,17 @@
+"""
+Example file for latency_run configuration. All provided configurations
+need to be dictionaries starting with 'bench_'. 'testdir' value is a path
+to benchmark test directory, other items are directly translated into
+bench_simul command line arguments.
+"""
+
+bench_16_threads = {
+    'testdir': '/tmp',
+    'n_threads': 16
+}
+
+bench_4_threads = {
+    'testdir': '/tmp',
+    'n_threads': 4,
+    'junk_start': 1
+}
