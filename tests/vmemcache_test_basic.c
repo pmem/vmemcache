@@ -543,6 +543,18 @@ test_evict(const char *dir,
 			strerror(errno), vmemcache_errormsg());
 	}
 
+	/* TEST #8 - evict nonexistent key */
+	const char *non_existent_key = "non_existent";
+	ret = vmemcache_evict(cache, non_existent_key,
+			strlen(non_existent_key));
+	if (ret == 0)
+		UT_FATAL(
+			"vmemcache_evict: return value for nonexistent key equals 0");
+	else if (errno != ENOENT)
+		UT_FATAL(
+			"vmemcache_evict: nonexistent key: errno %d (should be %d)",
+				errno, ENOENT);
+
 	/* free all the memory */
 	/* stats: evict:DNUM+1 -3 already evicted, miss:1 */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
