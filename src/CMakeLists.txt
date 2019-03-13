@@ -57,6 +57,7 @@ add_library(vmemcache SHARED ${SOURCES})
 target_link_libraries(vmemcache PRIVATE
 	${CMAKE_THREAD_LIBS_INIT}
 	-Wl,--version-script=${CMAKE_SOURCE_DIR}/src/libvmemcache.map)
+set_target_properties(vmemcache PROPERTIES SOVERSION 0)
 
 target_compile_definitions(vmemcache PRIVATE SRCVERSION="${VERSION}")
 
@@ -65,4 +66,6 @@ if(VALGRIND_FOUND)
 endif()
 
 install(TARGETS vmemcache
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
+install(FILES libvmemcache.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
