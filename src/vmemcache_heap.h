@@ -38,7 +38,7 @@
 #define VMEMCACHE_HEAP_H 1
 
 #include <stddef.h>
-#include "vec.h"
+#include <sys/types.h>
 
 /* type of the statistics */
 typedef unsigned long long stat_t;
@@ -49,23 +49,44 @@ extern "C" {
 
 #define HEAP_ENTRY_IS_NULL(he) ((he.ptr) == NULL)
 
-struct heap_entry {
+/* extent structure ('struct heap_entry' without header and footer ) */
+struct extent {
 	void *ptr;
 	size_t size;
 };
-
-VEC(extent_vec, struct heap_entry);
 
 struct heap;
 
 struct heap *vmcache_heap_create(void *addr, size_t size, size_t extent_size);
 void vmcache_heap_destroy(struct heap *heap);
 
-ssize_t vmcache_alloc(struct heap *heap, size_t size, struct extent_vec *vec);
-void vmcache_free(struct heap *heap, struct extent_vec *vec);
+ssize_t vmcache_alloc(struct heap *heap, size_t size, void **last_extent,
+			void **small_extent);
+void vmcache_free(struct heap *heap, void *last_extent);
 
 stat_t vmcache_get_heap_used_size(struct heap *heap);
 stat_t vmcache_get_heap_entries_count(struct heap *heap);
+
+void *vmcache_extent_get_prev(void *ptr);
+size_t vmcache_extent_get_size(void *ptr);
+
+/* unsafe variant - the headers of extents cannot be modified */
+#define EXTENTS_FOREACH(ext, extents) \
+	for ((ext).ptr = (extents), \
+		(ext).size = vmcache_extent_get_size((ext).ptr); \
+		(ext).ptr != NULL; \
+		(ext).ptr = vmcache_extent_get_prev((ext).ptr), \
+		(ext).size = vmcache_extent_get_size((ext).ptr))
+
+/* safe variant - the headers of extents can be modified (freed for example) */
+#define EXTENTS_FOREACH_SAFE(ext, extents, __prev) \
+	for ((ext).ptr = (extents), \
+		(ext).size = vmcache_extent_get_size((ext).ptr), \
+		(__prev) = vmcache_extent_get_prev((ext).ptr); \
+		(ext).ptr != NULL; \
+		(ext).ptr = (__prev), \
+		(ext).size = vmcache_extent_get_size((ext).ptr), \
+		(__prev) = vmcache_extent_get_prev((__prev)))
 
 #ifdef __cplusplus
 }

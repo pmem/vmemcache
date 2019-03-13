@@ -192,7 +192,6 @@ error_free_cache:
 void
 vmemcache_delete_entry_cb(struct cache_entry *entry)
 {
-	VEC_DELETE(&entry->value.extents);
 	Free(entry);
 }
 
@@ -217,13 +216,13 @@ static void
 vmemcache_populate_extents(struct cache_entry *entry,
 				const void *value, size_t value_size)
 {
-	struct heap_entry he;
+	struct extent ext;
 	size_t size_left = value_size;
 
-	VEC_FOREACH(he, &entry->value.extents) {
+	EXTENTS_FOREACH(ext, entry->value.extents) {
 		ASSERT(size_left > 0);
-		size_t len = (he.size < size_left) ? he.size : size_left;
-		memcpy(he.ptr, value, len);
+		size_t len = (ext.size < size_left) ? ext.size : size_left;
+		memcpy(ext.ptr, value, len);
 		value = (char *)value + len;
 		size_left -= len;
 	}
@@ -285,14 +284,16 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 	if (cache->index_only || cache->no_alloc)
 		goto put_index;
 
+	void *small_extent = NULL; /* required by vmcache_alloc() */
 	size_t left_to_allocate = value_size;
 
 	while (left_to_allocate != 0) {
 		ssize_t allocated = vmcache_alloc(cache->heap, left_to_allocate,
-			&entry->value.extents);
-		if (allocated < 0) {
+							&entry->value.extents,
+							&small_extent);
+		if (allocated < 0)
 			goto error_exit;
-		}
+
 		if (allocated == 0 && vmemcache_evict(cache, NULL, 0)) {
 			LOG(1, "vmemcache_evict() failed");
 			if (errno == ESRCH)
@@ -324,9 +325,8 @@ put_index:
 	return 0;
 
 error_exit:
-	vmcache_free(cache->heap, &entry->value.extents);
+	vmcache_free(cache->heap, entry->value.extents);
 
-	VEC_DELETE(&entry->value.extents);
 	Free(entry);
 
 	return -1;
@@ -344,18 +344,18 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 	if (!vbuf)
 		return 0;
 
-	struct heap_entry he;
+	struct extent ext;
 	size_t copied = 0;
 	size_t left_to_copy = entry->value.vsize;
 
-	VEC_FOREACH(he, &entry->value.extents) {
-		if (offset > he.size) {
-			offset -= he.size;
+	EXTENTS_FOREACH(ext, entry->value.extents) {
+		if (offset > ext.size) {
+			offset -= ext.size;
 			continue;
 		}
 
 		size_t off = 0;
-		size_t len = he.size;
+		size_t len = ext.size;
 
 		if (offset > 0) {
 			off += offset;
@@ -370,7 +370,7 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 			len = left_to_copy;
 
 		if (!no_memcpy)
-			memcpy(vbuf, (char *)he.ptr + off, len);
+			memcpy(vbuf, (char *)ext.ptr + off, len);
 
 		vbufsize -= len;
 		vbuf = (char *)vbuf + len;
@@ -411,9 +411,7 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 	VALGRIND_ANNOTATE_HAPPENS_AFTER(&entry->value.refcount);
 	VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(&entry->value.refcount);
 
-	vmcache_free(cache->heap, &entry->value.extents);
-
-	VEC_DELETE(&entry->value.extents);
+	vmcache_free(cache->heap, entry->value.extents);
 
 	util_fetch_and_sub64(&cache->size_DRAM, malloc_usable_size(entry));
 
