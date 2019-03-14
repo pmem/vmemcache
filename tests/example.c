@@ -54,13 +54,19 @@ get(const char *key)
 	if (len >= 0)
 		printf("%.*s\n", (int)len, buf);
 	else
-		printf("(not found)\n");
+		printf("(key not found: %s)\n", key);
 }
 
 int
 main()
 {
-	cache = vmemcache_new("/tmp", 1048576, 256, VMEMCACHE_REPLACEMENT_LRU);
+	cache = vmemcache_new("/tmp", VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
+				VMEMCACHE_REPLACEMENT_LRU);
+	if (cache == NULL) {
+		fprintf(stderr, "error: vmemcache_new: %s\n",
+				vmemcache_errormsg());
+		return -1;
+	}
 
 	/* Query a non-existent key. */
 	get("meow");
