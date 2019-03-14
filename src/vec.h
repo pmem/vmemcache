@@ -46,7 +46,7 @@
 extern "C" {
 #endif
 
-#define VEC_INIT_SIZE (64)
+#define VEC_INIT_SIZE (1)
 
 #define VEC(name, type)\
 struct name {\
