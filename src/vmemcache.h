@@ -68,12 +68,14 @@ struct vmemcache {
 	unsigned no_alloc:1;		/* bench: disable allocations */
 	unsigned no_memcpy:1;		/* bench: don't copy actual data */
 
+#ifndef VMEMCACHE_NO_STATS
 	/* statistics */
 	stat_t put_count;		/* total number of puts */
 	stat_t get_count;		/* total number of gets */
 	stat_t miss_count;		/* total number of misses */
 	stat_t evict_count;		/* total number of evicts */
 	stat_t size_DRAM;		/* current size of DRAM used for keys */
+#endif /* VMEMCACHE_NO_STATS */
 };
 
 struct cache_entry {

@@ -53,6 +53,7 @@
 /* type of statistics */
 typedef unsigned long long stat_t;
 
+#ifndef VMEMCACHE_NO_STATS
 /* names of statistics */
 static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"PUTs",
@@ -64,6 +65,7 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"DRAM_SIZE_USED",
 	"POOL_SIZE_USED"
 };
+#endif /* VMEMCACHE_NO_STATS */
 
 /* context of callbacks */
 struct ctx_cb {
@@ -87,6 +89,7 @@ static void
 verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 		stat_t evict, stat_t entries, stat_t dram, stat_t pool)
 {
+#ifndef VMEMCACHE_NO_STATS
 	stat_t stat;
 	int ret;
 
@@ -167,6 +170,7 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 	if (ret != -1)
 		UT_FATAL(
 			"vmemcache_get_stat() succeeded for incorrect statistic (-1)");
+#endif /* VMEMCACHE_NO_STATS */
 }
 
 /*
@@ -176,6 +180,7 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 static void
 verify_stat_entries(VMEMcache *cache, stat_t entries)
 {
+#ifndef VMEMCACHE_NO_STATS
 	stat_t stat;
 	int ret;
 
@@ -187,6 +192,7 @@ verify_stat_entries(VMEMcache *cache, stat_t entries)
 		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_ENTRIES], stat, entries);
+#endif /* VMEMCACHE_NO_STATS */
 }
 
 /*

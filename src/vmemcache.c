@@ -277,7 +277,9 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		return -1;
 	}
 
+#ifndef VMEMCACHE_NO_STATS
 	util_fetch_and_add64(&cache->size_DRAM, malloc_usable_size(entry));
+#endif /* VMEMCACHE_NO_STATS */
 
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
@@ -319,7 +321,9 @@ put_index:
 					&entry->value.p_entry);
 	}
 
+#ifndef VMEMCACHE_NO_STATS
 	util_fetch_and_add64(&cache->put_count, 1);
+#endif /* VMEMCACHE_NO_STATS */
 
 	return 0;
 
@@ -415,7 +419,9 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 
 	VEC_DELETE(&entry->value.extents);
 
+#ifndef VMEMCACHE_NO_STATS
 	util_fetch_and_sub64(&cache->size_DRAM, malloc_usable_size(entry));
+#endif /* VMEMCACHE_NO_STATS */
 
 	Free(entry);
 }
@@ -431,14 +437,18 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	struct cache_entry *entry;
 	size_t read = 0;
 
+#ifndef VMEMCACHE_NO_STATS
 	util_fetch_and_add64(&cache->get_count, 1);
+#endif /* VMEMCACHE_NO_STATS */
 
 	int ret = vmcache_index_get(cache->index, key, ksize, &entry);
 	if (ret < 0)
 		return -1;
 
 	if (entry == NULL) { /* cache miss */
+#ifndef VMEMCACHE_NO_STATS
 		util_fetch_and_add64(&cache->miss_count, 1);
+#endif /* VMEMCACHE_NO_STATS */
 
 		if (cache->on_miss) {
 			get_req.key = key;
@@ -530,7 +540,9 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		}
 	}
 
+#ifndef VMEMCACHE_NO_STATS
 	util_fetch_and_add64(&cache->evict_count, 1);
+#endif /* VMEMCACHE_NO_STATS */
 
 	if (cache->on_evict != NULL)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
@@ -581,6 +593,7 @@ vmemcache_callback_on_miss(VMEMcache *cache, vmemcache_on_miss *miss,
 	cache->arg_miss = arg;
 }
 
+#ifndef VMEMCACHE_NO_STATS
 /*
  * vmemcache_get_stat -- get the statistic
  */
@@ -630,6 +643,7 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 
 	return 0;
 }
+#endif /* VMEMCACHE_NO_STATS */
 
 static void
 prefault(VMEMcache *cache)

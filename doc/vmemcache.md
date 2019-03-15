@@ -204,6 +204,8 @@ Obtains a piece of statistics about the cache. The *stat* may be:
  + **VMEMCACHE_STAT_POOL_SIZE_USED**
 	current usage of data pool
 
+Statistics are enabled by default. They can be disabled at the compile time
+if **VMEMCACHE_NO_STATS** is defined.
 
 ```
 const char *vmemcache_errormsg(void);

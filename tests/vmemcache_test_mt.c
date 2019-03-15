@@ -296,6 +296,7 @@ on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 		UT_FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
 }
 
+#ifndef VMEMCACHE_NO_STATS
 /*
  * get_stat -- (internal) get one statistic
  */
@@ -307,6 +308,7 @@ get_stat(VMEMcache *cache, stat_t *stat_val, enum vmemcache_statistic i_stat)
 	if (ret == -1)
 		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 }
+#endif /* VMEMCACHE_NO_STATS */
 
 /*
  * worker_thread_get_unique_keys -- (internal) worker testing vmemcache_get()
@@ -356,6 +358,7 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 
 	vmemcache_callback_on_miss(cache, NULL, NULL);
 
+#ifndef VMEMCACHE_NO_STATS
 	stat_t puts, gets, misses;
 	get_stat(cache, &puts, VMEMCACHE_STAT_PUT);
 	get_stat(cache, &gets, VMEMCACHE_STAT_GET);
@@ -374,6 +377,7 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	if (misses != nops)
 		UT_FATAL("wrong number of misses: %llu (should be: %llu",
 				misses, nops);
+#endif /* VMEMCACHE_NO_STATS */
 
 	printf("%s: PASSED\n", __func__);
 }
