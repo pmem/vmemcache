@@ -42,7 +42,7 @@
 #include "libvmemcache.h"
 #include "test_helpers.h"
 
-#define VMEMCACHE_EXTENT 16
+#define VMEMCACHE_EXTENT ((int)VMEMCACHE_MIN_EXTENT)
 #define LEN (VMEMCACHE_EXTENT)
 #define KSIZE LEN /* key size */
 #define VSIZE LEN /* value size */
@@ -62,7 +62,8 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"EVICTs",
 	"CACHE_ENTRIES",
 	"DRAM_SIZE_USED",
-	"POOL_SIZE_USED"
+	"POOL_SIZE_USED",
+	"HEAP_ENTRIES",
 };
 
 /* context of callbacks */
@@ -190,6 +191,26 @@ verify_stat_entries(VMEMcache *cache, stat_t entries)
 }
 
 /*
+ * verify_heap_entries -- (internal) verify the statistic
+ *                                   'current number of heap entries'
+ */
+static void
+verify_heap_entries(VMEMcache *cache, stat_t entries)
+{
+	stat_t stat;
+	int ret;
+
+	ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_HEAP_ENTRIES,
+			&stat, sizeof(stat));
+	if (ret == -1)
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+	if (stat != entries)
+		UT_FATAL(
+			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
+			stat_str[VMEMCACHE_STAT_HEAP_ENTRIES], stat, entries);
+}
+
+/*
  * test_new_delete -- (internal) test _new() and _delete()
  */
 static void
@@ -301,11 +322,12 @@ test_put_get_evict(const char *dir,
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	const char *key = "KEY";
-	size_t key_size = strlen(key) + 1;
 	const char *value = "VALUE";
-	size_t value_size = strlen(value) + 1;
 
-	if (vmemcache_put(cache, key, key_size, value, value_size))
+	size_t key_size = strlen(key) + 1;
+	size_t val_size = strlen(value) + 1;
+
+	if (vmemcache_put(cache, key, key_size, value, val_size))
 		UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
 
 	verify_stat_entries(cache, 1);
@@ -320,15 +342,15 @@ test_put_get_evict(const char *dir,
 	if (ret < 0)
 		UT_FATAL("vmemcache_get: %s", vmemcache_errormsg());
 
-	if ((size_t)ret != value_size)
+	if ((size_t)ret != val_size)
 		UT_FATAL(
 			"vmemcache_get: wrong return value: %zi (should be %zu)",
-			ret, value_size);
+			ret, val_size);
 
-	if (vsize != value_size)
+	if (vsize != val_size)
 		UT_FATAL(
 			"vmemcache_get: wrong size of value: %zi (should be %zu)",
-			vsize, value_size);
+			vsize, val_size);
 
 	if (strncmp(vbuf, value, vsize))
 		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
@@ -693,6 +715,66 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 		UT_FATAL("memory leak detected");
 }
 
+/*
+ * test_merge_allocations -- (internal) test merging allocations
+ */
+static void
+test_merge_allocations(const char *dir,
+			enum vmemcache_replacement_policy replacement_policy)
+{
+	VMEMcache *cache;
+	ssize_t ret;
+
+#define N_KEYS 5
+	const char *key[N_KEYS] = {
+			"KEY_1",
+			"KEY_2",
+			"KEY_3",
+			"KEY_4",
+			"KEY_5",
+	};
+
+	const char *value = "VALUE";
+
+	size_t key_size = strlen(key[0]) + 1;
+	size_t val_size = strlen(value) + 1;
+
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_EXTENT,
+				replacement_policy);
+	if (cache == NULL)
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+
+	verify_stat_entries(cache, 0);
+	verify_heap_entries(cache, 1);
+
+	for (int i = 0; i < N_KEYS; i++)
+		if (vmemcache_put(cache, key[i], key_size, value, val_size))
+			UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
+
+	verify_stat_entries(cache, N_KEYS);
+	verify_heap_entries(cache, 1);
+
+	/* order of evicting the keys */
+	const unsigned i_key[N_KEYS] = {1, 3, 0, 4, 2};
+
+	for (int i = 0; i < N_KEYS; i++) {
+		ret = vmemcache_evict(cache, key[i_key[i]], key_size);
+		if (ret == -1)
+			UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
+	}
+
+	verify_stat_entries(cache, 0);
+	verify_heap_entries(cache, 1);
+
+	if (vmemcache_put(cache, key[0], key_size, value, val_size))
+		UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
+
+	verify_stat_entries(cache, 1);
+	verify_heap_entries(cache, 1);
+
+	vmemcache_delete(cache);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -716,6 +798,9 @@ main(int argc, char *argv[])
 
 	/* '1' means: key size > 1kB */
 	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU);
+
+	test_merge_allocations(dir, VMEMCACHE_REPLACEMENT_NONE);
+	test_merge_allocations(dir, VMEMCACHE_REPLACEMENT_LRU);
 
 	return 0;
 }
