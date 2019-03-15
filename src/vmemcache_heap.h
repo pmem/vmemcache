@@ -67,6 +67,14 @@ void vmcache_free(struct heap *heap, struct extent_vec *vec);
 stat_t vmcache_get_heap_used_size(struct heap *heap);
 stat_t vmcache_get_heap_entries_count(struct heap *heap);
 
+#ifndef VMEMCACHE_NO_STATS
+#define STAT_ADD(ptr, add) util_fetch_and_add64(ptr, add)
+#define STAT_SUB(ptr, add) util_fetch_and_sub64(ptr, add)
+#else
+#define STAT_ADD(ptr, add) do {} while (0)
+#define STAT_SUB(ptr, add) do {} while (0)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

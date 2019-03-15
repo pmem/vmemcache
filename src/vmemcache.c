@@ -61,7 +61,6 @@ static __thread struct {
 	size_t *vsize;
 } get_req = { 0 };
 
-
 /*
  * vmemcache_newU -- (internal) create a vmemcache
  */
@@ -277,7 +276,7 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		return -1;
 	}
 
-	util_fetch_and_add64(&cache->size_DRAM, malloc_usable_size(entry));
+	STAT_ADD(&cache->size_DRAM, malloc_usable_size(entry));
 
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
@@ -319,7 +318,7 @@ put_index:
 					&entry->value.p_entry);
 	}
 
-	util_fetch_and_add64(&cache->put_count, 1);
+	STAT_ADD(&cache->put_count, 1);
 
 	return 0;
 
@@ -415,7 +414,7 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 
 	VEC_DELETE(&entry->value.extents);
 
-	util_fetch_and_sub64(&cache->size_DRAM, malloc_usable_size(entry));
+	STAT_SUB(&cache->size_DRAM, malloc_usable_size(entry));
 
 	Free(entry);
 }
@@ -431,14 +430,14 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	struct cache_entry *entry;
 	size_t read = 0;
 
-	util_fetch_and_add64(&cache->get_count, 1);
+	STAT_ADD(&cache->get_count, 1);
 
 	int ret = vmcache_index_get(cache->index, key, ksize, &entry);
 	if (ret < 0)
 		return -1;
 
 	if (entry == NULL) { /* cache miss */
-		util_fetch_and_add64(&cache->miss_count, 1);
+		STAT_ADD(&cache->miss_count, 1);
 
 		if (cache->on_miss) {
 			get_req.key = key;
@@ -530,7 +529,7 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		}
 	}
 
-	util_fetch_and_add64(&cache->evict_count, 1);
+	STAT_ADD(&cache->evict_count, 1);
 
 	if (cache->on_evict != NULL)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);

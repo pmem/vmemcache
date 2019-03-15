@@ -249,12 +249,20 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 			goto exit_free;
 		}
 
+#ifndef VMEMCACHE_NO_STATS
 		if (vmemcache_get_stat(vc, VMEMCACHE_STAT_POOL_SIZE_USED,
 					&used_size, sizeof(used_size)) != 0) {
 			fprintf(stderr, "vmemcache_get_stat: %s\n",
 					vmemcache_errormsg());
 			goto exit_free;
 		}
+#else
+		/*
+		 * This test will always pass and show 100% utilization,
+		 * if statistics are disabled.
+		 */
+		used_size = p->pool_size;
+#endif /* VMEMCACHE_NO_STATS */
 
 		/*
 		 * Do not print the csv line if current ratio value is the same

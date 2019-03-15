@@ -156,6 +156,13 @@ static struct param_t {
 	{ 0 },
 };
 
+static struct {
+	os_cond_t cond;
+	os_mutex_t mutex;
+	uint64_t wanted;
+} ready;
+
+#ifndef VMEMCACHE_NO_STATS
 /* names of statistics */
 static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"puts",
@@ -168,12 +175,7 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"pool size used",
 	"heap entries",
 };
-
-static struct {
-	os_cond_t cond;
-	os_mutex_t mutex;
-	uint64_t wanted;
-} ready;
+#endif /* VMEMCACHE_NO_STATS */
 
 static void print_stats(VMEMcache *cache);
 
@@ -467,6 +469,7 @@ static void *worker(void *arg)
 	return (void *)(intptr_t)(t1.tv_sec * NSECPSEC + t1.tv_nsec);
 }
 
+#ifndef VMEMCACHE_NO_STATS
 /*
  * get_stat -- (internal) get one statistic
  */
@@ -478,6 +481,7 @@ get_stat(VMEMcache *cache, stat_t *stat_vals, enum vmemcache_statistic i_stat)
 	if (ret == -1)
 		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
 }
+#endif /* VMEMCACHE_NO_STATS */
 
 /*
  * print_stats -- (internal) print all statistics
@@ -485,6 +489,7 @@ get_stat(VMEMcache *cache, stat_t *stat_vals, enum vmemcache_statistic i_stat)
 static void
 print_stats(VMEMcache *cache)
 {
+#ifndef VMEMCACHE_NO_STATS
 	stat_t stat_vals[VMEMCACHE_STATS_NUM];
 
 	get_stat(cache, stat_vals, VMEMCACHE_STAT_PUT);
@@ -511,6 +516,7 @@ print_stats(VMEMcache *cache)
 	printf("  %-20s : %.2f %%\n", "hits [%]", hits_percent);
 
 	printf("\n");
+#endif /* VMEMCACHE_NO_STATS */
 }
 
 /*

@@ -254,7 +254,7 @@ vmcache_alloc(struct heap *heap, size_t size, struct extent_vec *vec)
 
 	} while (to_allocate > 0);
 
-	__sync_fetch_and_add(&heap->size_used, allocated);
+	STAT_ADD(&heap->size_used, allocated);
 
 	util_mutex_unlock(&heap->lock);
 
@@ -334,7 +334,7 @@ vmcache_free(struct heap *heap, struct extent_vec *vec)
 
 	VEC_CLEAR(vec);
 
-	__sync_fetch_and_sub(&heap->size_used, freed);
+	STAT_SUB(&heap->size_used, freed);
 
 	util_mutex_unlock(&heap->lock);
 }
