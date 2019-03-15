@@ -61,6 +61,10 @@ set_target_properties(vmemcache PROPERTIES SOVERSION 0)
 
 target_compile_definitions(vmemcache PRIVATE SRCVERSION="${VERSION}")
 
+if(STATS_ENABLED)
+	target_compile_definitions(vmemcache PRIVATE STATS_ENABLED=1)
+endif()
+
 if(VALGRIND_FOUND)
 	target_compile_definitions(vmemcache PRIVATE VALGRIND_ENABLED=1)
 endif()

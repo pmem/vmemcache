@@ -53,6 +53,7 @@
 /* type of statistics */
 typedef unsigned long long stat_t;
 
+#ifdef STATS_ENABLED
 /* names of statistics */
 static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"PUTs",
@@ -65,6 +66,7 @@ static const char *stat_str[VMEMCACHE_STATS_NUM] = {
 	"POOL_SIZE_USED",
 	"HEAP_ENTRIES",
 };
+#endif /* STATS_ENABLED */
 
 /* context of callbacks */
 struct ctx_cb {
@@ -99,6 +101,7 @@ static void
 verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 		stat_t evict, stat_t entries, stat_t dram, stat_t pool)
 {
+#ifdef STATS_ENABLED
 	stat_t stat;
 	int ret;
 
@@ -179,6 +182,7 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 	if (ret != -1)
 		UT_FATAL(
 			"vmemcache_get_stat() succeeded for incorrect statistic (-1)");
+#endif /* STATS_ENABLED */
 }
 
 /*
@@ -188,6 +192,7 @@ verify_stats(VMEMcache *cache, stat_t put, stat_t get, stat_t hit, stat_t miss,
 static void
 verify_stat_entries(VMEMcache *cache, stat_t entries)
 {
+#ifdef STATS_ENABLED
 	stat_t stat;
 	int ret;
 
@@ -199,6 +204,7 @@ verify_stat_entries(VMEMcache *cache, stat_t entries)
 		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_ENTRIES], stat, entries);
+#endif /* STATS_ENABLED */
 }
 
 /*
@@ -208,6 +214,7 @@ verify_stat_entries(VMEMcache *cache, stat_t entries)
 static void
 verify_heap_entries(VMEMcache *cache, stat_t entries)
 {
+#ifdef STATS_ENABLED
 	stat_t stat;
 	int ret;
 
@@ -219,6 +226,7 @@ verify_heap_entries(VMEMcache *cache, stat_t entries)
 		UT_FATAL(
 			"vmemcache_get_stat: wrong statistic's (%s) value: %llu (should be %llu)",
 			stat_str[VMEMCACHE_STAT_HEAP_ENTRIES], stat, entries);
+#endif
 }
 
 /*

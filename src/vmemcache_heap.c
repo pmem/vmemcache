@@ -403,7 +403,7 @@ vmcache_alloc(struct heap *heap, size_t size, ptr_ext_t **first_extent,
 
 	} while (to_allocate > 0);
 
-	util_fetch_and_add64(&heap->size_used, allocated);
+	STAT_ADD(&heap->size_used, allocated);
 
 	util_mutex_unlock(&heap->lock);
 
@@ -512,7 +512,7 @@ vmcache_free(struct heap *heap, ptr_ext_t *first_extent)
 					&he, &heap->first_extent, IS_FREE);
 	}
 
-	util_fetch_and_sub64(&heap->size_used, freed);
+	STAT_SUB(&heap->size_used, freed);
 
 	util_mutex_unlock(&heap->lock);
 }

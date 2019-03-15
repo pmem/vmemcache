@@ -94,6 +94,14 @@ size_t vmcache_extent_get_size(ptr_ext_t *ptr);
 		(ext).size = vmcache_extent_get_size((ext).ptr), \
 		(__next) = vmcache_extent_get_next((__next)))
 
+#ifdef STATS_ENABLED
+#define STAT_ADD(ptr, add) util_fetch_and_add64(ptr, add)
+#define STAT_SUB(ptr, add) util_fetch_and_sub64(ptr, add)
+#else
+#define STAT_ADD(ptr, add) do {} while (0)
+#define STAT_SUB(ptr, add) do {} while (0)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

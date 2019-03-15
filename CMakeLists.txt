@@ -196,6 +196,8 @@ add_check_whitespace(other
 	${CMAKE_SOURCE_DIR}/utils/check_license/*.sh
 	${CMAKE_SOURCE_DIR}/README.md)
 
+option(STATS_ENABLED "statistics are enabled" ON)
+
 option(DEVELOPER_MODE "enable developer checks" OFF)
 if(DEVELOPER_MODE)
 	add_c_flag(-Werror)
