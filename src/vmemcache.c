@@ -275,8 +275,6 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		return -1;
 	}
 
-	STAT_ADD(&cache->size_DRAM, malloc_usable_size(entry));
-
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
 
@@ -319,6 +317,7 @@ put_index:
 					&entry->value.p_entry);
 	}
 
+	STAT_ADD(&cache->size_DRAM, malloc_usable_size(entry));
 	STAT_ADD(&cache->put_count, 1);
 
 	return 0;
