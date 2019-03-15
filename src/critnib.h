@@ -56,6 +56,7 @@ struct critnib_node {
 struct critnib {
 	struct critnib_node *root;
 	os_rwlock_t lock;
+	size_t node_count; /* internal nodes only */
 };
 
 struct cache_entry;
