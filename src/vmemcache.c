@@ -317,7 +317,8 @@ put_index:
 					&entry->value.p_entry);
 	}
 
-	util_fetch_and_add64(&cache->size_DRAM, malloc_usable_size(entry));
+	util_fetch_and_add64(&cache->size_DRAM, malloc_usable_size(entry)
+		+ malloc_usable_size(entry->value.extents.buffer));
 	util_fetch_and_add64(&cache->put_count, 1);
 
 	return 0;
@@ -410,11 +411,12 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 	VALGRIND_ANNOTATE_HAPPENS_AFTER(&entry->value.refcount);
 	VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(&entry->value.refcount);
 
+	util_fetch_and_sub64(&cache->size_DRAM, malloc_usable_size(entry)
+		+ malloc_usable_size(entry->value.extents.buffer));
+
 	vmcache_free(cache->heap, &entry->value.extents);
 
 	VEC_DELETE(&entry->value.extents);
-
-	util_fetch_and_sub64(&cache->size_DRAM, malloc_usable_size(entry));
 
 	Free(entry);
 }
