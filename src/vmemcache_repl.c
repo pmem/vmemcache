@@ -100,6 +100,7 @@ static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
 	.repl_p_insert	= repl_p_none_insert,
 	.repl_p_use	= repl_p_none_use,
 	.repl_p_evict	= repl_p_none_evict,
+	.dram_per_entry	= 0,
 },
 {
 	.repl_p_new	= repl_p_lru_new,
@@ -107,6 +108,7 @@ static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
 	.repl_p_insert	= repl_p_lru_insert,
 	.repl_p_use	= repl_p_lru_use,
 	.repl_p_evict	= repl_p_lru_evict,
+	.dram_per_entry	= sizeof(struct repl_p_entry),
 }
 };
 
