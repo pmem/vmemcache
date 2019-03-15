@@ -646,7 +646,7 @@ static void run_bench()
 	uint64_t total = 0;
 
 	for (uint64_t i = 0; i < n_threads; i++) {
-		uint64_t t;
+		uintptr_t t;
 		if (os_thread_join(&th[i], (void **)&t))
 			UT_FATAL("thread join failed: %s", strerror(errno));
 		total += t;

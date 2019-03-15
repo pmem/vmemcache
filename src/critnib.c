@@ -74,7 +74,7 @@ typedef struct cache_entry critnib_leaf;
 static inline bool
 is_leaf(struct critnib_node *n)
 {
-	return (uint64_t)n & 1;
+	return (uintptr_t)n & 1;
 }
 
 /*
@@ -83,7 +83,7 @@ is_leaf(struct critnib_node *n)
 static inline critnib_leaf *
 to_leaf(struct critnib_node *n)
 {
-	return (void *)((uint64_t)n & ~1ULL);
+	return (void *)((uintptr_t)n & ~1ULL);
 }
 
 /*
@@ -175,7 +175,7 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 {
 	const char *key = (void *)&e->key;
 	byten_t key_len = (byten_t)KEYLEN(e);
-	critnib_leaf *k = (void *)((uint64_t)e | 1);
+	critnib_leaf *k = (void *)((uintptr_t)e | 1);
 
 	struct critnib_node *n = c->root;
 	if (!n) {
