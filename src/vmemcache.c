@@ -613,7 +613,8 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 		*val = cache->put_count - cache->evict_count;
 		break;
 	case VMEMCACHE_STAT_DRAM_SIZE_USED:
-		*val = cache->size_DRAM;
+		*val = cache->size_DRAM
+			+ vmemcache_index_internal_memory_usage(cache->index);
 		break;
 	case VMEMCACHE_STAT_POOL_SIZE_USED:
 		*val = vmcache_get_heap_used_size(cache->heap);
