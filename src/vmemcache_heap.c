@@ -37,6 +37,7 @@
 #include "vmemcache_heap.h"
 #include "vec.h"
 #include "sys_util.h"
+#include <malloc.h>
 
 #define IS_ALLOCATED 1
 #define IS_FREE 0
@@ -355,4 +356,19 @@ stat_t
 vmcache_get_heap_entries_count(struct heap *heap)
 {
 	return (stat_t)VEC_SIZE(&heap->entries);
+}
+
+/*
+ * vmcache_heap_internal_memory_usage -- estimate DRAM usage
+ */
+size_t
+vmcache_heap_internal_memory_usage(struct heap *heap)
+{
+	util_mutex_lock(&heap->lock);
+
+	size_t dram = malloc_usable_size(heap->entries.buffer);
+
+	util_mutex_unlock(&heap->lock);
+
+	return dram;
 }
