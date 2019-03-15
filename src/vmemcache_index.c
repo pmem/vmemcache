@@ -221,3 +221,17 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 
 	return 0;
 }
+
+/*
+ * vmemcache_index_internal_memory_usage -- query memory for index overhead
+ */
+size_t
+vmemcache_index_internal_memory_usage(struct index *index)
+{
+	size_t total = 0;
+
+	for (int i = 0; i < NSHARDS; i++)
+		total += index->bucket[i]->node_count;
+
+	return total * sizeof(struct critnib_node);
+}

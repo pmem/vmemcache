@@ -85,10 +85,9 @@ slice_index(char b, bitn_t bit)
 struct critnib *
 critnib_new(void)
 {
-	struct critnib *c = Malloc(sizeof(struct critnib));
+	struct critnib *c = Zalloc(sizeof(struct critnib));
 	if (!c)
 		return NULL;
-	c->root = NULL;
 	return c;
 }
 
@@ -129,6 +128,9 @@ alloc_node(struct critnib *c)
 	struct critnib_node *n = Zalloc(sizeof(struct critnib_node));
 	if (!n)
 		return NULL;
+#ifdef STATS_ENABLED
+	c->node_count++;
+#endif
 	for (int i = 0; i < SLNODES; i++)
 		n->child[i] = NULL;
 	return n;
@@ -325,5 +327,8 @@ critnib_remove(struct critnib *c, const struct cache_entry *e)
 	ASSERT(only_child);
 	*pp = only_child;
 	Free(n);
+#ifdef STATS_ENABLED
+	c->node_count--;
+#endif
 	return k;
 }
