@@ -46,25 +46,9 @@
  * or such if such keys are possible.
  */
 
-/*
- * SLICE may be 1, 2, 4 or 8.  1 or 8 could be further optimized (critbit
- * and critbyte respectively); 4 (critnib) strikes a good balance between
- * speed and memory use.
- */
-#define SLICE 4
 #define NIB ((1 << SLICE) - 1)
-#define SLNODES (1 << SLICE)
 
 #define KEYLEN(leaf) (leaf->key.ksize + sizeof(size_t))
-
-typedef uint32_t byten_t;
-typedef unsigned char bitn_t;
-
-struct critnib_node {
-	struct critnib_node *child[SLNODES];
-	byten_t byte;
-	bitn_t bit;
-};
 
 typedef struct cache_entry critnib_leaf;
 
