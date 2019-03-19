@@ -124,7 +124,7 @@ str_to_ull(const char *str, unsigned long long *value)
  * get_granular_rand_size - (internal) generate random size value
  * with specified granularity
  */
-static size_t
+static inline size_t
 get_granular_rand_size(size_t val_max, size_t granularity)
 {
 	size_t val_size =
