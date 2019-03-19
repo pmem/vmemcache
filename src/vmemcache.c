@@ -541,6 +541,9 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 						&entry->value.p_entry)) {
 			/* release the reference from the replacement policy */
 			vmemcache_entry_release(cache, entry);
+		} else if (cache->repl_p != VMEMCACHE_REPLACEMENT_NONE) {
+			ERR("evicting from LRU list failed");
+			return -1;
 		}
 	}
 
