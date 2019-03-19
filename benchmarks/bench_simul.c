@@ -448,6 +448,8 @@ static void *worker(void *arg)
 		vmemcache_bench_set(cache, VMEMCACHE_BENCH_NO_MEMCPY,
 			type < ST_FULL);
 
+		printf("Starting measured run...\n");
+
 		os_cond_broadcast(&ready.cond);
 	}
 	os_mutex_unlock(&ready.mutex);
@@ -610,6 +612,8 @@ static void run_bench()
 	}
 
 	if (junk_start) {
+		printf("Pre-filling the cache with junk...\n");
+
 		char junk[256];
 		memset(junk, '!' /* arbitrary */, sizeof(junk));
 
@@ -631,6 +635,8 @@ static void run_bench()
 	if (warm_up)
 		vmemcache_bench_set(cache, VMEMCACHE_BENCH_PREFAULT, 1);
 
+	printf("Spawning threads...\n");
+
 	os_thread_t th[MAX_THREADS];
 	for (uint64_t i = 0; i < n_threads; i++) {
 		if (os_thread_create(&th[i], 0, worker, (void *)i))
@@ -645,6 +651,8 @@ static void run_bench()
 			UT_FATAL("thread join failed: %s", strerror(errno));
 		total += t;
 	}
+
+	printf("Done.\n");
 
 	print_stats(cache);
 
