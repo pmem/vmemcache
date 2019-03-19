@@ -72,7 +72,7 @@ struct context {
  */
 static VMEMcache *
 bench_init(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy,
+		enum vmemcache_repl_p replacement_policy,
 		unsigned n_threads, struct context *ctx)
 {
 	VMEMcache *cache = vmemcache_new(path, max_size, extent_size,
@@ -197,7 +197,7 @@ print_bench_results(const char *op_name, unsigned n_threads,
  */
 static void
 run_bench_put(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy,
+		enum vmemcache_repl_p replacement_policy,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
@@ -238,7 +238,7 @@ on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
  */
 static void
 run_bench_get(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy,
+		enum vmemcache_repl_p replacement_policy,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {

@@ -47,7 +47,7 @@ header: PMDK
 #include <libvmemcache.h>
 
 VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-	enum vmemcache_replacement_policy replacement_policy);
+	enum vmemcache_repl_p replacement_policy);
 void vmemcache_delete(VMEMcache *cache);
 
 void vmemcache_callback_on_evict(VMEMcache *cache,
@@ -83,7 +83,7 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
 
 ```
 VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-	enum vmemcache_replacement_policy replacement_policy);
+	enum vmemcache_repl_p replacement_policy);
 ```
 
 The cache will be created in the given *path*, which may be:

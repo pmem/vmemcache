@@ -76,7 +76,7 @@ struct repl_p {
 	struct repl_p_head *head;
 };
 
-struct repl_p *repl_p_init(enum vmemcache_replacement_policy rp);
+struct repl_p *repl_p_init(enum vmemcache_repl_p rp);
 void repl_p_destroy(struct repl_p *repl_p);
 
 #ifdef __cplusplus

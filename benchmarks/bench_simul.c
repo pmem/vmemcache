@@ -595,7 +595,7 @@ static void run_bench()
 	ready.wanted = n_threads;
 
 	cache = vmemcache_new(dir, cache_size, cache_extent_size,
-		(enum vmemcache_replacement_policy)repl_policy);
+		(enum vmemcache_repl_p)repl_policy);
 	if (!cache)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
 

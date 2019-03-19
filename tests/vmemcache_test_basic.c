@@ -215,7 +215,7 @@ verify_heap_entries(VMEMcache *cache, stat_t entries)
  */
 static void
 test_new_delete(const char *dir, const char *file,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	VMEMcache *cache;
 
@@ -312,7 +312,7 @@ test_new_delete(const char *dir, const char *file,
  */
 static void
 test_put_get_evict(const char *dir,
-			enum vmemcache_replacement_policy replacement_policy)
+			enum vmemcache_repl_p replacement_policy)
 {
 	VMEMcache *cache;
 
@@ -425,7 +425,7 @@ on_miss_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
  */
 static void
 test_evict(const char *dir,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	VMEMcache *cache;
 	char vbuf[VSIZE];
@@ -613,7 +613,7 @@ on_evict_test_memory_leaks_cb(VMEMcache *cache,
  */
 static void
 test_memory_leaks(const char *dir, int key_gt_1K,
-			enum vmemcache_replacement_policy replacement_policy)
+			enum vmemcache_repl_p replacement_policy)
 {
 	VMEMcache *cache;
 	char *vbuf;
@@ -720,7 +720,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
  */
 static void
 test_merge_allocations(const char *dir,
-			enum vmemcache_replacement_policy replacement_policy)
+			enum vmemcache_repl_p replacement_policy)
 {
 	VMEMcache *cache;
 	ssize_t ret;

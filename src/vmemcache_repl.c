@@ -114,7 +114,7 @@ static const struct repl_p_ops repl_p_ops[VMEMCACHE_REPLACEMENT_NUM] = {
  * repl_p_init -- allocate and initialize the replacement policy structure
  */
 struct repl_p *
-repl_p_init(enum vmemcache_replacement_policy rp)
+repl_p_init(enum vmemcache_repl_p rp)
 {
 	struct repl_p *repl_p = Malloc(sizeof(struct repl_p));
 	if (repl_p == NULL)
