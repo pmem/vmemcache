@@ -70,7 +70,7 @@ static inline
 #endif
 VMEMcache *
 vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	LOG(3, "dir %s max_size %zu extent_size %zu replacement_policy %d",
 		dir, max_size, extent_size, replacement_policy);
@@ -675,7 +675,7 @@ vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
  */
 VMEMcache *
 vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	return vmemcache_newU(path, max_size, extent_size,
 				replacement_policy);
@@ -686,7 +686,7 @@ vmemcache_new(const char *path, size_t max_size, size_t extent_size,
  */
 VMEMcache *
 vmemcache_newW(const wchar_t *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	char *upath = util_toUTF8(path);
 	if (upath == NULL)

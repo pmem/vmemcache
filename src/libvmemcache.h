@@ -80,7 +80,7 @@ extern "C" {
  */
 typedef struct vmemcache VMEMcache;
 
-enum vmemcache_replacement_policy {
+enum vmemcache_repl_p {
 	VMEMCACHE_REPLACEMENT_NONE,
 	VMEMCACHE_REPLACEMENT_LRU,
 
@@ -117,14 +117,14 @@ typedef void vmemcache_on_miss(VMEMcache *cache,
 
 #ifndef _WIN32
 VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy);
+		enum vmemcache_repl_p replacement_policy);
 #else
 VMEMcache *vmemcache_newU(const char *path, size_t max_size,
 		size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy);
+		enum vmemcache_repl_p replacement_policy);
 VMEMcache *vmemcache_newW(const wchar_t *path, size_t max_size,
 		size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy);
+		enum vmemcache_repl_p replacement_policy);
 #endif
 
 void vmemcache_delete(VMEMcache *cache);
