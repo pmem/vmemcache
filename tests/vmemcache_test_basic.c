@@ -233,14 +233,13 @@ verify_heap_entries(VMEMcache *cache, stat_t entries)
  * test_new_delete -- (internal) test _new() and _delete()
  */
 static void
-test_new_delete(const char *dir, const char *file,
-		enum vmemcache_replacement_policy replacement_policy)
+test_new_delete(const char *dir, const char *file, enum vmemcache_repl_p repl_p)
 {
 	VMEMcache *cache;
 
 	/* TEST #1 - minimum values of max_size and extent_size */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -248,69 +247,65 @@ test_new_delete(const char *dir, const char *file,
 
 	/* TEST #2 - extent_size = max_size = VMEMCACHE_MIN_POOL */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_POOL,
-				replacement_policy);
+				repl_p);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
 	vmemcache_delete(cache);
 
 	/* TEST #3 - extent_size == 0 */
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, 0,
-				replacement_policy);
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, 0, repl_p);
 	if (cache != NULL)
 		UT_FATAL("vmemcache_new did not fail with extent_size == 0");
 
 	/* TEST #4 - extent_size == -1 */
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, (size_t)-1,
-				replacement_policy);
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, (size_t)-1, repl_p);
 	if (cache != NULL)
 		UT_FATAL("vmemcache_new did not fail with extent_size == -1");
 
 	/* TEST #5 - extent_size == VMEMCACHE_MIN_EXTENT - 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT - 1,
-				replacement_policy);
+				repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with extent_size == VMEMCACHE_MIN_EXTENT - 1");
 
 	/* TEST #6 - extent_size == max_size + 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_POOL + 1,
-				replacement_policy);
+				repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with extent_size == max_size + 1");
 
 	/* TEST #7 - size == VMEMCACHE_MIN_POOL - 1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL - 1, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with size == VMEMCACHE_MIN_POOL - 1");
 
 	/* TEST #8 - size == 0 */
-	cache = vmemcache_new(dir, 0, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+	cache = vmemcache_new(dir, 0, VMEMCACHE_MIN_EXTENT, repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with size == 0");
 
 	/* TEST #9 - size == -1 */
-	cache = vmemcache_new(dir, (size_t)-1, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+	cache = vmemcache_new(dir, (size_t)-1, VMEMCACHE_MIN_EXTENT, repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with size == -1");
 
 	/* TEST #10 - not a directory, but a file */
 	cache = vmemcache_new(file, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a file instead of a directory");
 
 	/* TEST #11 - NULL directory path */
 	cache = vmemcache_new(NULL, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a NULL directory path");
@@ -320,7 +315,7 @@ test_new_delete(const char *dir, const char *file,
 	strcpy(nonexistent, dir);
 	strcat(nonexistent, "/nonexistent_dir");
 	cache = vmemcache_new(nonexistent, VMEMCACHE_MIN_POOL,
-				VMEMCACHE_MIN_EXTENT, replacement_policy);
+				VMEMCACHE_MIN_EXTENT, repl_p);
 	if (cache != NULL)
 		UT_FATAL(
 			"vmemcache_new did not fail with a nonexistent directory path");
@@ -330,13 +325,12 @@ test_new_delete(const char *dir, const char *file,
  * test_put_get_evict -- (internal) test _put(), _get() and _evict()
  */
 static void
-test_put_get_evict(const char *dir,
-			enum vmemcache_replacement_policy replacement_policy)
+test_put_get_evict(const char *dir, enum vmemcache_repl_p repl_p)
 {
 	VMEMcache *cache;
 
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -376,7 +370,7 @@ test_put_get_evict(const char *dir,
 			vbuf, value);
 
 	/* evict the only one element */
-	switch (replacement_policy) {
+	switch (repl_p) {
 	case VMEMCACHE_REPLACEMENT_NONE:
 		ret = vmemcache_evict(cache, key, key_size);
 		break;
@@ -384,7 +378,7 @@ test_put_get_evict(const char *dir,
 		ret = vmemcache_evict(cache, NULL, 0);
 		break;
 	default:
-		UT_FATAL("unknown policy: %u", replacement_policy);
+		UT_FATAL("unknown policy: %u", repl_p);
 		break;
 	}
 
@@ -443,8 +437,7 @@ on_miss_test_evict_cb(VMEMcache *cache, const void *key, size_t key_size,
  * test_evict -- (internal) test _evict()
  */
 static void
-test_evict(const char *dir,
-		enum vmemcache_replacement_policy replacement_policy)
+test_evict(const char *dir, enum vmemcache_repl_p repl_p)
 {
 	VMEMcache *cache;
 	char vbuf[VSIZE];
@@ -459,7 +452,7 @@ test_evict(const char *dir,
 	} data[DNUM];
 
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -632,7 +625,7 @@ on_evict_test_memory_leaks_cb(VMEMcache *cache,
  */
 static void
 test_memory_leaks(const char *dir, int key_gt_1K,
-			enum vmemcache_replacement_policy replacement_policy,
+			enum vmemcache_repl_p repl_p,
 			unsigned seed)
 {
 	VMEMcache *cache;
@@ -654,7 +647,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
 
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -739,8 +732,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
  * test_merge_allocations -- (internal) test merging allocations
  */
 static void
-test_merge_allocations(const char *dir,
-			enum vmemcache_replacement_policy replacement_policy)
+test_merge_allocations(const char *dir, enum vmemcache_repl_p repl_p)
 {
 	VMEMcache *cache;
 	ssize_t ret;
@@ -760,7 +752,7 @@ test_merge_allocations(const char *dir,
 	size_t val_size = strlen(value) + 1;
 
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_EXTENT,
-				replacement_policy);
+				repl_p);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
 
@@ -830,8 +822,7 @@ on_evict_test_put_in_evict_cb(VMEMcache *cache, const void *key,
  * a put in 'on evict' callback function
  */
 static void
-test_put_in_evict(const char *dir, enum vmemcache_replacement_policy policy,
-					unsigned seed)
+test_put_in_evict(const char *dir, enum vmemcache_repl_p policy, unsigned seed)
 {
 	size_t min_size = VMEMCACHE_MIN_EXTENT / 2;
 	size_t max_size = VMEMCACHE_MIN_POOL / 16;
