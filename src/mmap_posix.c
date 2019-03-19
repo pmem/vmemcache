@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -133,16 +133,16 @@ util_map_hint_unused(void *minaddr, size_t len, size_t align)
 /*
  * util_map_hint -- determine hint address for mmap()
  *
- * If PMEM_MMAP_HINT environment variable is not set, we let the system to pick
- * the randomized mapping address.  Otherwise, a user-defined hint address
- * is used.
+ * If VMEMCACHE_MMAP_HINT environment variable is not set, we let the system
+ * to pick the randomized mapping address.  Otherwise, a user-defined hint
+ * address is used.
  *
  * ALSR in 64-bit Linux kernel uses 28-bit of randomness for mmap
  * (bit positions 12-39), which means the base mapping address is randomized
  * within [0..1024GB] range, with 4KB granularity.  Assuming additional
  * 1GB alignment, it results in 1024 possible locations.
  *
- * Configuring the hint address via PMEM_MMAP_HINT environment variable
+ * Configuring the hint address via VMEMCACHE_MMAP_HINT environment variable
  * disables address randomization.  In such case, the function will search for
  * the first unused, properly aligned region of given size, above the specified
  * address.

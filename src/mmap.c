@@ -70,20 +70,20 @@ util_mmap_init(void)
 	 * For testing, allow overriding the default mmap() hint address.
 	 * If hint address is defined, it also disables address randomization.
 	 */
-	char *e = os_getenv("PMEM_MMAP_HINT");
+	char *e = os_getenv("VMEMCACHE_MMAP_HINT");
 	if (e) {
 		char *endp;
 		errno = 0;
 		unsigned long long val = strtoull(e, &endp, 16);
 
 		if (errno || endp == e) {
-			LOG(2, "Invalid PMEM_MMAP_HINT");
+			LOG(2, "Invalid VMEMCACHE_MMAP_HINT");
 		} else if (os_access(OS_MAPFILE, R_OK)) {
-			LOG(2, "No /proc, PMEM_MMAP_HINT ignored");
+			LOG(2, "No /proc, VMEMCACHE_MMAP_HINT ignored");
 		} else {
 			Mmap_hint = (void *)val;
 			Mmap_no_random = 1;
-			LOG(3, "PMEM_MMAP_HINT set to %p", Mmap_hint);
+			LOG(3, "VMEMCACHE_MMAP_HINT set to %p", Mmap_hint);
 		}
 	}
 }
