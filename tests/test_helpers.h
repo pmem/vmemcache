@@ -42,6 +42,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <assert.h>
 #include <errno.h>
 
 #define UT_ERR(...) do {\
@@ -118,4 +119,24 @@ str_to_ull(const char *str, unsigned long long *value)
 
 	return 0;
 }
+
+/*
+ * get_granular_rand_size - (internal) generate random size value
+ * with specified granularity
+ */
+static size_t
+get_granular_rand_size(size_t val_max, size_t granularity)
+{
+	size_t val_size =
+	    (1 + (size_t) rand() / (RAND_MAX / (val_max / granularity) + 1)) *
+	    granularity;
+
+	assert(val_size <= val_max);
+	assert(val_size >= granularity);
+	assert(val_size % granularity == 0 &&
+		"put value size must be a multiple of granularity");
+
+	return val_size;
+}
+
 #endif /* TEST_HELPERS_H */
