@@ -165,7 +165,8 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		goto error_destroy_heap;
 	}
 
-	cache->repl = repl_p_init(replacement_policy);
+	cache->repl_p = replacement_policy;
+	cache->repl = repl_p_init(cache->repl_p);
 	if (cache->repl == NULL) {
 		LOG(1, "replacement policy initialization failed");
 		goto error_destroy_index;
