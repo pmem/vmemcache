@@ -44,6 +44,7 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/mman.h>
+#include <inttypes.h>
 
 #include "libvmemcache.h"
 #include "test_helpers.h"
@@ -687,7 +688,7 @@ print_units(uint64_t x)
 		x /= 1024;
 	}
 
-	printf("%lu%s", x, units[u]);
+	printf("%"PRIu64"%s", x, units[u]);
 }
 
 int

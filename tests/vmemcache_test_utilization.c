@@ -224,7 +224,7 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 	}
 
 	size_t val_size;
-	size_t used_size;
+	unsigned long long used_size;
 	char key[MAX_KEYSIZE];
 	int len;
 	size_t keynum = 0;
