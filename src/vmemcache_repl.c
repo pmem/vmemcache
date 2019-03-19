@@ -167,6 +167,7 @@ static struct repl_p_entry *
 repl_p_none_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry)
 {
+	vmemcache_entry_acquire(element);
 	return NULL;
 }
 
@@ -184,7 +185,7 @@ repl_p_none_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 static void *
 repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
-	return NULL;
+	return ptr_entry;
 }
 
 
