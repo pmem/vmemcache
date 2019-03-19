@@ -528,8 +528,6 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		}
 	}
 
-	STAT_ADD(&cache->evict_count, 1);
-
 	if (cache->on_evict != NULL)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
 
@@ -538,6 +536,19 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 						&entry->value.p_entry)) {
 			/* release the reference from the replacement policy */
 			vmemcache_entry_release(cache, entry);
+		} else {
+			/*
+			 * The given entry is busy
+			 * and cannot be evicted right now.
+			 * Release the reference from vmcache_index_get().
+			 */
+			vmemcache_entry_release(cache, entry);
+
+			/* reset 'evicting' flag */
+			__sync_bool_compare_and_swap(&entry->value.evicting,
+									1, 0);
+			ERR("evicting from LRU list failed");
+			return -1;
 		}
 	}
 
@@ -548,6 +559,8 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		LOG(1, "removing from the index failed");
 		goto exit_release;
 	}
+
+	STAT_ADD(&cache->evict_count, 1);
 
 	return 0;
 
