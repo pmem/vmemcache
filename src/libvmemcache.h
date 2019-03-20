@@ -79,6 +79,7 @@ extern "C" {
  * opaque type, internal to libvmemcache
  */
 typedef struct vmemcache VMEMcache;
+typedef struct vmemcache_config VMEMconfig;
 
 enum vmemcache_replacement_policy {
 	VMEMCACHE_REPLACEMENT_NONE,
@@ -114,6 +115,14 @@ typedef void vmemcache_on_evict(VMEMcache *cache,
 
 typedef void vmemcache_on_miss(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
+
+VMEMconfig *vmemcache_config_new(void);
+void vmemcache_config_delete(VMEMconfig *cfg);
+
+void vmemcache_config_set_eviction_policy(VMEMconfig *cfg,
+	enum vmemcache_replacement_policy repl_p);
+void vmemcache_config_set_size(VMEMconfig *cfg, size_t size);
+void vmemcache_config_set_extent_size(VMEMconfig *cfg, size_t extent_size);
 
 #ifndef _WIN32
 VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,

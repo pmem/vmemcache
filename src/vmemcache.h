@@ -54,6 +54,13 @@ extern "C" {
 struct index;
 struct repl_p;
 
+struct vmemcache_config {
+	size_t size;			/* initial size of the cache */
+	size_t max_size;		/* never expand above this */
+	size_t extent_size;		/* allocation block size */
+	enum vmemcache_replacement_policy repl_p;
+};
+
 struct vmemcache {
 	void *addr;			/* mapping address */
 	size_t size;			/* mapping size */

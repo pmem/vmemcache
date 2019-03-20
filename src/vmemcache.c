@@ -62,6 +62,67 @@ static __thread struct {
 } get_req = { 0 };
 
 /*
+ * Default config.
+ */
+static VMEMconfig defconfig = {
+	.size = 0,
+	.max_size = 0,		/* same as size, infinite if not set */
+	.extent_size = 256,
+	.repl_p = VMEMCACHE_REPLACEMENT_LRU,
+};
+
+
+/*
+ * vmemcache_config_new -- allocate and init a config
+ */
+VMEMconfig *
+vmemcache_config_new(void)
+{
+	VMEMconfig *cfg = Malloc(sizeof(VMEMconfig));
+	if (cfg)
+		*cfg = defconfig;
+
+	return cfg;
+}
+
+/*
+ * vmemcache_config_delete -- free a config
+ */
+void
+vmemcache_config_delete(VMEMconfig *cfg)
+{
+	Free(cfg);
+}
+
+/*
+ * vmemcache_config_set_eviction_policy
+ */
+void
+vmemcache_config_set_eviction_policy(VMEMconfig *cfg,
+	enum vmemcache_replacement_policy repl_p)
+{
+	cfg->repl_p = repl_p;
+}
+
+/*
+ * vmemcache_config_set_size
+ */
+void
+vmemcache_config_set_size(VMEMconfig *cfg, size_t size)
+{
+	cfg->size = size;
+}
+
+/*
+ * vmemcache_config_set_extent_size
+ */
+void
+vmemcache_config_set_extent_size(VMEMconfig *cfg, size_t extent_size)
+{
+	cfg->extent_size = extent_size;
+}
+
+/*
  * vmemcache_newU -- (internal) create a vmemcache
  */
 #ifndef _WIN32
