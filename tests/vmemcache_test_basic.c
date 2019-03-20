@@ -254,9 +254,9 @@ test_new_delete(const char *dir, const char *file, enum vmemcache_repl_p repl_p)
 	vmemcache_delete(cache);
 
 	/* TEST #3 - extent_size == 0 */
-	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, 0, repl_p);
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, 1, repl_p);
 	if (cache != NULL)
-		UT_FATAL("vmemcache_new did not fail with extent_size == 0");
+		UT_FATAL("vmemcache_new did not fail with extent_size == 1");
 
 	/* TEST #4 - extent_size == -1 */
 	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, (size_t)-1, repl_p);
@@ -285,10 +285,10 @@ test_new_delete(const char *dir, const char *file, enum vmemcache_repl_p repl_p)
 			"vmemcache_new did not fail with size == VMEMCACHE_MIN_POOL - 1");
 
 	/* TEST #8 - size == 0 */
-	cache = vmemcache_new(dir, 0, VMEMCACHE_MIN_EXTENT, repl_p);
+	cache = vmemcache_new(dir, 1, VMEMCACHE_MIN_EXTENT, repl_p);
 	if (cache != NULL)
 		UT_FATAL(
-			"vmemcache_new did not fail with size == 0");
+			"vmemcache_new did not fail with size == 1");
 
 	/* TEST #9 - size == -1 */
 	cache = vmemcache_new(dir, (size_t)-1, VMEMCACHE_MIN_EXTENT, repl_p);
