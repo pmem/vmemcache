@@ -118,7 +118,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 
 		if (max_size != 0 && max_size > (size_t)size) {
 			ERR(
-				"error: maximum cache size (%zu) is bigger than the size of the DAX device (%li)",
+				"error: maximum cache size (%zu) is bigger than the size of the DAX device (%zi)",
 				max_size, size);
 			errno = EINVAL;
 			goto error_free_cache;

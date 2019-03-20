@@ -44,6 +44,7 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/mman.h>
+#include <inttypes.h>
 
 #include "libvmemcache.h"
 #include "test_helpers.h"
@@ -646,7 +647,7 @@ static void run_bench()
 	uint64_t total = 0;
 
 	for (uint64_t i = 0; i < n_threads; i++) {
-		uint64_t t;
+		uintptr_t t;
 		if (os_thread_join(&th[i], (void **)&t))
 			UT_FATAL("thread join failed: %s", strerror(errno));
 		total += t;
@@ -687,7 +688,7 @@ print_units(uint64_t x)
 		x /= 1024;
 	}
 
-	printf("%lu%s", x, units[u]);
+	printf("%"PRIu64"%s", x, units[u]);
 }
 
 int

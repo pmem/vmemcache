@@ -59,13 +59,14 @@
 } while (/*CONSTCOND*/0)
 
 #define UT_ASSERTeq(x, y) do if ((x) != (y)) {\
-	UT_FATAL("ASSERT FAILED : " #x " (%zu) ≠ %zu",\
-		(uint64_t)(x), (uint64_t)(y));\
+	UT_FATAL("ASSERT FAILED : " #x " (%llu) ≠ %llu",\
+		(unsigned long long)(x), (unsigned long long)(y));\
 } while (/*CONSTCOND*/0)
 
 #define UT_ASSERTin(x, min, max) do if ((x) < (min) || (x) > (max)) {\
-	UT_FATAL("ASSERT FAILED : " #x " = %zu not in [%zu,%zu]", (x),\
-		(uint64_t)(min), (uint64_t)(max));\
+	UT_FATAL("ASSERT FAILED : " #x " = %llu not in [%llu,%llu]",\
+		(unsigned long long)(x),\
+		(unsigned long long)(min), (unsigned long long)(max));\
 } while (/*CONSTCOND*/0)
 
 
