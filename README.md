@@ -15,6 +15,10 @@ Requirements:
 - cmake >= 3.3
 - git
 
+Optional:
+- valgrind (for tests)
+- pandoc (for documentation)
+
 For all systems:
 
 ```sh
