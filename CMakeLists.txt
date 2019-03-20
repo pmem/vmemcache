@@ -60,6 +60,9 @@ else()
 endif()
 
 find_program(PANDOC NAMES pandoc)
+if(NOT PANDOC)
+	message(WARNING "pandoc not found - documentation will not be generated")
+endif()
 
 set(CMAKE_C_STANDARD 99)
 
