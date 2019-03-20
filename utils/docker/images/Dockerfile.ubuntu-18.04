@@ -50,6 +50,7 @@ RUN apt-get update \
 	gdb \
 	git \
 	libunwind8-dev \
+	pandoc \
 	pkg-config \
 	sudo \
 	wget \
