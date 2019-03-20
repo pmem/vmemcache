@@ -864,6 +864,33 @@ test_put_in_evict(const char *dir, enum vmemcache_replacement_policy policy,
 	vmemcache_delete(cache);
 }
 
+/*
+ * test_vmemcache_get_stat -- (internal) vmemcache_get_stat tests
+ */
+static void
+test_vmemcache_get_stat(const char *dir)
+{
+	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
+		VMEMCACHE_MIN_EXTENT, VMEMCACHE_REPLACEMENT_LRU);
+	if (cache == NULL)
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+
+	/* TEST #1 - stat with invalid size */
+	size_t invalid_size = sizeof(stat_t) + 1;
+	char buf[invalid_size];
+	int ret = vmemcache_get_stat(cache, VMEMCACHE_STAT_PUT, buf,
+		invalid_size);
+
+	if (ret == 0)
+		UT_FATAL(
+			"vmemcache_get_stat: 0 return value on invalid sized stat");
+	else if (errno != EINVAL)
+		UT_FATAL("vmemcache_get_stat: errno equals %d (should be %d)",
+				errno, EINVAL);
+
+	vmemcache_delete(cache);
+}
+
 
 int
 main(int argc, char *argv[])
@@ -900,6 +927,8 @@ main(int argc, char *argv[])
 	test_merge_allocations(dir, VMEMCACHE_REPLACEMENT_LRU);
 
 	test_put_in_evict(dir, VMEMCACHE_REPLACEMENT_LRU, seed);
+
+	test_vmemcache_get_stat(dir);
 
 	return 0;
 }
