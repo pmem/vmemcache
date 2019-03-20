@@ -209,3 +209,6 @@ add_subdirectory(benchmarks)
 if (PANDOC)
 	add_subdirectory(doc)
 endif()
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/doc/vmemcache.3
+	DESTINATION ${CMAKE_INSTALL_MANDIR}/man3)
