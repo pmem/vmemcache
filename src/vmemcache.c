@@ -62,6 +62,26 @@ static __thread struct {
 } get_req = { 0 };
 
 /*
+ * Default config.
+ */
+static VMEMconfig defconfig = {
+	.size = 0,
+	.max_size = 0,		/* same as size, infinite if not set */
+	.extent_size = 256,
+	.repl_p = VMEMCACHE_REPLACEMENT_LRU,
+};
+
+
+/*
+ * vmemcache_config_init -- populate a config with defaults
+ */
+void
+vmemcache_config_init(VMEMconfig *cfg)
+{
+	*cfg = defconfig;
+}
+
+/*
  * vmemcache_newU -- (internal) create a vmemcache
  */
 #ifndef _WIN32
