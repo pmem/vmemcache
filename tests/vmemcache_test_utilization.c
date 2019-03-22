@@ -304,7 +304,12 @@ main(int argc, char **argv)
 {
 	test_params p = parse_args(argc, argv);
 
-	VMEMcache *vc = vmemcache_new(p.dir, p.pool_size, p.extent_size, 1);
+	VMEMconfig *cfg = vmemcache_config_new();
+	vmemcache_config_set_size(cfg, p.pool_size);
+	vmemcache_config_set_extent_size(cfg, p.extent_size);
+	vmemcache_config_set_eviction_policy(cfg, VMEMCACHE_REPLACEMENT_LRU);
+	VMEMcache *vc = vmemcache_new(p.dir, cfg);
+	vmemcache_config_delete(cfg);
 	if (vc == NULL)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), p.dir);
 

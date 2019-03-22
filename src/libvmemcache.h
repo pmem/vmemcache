@@ -125,15 +125,10 @@ void vmemcache_config_set_size(VMEMconfig *cfg, size_t size);
 void vmemcache_config_set_extent_size(VMEMconfig *cfg, size_t extent_size);
 
 #ifndef _WIN32
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy);
+VMEMcache *vmemcache_new(const char *path, VMEMconfig *cfg);
 #else
-VMEMcache *vmemcache_newU(const char *path, size_t max_size,
-		size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy);
-VMEMcache *vmemcache_newW(const wchar_t *path, size_t max_size,
-		size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy);
+VMEMcache *vmemcache_newU(const char *path, VMEMconfig *cfg);
+VMEMcache *vmemcache_newW(const wchar_t *path, VMEMconfig *cfg);
 #endif
 
 void vmemcache_delete(VMEMcache *cache);

@@ -129,17 +129,40 @@ vmemcache_config_set_extent_size(VMEMconfig *cfg, size_t extent_size)
 static inline
 #endif
 VMEMcache *
-vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+vmemcache_newU(const char *dir, VMEMconfig *cfg)
 {
-	LOG(3, "dir %s max_size %zu extent_size %zu replacement_policy %d",
-		dir, max_size, extent_size, replacement_policy);
+	if (!cfg)
+		cfg = &defconfig;
 
-	if (max_size < VMEMCACHE_MIN_POOL) {
-		ERR("size %zu smaller than %zu", max_size, VMEMCACHE_MIN_POOL);
+	LOG(3,
+		"dir %s size %zu max_size %zu extent_size %zu replacement_policy %d",
+		dir, cfg->size, cfg->max_size, cfg->extent_size,
+		cfg->repl_p);
+
+	if (cfg->size && cfg->size < VMEMCACHE_MIN_POOL) {
+		ERR("size %zu smaller than %zu", cfg->size, VMEMCACHE_MIN_POOL);
 		errno = EINVAL;
 		return NULL;
 	}
+
+	/* max_size can be "infinite", size can't */
+	if (cfg->size >= (1ULL << 56)) {
+		ERR("implausible large size %zu", cfg->size);
+		errno = EINVAL;
+		return NULL;
+	}
+
+	size_t max_size = cfg->max_size ? cfg->max_size : cfg->size;
+
+	if (max_size && max_size < VMEMCACHE_MIN_POOL) {
+		ERR("max_size %zu smaller than %zu", max_size,
+			VMEMCACHE_MIN_POOL);
+		errno = EINVAL;
+		return NULL;
+	}
+
+	size_t extent_size = cfg->extent_size ? cfg->extent_size
+		: defconfig.extent_size;
 
 	if (extent_size < VMEMCACHE_MIN_EXTENT) {
 		ERR("extent size %zu smaller than %zu bytes",
@@ -148,7 +171,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		return NULL;
 	}
 
-	if (extent_size > max_size) {
+	if (max_size && extent_size > max_size) {
 		ERR(
 			"extent size %zu larger than maximum file size: %zu bytes",
 			extent_size, max_size);
@@ -170,26 +193,26 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 
 	if (type == TYPE_DEVDAX) {
 		const char *devdax = dir;
-		ssize_t size = util_file_get_size(devdax);
-		if (size < 0) {
+		ssize_t dax_size = util_file_get_size(devdax);
+		if (dax_size < 0) {
 			LOG(1, "cannot determine file length \"%s\"", devdax);
 			goto error_free_cache;
 		}
 
-		if (max_size != 0 && max_size > (size_t)size) {
+		if (max_size != 0 && max_size > (size_t)dax_size) {
 			ERR(
 				"error: maximum cache size (%zu) is bigger than the size of the DAX device (%zi)",
-				max_size, size);
+				max_size, dax_size);
 			errno = EINVAL;
 			goto error_free_cache;
 		}
 
 		if (max_size == 0) {
-			cache->size = (size_t)size;
+			cache->size = (size_t)dax_size;
 		} else {
 			cache->size = roundup(max_size, Mmap_align);
-			if (cache->size > (size_t)size)
-				cache->size = (size_t)size;
+			if (cache->size > (size_t)dax_size)
+				cache->size = (size_t)dax_size;
 		}
 
 		cache->addr = util_file_map_whole(devdax);
@@ -200,7 +223,11 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 
 	} else {
 		/* silently enforce multiple of mapping alignment */
-		cache->size = roundup(max_size, Mmap_align);
+		cache->size = roundup(cfg->size, Mmap_align);
+
+		/* if not set, start with the default */
+		if (!cache->size)
+			cache->size = VMEMCACHE_MIN_POOL;
 
 		/*
 		 * XXX: file should be mapped on-demand during allocation,
@@ -226,7 +253,7 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		goto error_destroy_heap;
 	}
 
-	cache->repl = repl_p_init(replacement_policy);
+	cache->repl = repl_p_init(cfg->repl_p);
 	if (cache->repl == NULL) {
 		LOG(1, "replacement policy initialization failed");
 		goto error_destroy_index;
@@ -730,26 +757,22 @@ vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
  * vmemcache_new -- create a vmemcache
  */
 VMEMcache *
-vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+vmemcache_new(const char *path, VMEMconfig *cfg)
 {
-	return vmemcache_newU(path, max_size, extent_size,
-				replacement_policy);
+	return vmemcache_newU(path, cfg);
 }
 #else
 /*
  * vmemcache_newW -- create a vmemcache
  */
 VMEMcache *
-vmemcache_newW(const wchar_t *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+vmemcache_newW(const wchar_t *path, VMEMconfig *cfg)
 {
 	char *upath = util_toUTF8(path);
 	if (upath == NULL)
 		return NULL;
 
-	VMEMcache *ret = vmemcache_newU(upath, path, max_size, extent_size,
-					replacement_policy);
+	VMEMcache *ret = vmemcache_newU(upath, cfg);
 
 	util_free_UTF8(upath);
 	return ret;
