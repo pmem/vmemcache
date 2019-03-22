@@ -142,6 +142,56 @@ cd ..
 rm -r build
 
 # -----------------------------------------
+# deb & rpm
+
+echo
+echo " ##########################################"
+echo " # Running the configuration: deb & rpm   #"
+echo " ##########################################"
+echo
+
+mkdir -p build
+cd build
+
+CC=gcc \
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+	-DCPACK_GENERATOR=$PACKAGE_MANAGER \
+	-DDEVELOPER_MODE=1 \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DTRACE_TESTS=1
+
+make -j2
+ctest --output-on-failure
+
+make package
+
+find . -iname "libvmemcache*.$PACKAGE_MANAGER"
+
+if [ $PACKAGE_MANAGER = "deb" ]; then
+	echo "$ dpkg-deb --info ./libvmemcache*.deb"
+	dpkg-deb --info ./libvmemcache*.deb
+
+	echo "$ dpkg-deb -c ./libvmemcache*.deb"
+	dpkg-deb -c ./libvmemcache*.deb
+
+	echo "$ sudo -S dpkg -i ./libvmemcache*.deb"
+	echo $USERPASS | sudo -S dpkg -i ./libvmemcache*.deb
+
+elif [ $PACKAGE_MANAGER = "rpm" ]; then
+	echo "$ rpm -q --info ./libvmemcache*.rpm"
+	rpm -q --info ./libvmemcache*.rpm && true
+
+	echo "$ rpm -q --list ./libvmemcache*.rpm"
+	rpm -q --list ./libvmemcache*.rpm && true
+
+	echo "$ sudo -S rpm -ivh --force *.rpm"
+	echo $USERPASS | sudo -S rpm -ivh --force *.rpm
+fi
+
+cd ..
+rm -rf build
+
+# -----------------------------------------
 # Coverage
 if [[ $COVERAGE -eq 1 ]] ; then
 	echo

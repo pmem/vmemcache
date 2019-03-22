@@ -209,3 +209,7 @@ add_subdirectory(benchmarks)
 if (PANDOC)
 	add_subdirectory(doc)
 endif()
+
+if(NOT "${CPACK_GENERATOR}" STREQUAL "")
+	include(${CMAKE_SOURCE_DIR}/packages.cmake)
+endif()
