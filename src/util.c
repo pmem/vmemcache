@@ -130,7 +130,6 @@ util_emit_log(const char *lib, const char *func, int order)
 }
 #endif
 
-#if 0
 /*
  * util_is_zeroed -- check if given memory range is all zero
  */
@@ -148,6 +147,7 @@ util_is_zeroed(const void *addr, size_t len)
 	return 0;
 }
 
+#if 0
 /*
  * util_checksum -- compute Fletcher64 checksum
  *

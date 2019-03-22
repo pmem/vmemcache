@@ -603,8 +603,12 @@ static void run_bench()
 	os_mutex_init(&ready.mutex);
 	ready.wanted = n_threads;
 
-	cache = vmemcache_new(dir, cache_size, cache_extent_size,
-		(enum vmemcache_replacement_policy)repl_policy);
+	VMEMconfig cfg;
+	vmemcache_config_init(&cfg);
+	cfg.size = cache_size;
+	cfg.extent_size = cache_extent_size;
+	cfg.repl_p = (enum vmemcache_replacement_policy)repl_policy;
+	cache = vmemcache_new(dir, &cfg);
 	if (!cache)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
 

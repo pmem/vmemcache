@@ -60,8 +60,7 @@ get(const char *key)
 int
 main()
 {
-	cache = vmemcache_new("/tmp", VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
-				VMEMCACHE_REPLACEMENT_LRU);
+	cache = vmemcache_new("/tmp", NULL);
 	if (cache == NULL) {
 		fprintf(stderr, "error: vmemcache_new: %s\n",
 				vmemcache_errormsg());

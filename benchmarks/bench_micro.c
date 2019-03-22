@@ -75,8 +75,11 @@ bench_init(const char *path, size_t size, size_t extent_size,
 		enum vmemcache_replacement_policy replacement_policy,
 		unsigned n_threads, struct context *ctx)
 {
-	VMEMcache *cache = vmemcache_new(path, size, extent_size,
-						replacement_policy);
+	VMEMconfig cfg;
+	vmemcache_config_init(&cfg);
+	cfg.size = size;
+	cfg.repl_p = replacement_policy;
+	VMEMcache *cache = vmemcache_new(path, &cfg);
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), path);
 
