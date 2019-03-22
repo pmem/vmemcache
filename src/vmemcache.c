@@ -341,12 +341,12 @@ static size_t
 vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 				struct cache_entry *entry, int no_memcpy)
 {
-	if (!vbuf)
+	if (!vbuf || offset >= entry->value.vsize)
 		return 0;
 
 	struct heap_entry he;
 	size_t copied = 0;
-	size_t left_to_copy = entry->value.vsize;
+	size_t left_to_copy = entry->value.vsize - offset;
 
 	VEC_FOREACH(he, &entry->value.extents) {
 		if (offset > he.size) {
@@ -354,23 +354,13 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 			continue;
 		}
 
-		size_t off = 0;
-		size_t len = he.size;
-
-		if (offset > 0) {
-			off += offset;
-			len -= offset;
-			offset = 0;
-		}
+		size_t len = MIN(left_to_copy, he.size);
 
 		if (len > vbufsize)
 			len = vbufsize;
 
-		if (len > left_to_copy)
-			len = left_to_copy;
-
 		if (!no_memcpy)
-			memcpy(vbuf, (char *)he.ptr + off, len);
+			memcpy(vbuf, (char *)he.ptr + offset, len);
 
 		vbufsize -= len;
 		vbuf = (char *)vbuf + len;
