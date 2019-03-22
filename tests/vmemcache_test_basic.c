@@ -891,6 +891,149 @@ test_vmemcache_get_stat(const char *dir)
 	vmemcache_delete(cache);
 }
 
+/* context of data integrity callback */
+struct ctx_di_cb {
+	char *values_buffer;
+	char *get_buffer;
+	size_t size_get_buffer;
+	stat_t evict_count;
+};
+
+struct value {
+	struct header {
+		size_t offset;
+		size_t size;
+	} header;
+	char buffer[]; /* of size 'size' */
+};
+
+#define HEADER_SIZE offsetof(struct value, buffer)
+
+/*
+ * on_evict_test_data_integrity -- (internal) 'on evict' callback
+ *                                  for test_data_integrity
+ */
+static void
+on_evict_test_data_integrity(VMEMcache *cache, const void *key, size_t key_size,
+				void *arg)
+{
+	struct ctx_di_cb *ctx = arg;
+	size_t vsize, size;
+	ssize_t ret;
+
+	ctx->evict_count++;
+
+	ret = vmemcache_get(cache, key, key_size,
+				ctx->get_buffer, ctx->size_get_buffer,
+				0, &vsize);
+	if (ret < 0)
+		UT_FATAL("vmemcache_get: %s", vmemcache_errormsg());
+
+	struct value *value = (struct value *)ctx->get_buffer;
+	size = value->header.size + HEADER_SIZE;
+
+	if ((size_t)ret != size)
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %zu)",
+			ret, size);
+
+	if (vsize != size)
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %zu)",
+			vsize, size);
+
+	int cmp_val = memcmp(value->buffer,
+				ctx->values_buffer + value->header.offset,
+				value->header.size);
+	if (cmp_val)
+		UT_FATAL("vmemcache_get: wrong value");
+}
+
+/*
+ * test_data_integrity -- (internal) test data integrity
+ */
+static void
+test_data_integrity(const char *dir, unsigned seed)
+{
+	VMEMcache *cache;
+	size_t size;
+	size_t offset;
+	int ret;
+
+	srand(seed);
+
+	stat_t n_puts = 0;
+	size_t buff_size = VMEMCACHE_MIN_POOL;
+	size_t min_size = VMEMCACHE_MIN_EXTENT;
+	size_t max_size = VMEMCACHE_MIN_POOL / 16;
+
+	/* create and fill the buffer of values */
+	char *values_buffer = malloc(buff_size);
+	if (values_buffer == NULL)
+		UT_FATAL("out of memory");
+	for (int i = 0; i < (int)buff_size; i++)
+		values_buffer[i] = (char)rand();
+
+	/* create the put buffer */
+	char *put_buffer = malloc(max_size);
+	if (put_buffer == NULL)
+		UT_FATAL("out of memory");
+
+	/* create the get buffer */
+	char *get_buffer = malloc(max_size);
+	if (get_buffer == NULL)
+		UT_FATAL("out of memory");
+
+	struct ctx_di_cb ctx = {values_buffer, get_buffer, max_size, 0};
+
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
+				VMEMCACHE_REPLACEMENT_LRU);
+	if (cache == NULL)
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+
+	vmemcache_callback_on_evict(cache, on_evict_test_data_integrity, &ctx);
+
+	while (ctx.evict_count < 1000) {
+		size = min_size + (size_t)rand() % (max_size - min_size + 1);
+		offset = (size_t)rand() % (buff_size - size + 1);
+
+		struct value *value = (struct value *)put_buffer;
+		value->header.offset = offset;
+		value->header.size = size - HEADER_SIZE;
+		memcpy(value->buffer,
+				values_buffer + value->header.offset,
+				value->header.size);
+
+		ret = vmemcache_put(cache, &n_puts, sizeof(n_puts),
+					value, size);
+		if (ret)
+			UT_FATAL(
+				"vmemcache_put(n_puts: %llu n_evicts: %llu): %s",
+				n_puts, ctx.evict_count, vmemcache_errormsg());
+
+		n_puts++;
+	}
+
+	verify_stat_entries(cache, n_puts - ctx.evict_count);
+
+	/* free all the memory */
+	while (vmemcache_evict(cache, NULL, 0) == 0)
+		;
+
+	/* check statistics */
+	verify_stats(cache, n_puts, ctx.evict_count, ctx.evict_count, 0,
+			ctx.evict_count, 0, 0, 0);
+
+	vmemcache_delete(cache);
+
+	free(values_buffer);
+	free(put_buffer);
+	free(get_buffer);
+
+	if (ctx.evict_count != n_puts)
+		UT_FATAL("memory leak detected");
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -929,6 +1072,8 @@ main(int argc, char *argv[])
 	test_put_in_evict(dir, VMEMCACHE_REPLACEMENT_LRU, seed);
 
 	test_vmemcache_get_stat(dir);
+
+	test_data_integrity(dir, seed);
 
 	return 0;
 }
