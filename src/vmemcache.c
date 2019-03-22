@@ -340,36 +340,34 @@ static size_t
 vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 				struct cache_entry *entry, int no_memcpy)
 {
-	if (!vbuf)
+	if (!vbuf || offset >= entry->value.vsize)
 		return 0;
 
+	size_t left_to_copy = entry->value.vsize - offset;
 	struct extent ext;
 	size_t copied = 0;
-	size_t left_to_copy = entry->value.vsize;
 
 	EXTENTS_FOREACH(ext, entry->value.extents) {
-		if (offset > ext.size) {
-			offset -= ext.size;
-			continue;
-		}
-
-		size_t off = 0;
+		char *ptr = (char *)ext.ptr;
 		size_t len = ext.size;
 
-		if (offset > 0) {
-			off += offset;
+		if (offset) {
+			if (offset > ext.size) {
+				offset -= ext.size;
+				continue;
+			}
+
+			ptr += offset;
 			len -= offset;
 			offset = 0;
 		}
 
-		if (len > vbufsize)
-			len = vbufsize;
-
-		if (len > left_to_copy)
-			len = left_to_copy;
+		size_t max_len = MIN(left_to_copy, vbufsize);
+		if (len > max_len)
+			len = max_len;
 
 		if (!no_memcpy)
-			memcpy(vbuf, (char *)ext.ptr + off, len);
+			memcpy(vbuf, ptr, len);
 
 		vbufsize -= len;
 		vbuf = (char *)vbuf + len;
