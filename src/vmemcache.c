@@ -344,9 +344,9 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 	if (!vbuf || offset >= entry->value.vsize)
 		return 0;
 
+	size_t left_to_copy = entry->value.vsize - offset;
 	struct heap_entry he;
 	size_t copied = 0;
-	size_t left_to_copy = entry->value.vsize - offset;
 
 	VEC_FOREACH(he, &entry->value.extents) {
 		if (offset > he.size) {
