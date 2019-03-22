@@ -43,13 +43,10 @@ set(SOURCES
 	util_posix.c
 	file.c
 	file_posix.c
-	mmap.c
-	mmap_posix.c
 	libvmemcache.c
 	critnib.c
 	ringbuf.c
 	vmemcache.c
-	vmemcache_heap.c
 	vmemcache_index.c
 	vmemcache_repl.c)
 

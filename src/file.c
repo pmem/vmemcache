@@ -51,77 +51,11 @@
 #include "file.h"
 #include "os.h"
 #include "out.h"
-#include "mmap.h"
 
 #define MAX_SIZE_LENGTH 64
 
 #if 0
 #define DEVICE_DAX_ZERO_LEN (2 * MEGABYTE)
-#endif
-
-#ifndef _WIN32
-/*
- * device_dax_size -- (internal) checks the size of a given dax device
- */
-static ssize_t
-device_dax_size(const char *path)
-{
-	LOG(3, "path \"%s\"", path);
-
-	os_stat_t st;
-	int olderrno;
-
-	if (os_stat(path, &st) < 0) {
-		ERR("!stat \"%s\"", path);
-		return -1;
-	}
-
-	char spath[PATH_MAX];
-	snprintf(spath, PATH_MAX, "/sys/dev/char/%u:%u/size",
-		os_major(st.st_rdev), os_minor(st.st_rdev));
-
-	LOG(4, "device size path \"%s\"", spath);
-
-	int fd = os_open(spath, O_RDONLY);
-	if (fd < 0) {
-		ERR("!open \"%s\"", spath);
-		return -1;
-	}
-
-	ssize_t size = -1;
-
-	char sizebuf[MAX_SIZE_LENGTH + 1];
-	ssize_t nread;
-	if ((nread = read(fd, sizebuf, MAX_SIZE_LENGTH)) < 0) {
-		ERR("!read");
-		goto out;
-	}
-
-	sizebuf[nread] = 0; /* null termination */
-
-	char *endptr;
-
-	olderrno = errno;
-	errno = 0;
-
-	size = strtoll(sizebuf, &endptr, 0);
-	if (endptr == sizebuf || *endptr != '\n' ||
-	    ((size == LLONG_MAX || size == LLONG_MIN) && errno == ERANGE)) {
-		ERR("invalid device size %s", sizebuf);
-		size = -1;
-		goto out;
-	}
-
-	errno = olderrno;
-
-out:
-	olderrno = errno;
-	(void) os_close(fd);
-	errno = olderrno;
-
-	LOG(4, "device size %zu", size);
-	return size;
-}
 #endif
 
 /*
@@ -261,16 +195,6 @@ util_file_get_size(const char *path)
 {
 	LOG(3, "path \"%s\"", path);
 
-	int file_type = util_file_get_type(path);
-	if (file_type < 0)
-		return -1;
-
-#ifndef _WIN32
-	if (file_type == TYPE_DEVDAX) {
-		return device_dax_size(path);
-	}
-#endif
-
 	os_stat_t stbuf;
 	if (os_stat(path, &stbuf) < 0) {
 		ERR("!stat \"%s\"", path);
@@ -279,43 +203,6 @@ util_file_get_size(const char *path)
 
 	LOG(4, "file length %zu", stbuf.st_size);
 	return stbuf.st_size;
-}
-
-/*
- * util_file_map_whole -- maps the entire file into memory
- */
-void *
-util_file_map_whole(const char *path)
-{
-	LOG(3, "path \"%s\"", path);
-
-	int fd;
-	int olderrno;
-	void *addr = NULL;
-
-	if ((fd = os_open(path, O_RDWR)) < 0) {
-		ERR("!open \"%s\"", path);
-		return NULL;
-	}
-
-	ssize_t size = util_file_get_size(path);
-	if (size < 0) {
-		LOG(2, "cannot determine file length \"%s\"", path);
-		goto out;
-	}
-
-	addr = util_map(fd, (size_t)size, MAP_SHARED, 0, 0, NULL);
-	if (addr == NULL) {
-		LOG(2, "failed to map entire file \"%s\"", path);
-		goto out;
-	}
-
-out:
-	olderrno = errno;
-	(void) os_close(fd);
-	errno = olderrno;
-
-	return addr;
 }
 
 #if 0

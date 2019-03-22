@@ -41,7 +41,6 @@
 #include <stddef.h>
 
 #include "libvmemcache.h"
-#include "vmemcache_heap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,10 +53,11 @@ extern "C" {
 struct index;
 struct repl_p;
 
+typedef unsigned long long stat_t;
+
 struct vmemcache {
-	void *addr;			/* mapping address */
+	int dirfd;			/* directory */
 	size_t size;			/* mapping size */
-	struct heap *heap;		/* heap address */
 	struct index *index;		/* indexing structure */
 	struct repl_p *repl;		/* replacement policy abstraction */
 	vmemcache_on_evict *on_evict;	/* callback on evict */
@@ -82,7 +82,7 @@ struct cache_entry {
 		int evicting;
 		struct repl_p_entry *p_entry;
 		size_t vsize;
-		struct extent_vec extents;
+		stat_t file_no;
 	} value;
 
 	struct key {
