@@ -46,8 +46,17 @@ header: PMDK
 ```c
 #include <libvmemcache.h>
 
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-	enum vmemcache_replacement_policy replacement_policy);
+VMEMconfig {
+	size_t size;
+	size_t max_size;
+	size_t extent_size;
+	enum vmemcache_replacement_policy;
+};
+
+VMEMconfig cfg = VMEMCACHE_CONFIG_EMPTY;
+
+void vmemcache_config_init(VMEMconfig *cfg);
+VMEMcache *vmemcache_new(const char *path, VMEMconfig *cfg);
 void vmemcache_delete(VMEMcache *cache);
 
 void vmemcache_callback_on_evict(VMEMcache *cache,
@@ -81,6 +90,36 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
 
 ##### Creation #####
 
+`void vmemcache_config_init(VMEMconfig *cfg);`
+
+:   Initializes a config struct that can then be used to specify parameters
+    for a vmemcache instance, setting fields to the defaults.
+
+    Or, alternatively, you can zero out all fields, which has the same
+    effect.  Assign `VMEMCACHE_CONFIG_EMPTY` to do so statically.
+
+Parameters:
+
++ **size**: initial size of the cache; if non-zero yet **max_size** is not
+  set, the cache won't be growable. Rounded up towards page size (4KB on
+  x86).
+
++ **max_size**: max size the cache is allowed to grow; defaults to infinity
+  (ie, whatever the backing device can handle) unless **size** is set.
+
++ **extent_size** controls fragmentation of the cache. Increasing it
+  improves performance at the cost of space utilization for small values.
+  If the backing device is not byte-addressable (such as all legacy disks),
+  extent_size should be 4KB or multiple, or performance will greatly suffer.
+
++ **replacement_policy** may be:
+
+    + **VMEMCACHE_REPLACEMENT_NONE**: manual eviction only - puts into a full
+      cache will fail
+    + **VMEMCACHE_REPLACEMENT_LRU**: least recently accessed entry will be evicted
+      to make space when needed
+
+
 `VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size, enum vmemcache_replacement_policy replacement_policy);`
 
 :   The cache will be created in the given *path*, which may be:
@@ -88,19 +127,6 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
     + a `/dev/dax` device
     + a directory on a regular filesystem (which may or may not be mounted with
       -o dax, either on persistent memory or any other backing)
-
-    Its size is given as *max_size*, although it is rounded **up** towards a
-    whole page size alignment (4KB on x86, 64KB on ppc, 4/16/64KB on arm64).
-
-    *extent_size* affects allowed fragmentation of the cache. Reducing it
-    improves cache space utilization, increasing it improves performance.
-
-    *replacement_policy* may be:
-
-    + **VMEMCACHE_REPLACEMENT_NONE**: manual eviction only - puts into a full
-      cache will fail
-    + **VMEMCACHE_REPLACEMENT_LRU**: least recently accessed entry will be evicted
-      to make space when needed
 
 
 `void vmemcache_delete(VMEMcache *cache);`
