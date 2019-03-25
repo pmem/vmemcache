@@ -99,6 +99,7 @@ if(NOT MSVC)
 	add_c_flag(-Wsign-conversion)
 	add_c_flag(-Wunused-macros)
 	add_c_flag(-Wunreachable-code-return)
+	add_c_flag(-Werror=incompatible-pointer-types)
 
 	# Place each function or data item into its own section. Will be used to strip unneeded symbols.
 	add_c_flag(-fdata-sections)
@@ -194,6 +195,7 @@ add_check_whitespace(other
 
 option(DEVELOPER_MODE "enable developer checks" OFF)
 if(DEVELOPER_MODE)
+	add_c_flag(-Werror)
 	add_dependencies(checkers cstyle)
 	add_dependencies(checkers check-whitespace)
 	add_dependencies(checkers check-license)
