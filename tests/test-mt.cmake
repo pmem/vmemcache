@@ -33,7 +33,9 @@ include(${SRC_DIR}/helpers.cmake)
 
 setup()
 
+set(SEED 0) # set seed from time
 set(vg_thread_tracers helgrind drd)
+set(valgrind memcheck helgrind drd)
 
 if (${TRACER} IN_LIST vg_thread_tracers)
 	set(N_THREADS 4)
@@ -43,6 +45,12 @@ else()
 	set(N_OPS 10000)
 endif()
 
-execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} ${N_THREADS} ${N_OPS})
+if (${TRACER} IN_LIST valgrind)
+	set(SKIP "skip") # skip tests that last very long under Valgrind
+else()
+	set(SKIP "")
+endif()
+
+execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} ${N_THREADS} ${N_OPS} ${SEED} ${SKIP})
 
 cleanup()
