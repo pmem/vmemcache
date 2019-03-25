@@ -1042,6 +1042,108 @@ test_data_integrity(const char *dir, unsigned seed)
 		UT_FATAL("memory leak detected");
 }
 
+/* test_offsets test case parameters */
+struct offset_tc {
+	char *vbuf;
+	ssize_t vbuf_size;
+	ssize_t offset;
+	ssize_t expected_ret;
+};
+
+/*
+ * run_offset_tc -- (internal) run single get with offset test case
+ */
+static void
+run_offset_tc(struct offset_tc *tc, VMEMcache *cache, const char *key,
+			size_t ksize, const char *val, size_t val_size)
+{
+		size_t vsize;
+		ssize_t ret = vmemcache_get(cache, key, ksize, tc->vbuf,
+						(size_t)tc->vbuf_size,
+						(size_t)tc->offset, &vsize);
+		if (ret != tc->expected_ret)
+			UT_FATAL(
+				"vmemcache_get: wrong return value: %zi (should be %zi)",
+				ret, tc->expected_ret);
+
+		if (vsize != (size_t)val_size)
+			UT_FATAL(
+				"vmemcache_get: wrong size of value: %zi (should be %zu)",
+				vsize, val_size);
+
+		if (tc->expected_ret > 0) {
+			const char *retval = val + tc->offset;
+			if (strncmp(tc->vbuf, retval, (size_t)tc->expected_ret))
+				UT_FATAL(
+					"vmemcache_get: wrong value: %s (should be %s)",
+					tc->vbuf, retval);
+		}
+}
+
+/*
+ * test_offsets -- (internal) test vmemcache_get()
+ * with different offsets and value buffer sizes
+ */
+static void
+test_offsets(const char *dir, enum vmemcache_replacement_policy policy)
+{
+	ssize_t val_size = 32;
+	char vbuf_eq[val_size];
+
+	ssize_t twice_size = val_size * 2;
+	char vbuf_twice[twice_size];
+
+	ssize_t half_size = val_size / 2;
+	char vbuf_half[half_size];
+
+	struct offset_tc tcs[] = {
+		/* vbuf, vbuf_size, offset, expected_ret */
+		{vbuf_eq, val_size, 0, val_size},
+		{vbuf_eq, val_size, 2, val_size - 2},
+		{vbuf_eq, val_size, val_size - 1, 1},
+		{vbuf_eq, val_size, val_size, 0},
+		{vbuf_eq, val_size, val_size + 1, 0},
+
+		{vbuf_twice, twice_size, 0, val_size},
+		{vbuf_twice, twice_size, 4, val_size - 4},
+		{vbuf_twice, twice_size, val_size - 1, 1},
+		{vbuf_twice, twice_size, val_size, 0},
+		{vbuf_twice, twice_size, val_size + 1, 0},
+
+		{vbuf_half, half_size, 0, half_size},
+		{vbuf_half, half_size, 2, half_size},
+		{vbuf_half, half_size, half_size, half_size},
+		{vbuf_half, half_size, half_size + 2, val_size - half_size - 2},
+		{vbuf_half, half_size, val_size, 0},
+		{vbuf_half, half_size, val_size + 1, 0},
+	};
+	size_t n_tcs = sizeof(tcs) / sizeof(struct offset_tc);
+
+	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
+		VMEMCACHE_MIN_EXTENT, policy);
+	if (cache == NULL)
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+
+	const char *key = "KEY";
+	size_t ksize = strlen(key) + 1;
+
+	char val[val_size];
+	for (unsigned i = 0; i < val_size - 1; i++) {
+		val[i] = (char)('a' + i);
+	}
+	val[val_size - 1] = '\0';
+
+	if (vmemcache_put(cache, key, ksize, val, (size_t)val_size))
+		UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
+
+	for (unsigned i = 0; i < n_tcs; ++i) {
+		run_offset_tc(&tcs[i], cache, key, ksize,
+							val, (size_t)val_size);
+	}
+
+	vmemcache_delete(cache);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -1078,6 +1180,9 @@ main(int argc, char *argv[])
 	test_merge_allocations(dir, VMEMCACHE_REPLACEMENT_LRU);
 
 	test_put_in_evict(dir, VMEMCACHE_REPLACEMENT_LRU, seed);
+
+	test_offsets(dir, VMEMCACHE_REPLACEMENT_LRU);
+	test_offsets(dir, VMEMCACHE_REPLACEMENT_NONE);
 
 	test_vmemcache_get_stat(dir);
 
