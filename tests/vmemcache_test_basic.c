@@ -624,7 +624,8 @@ on_evict_test_memory_leaks_cb(VMEMcache *cache,
  */
 static void
 test_memory_leaks(const char *dir, int key_gt_1K,
-			enum vmemcache_replacement_policy replacement_policy)
+			enum vmemcache_replacement_policy replacement_policy,
+			unsigned seed)
 {
 	VMEMcache *cache;
 	char *vbuf;
@@ -635,7 +636,7 @@ test_memory_leaks(const char *dir, int key_gt_1K,
 	ssize_t get_ret;
 	struct big_key bk;
 
-	srand((unsigned)time(NULL));
+	srand(seed);
 
 	stat_t n_puts = 0;
 	stat_t n_evicts = 0;
@@ -830,7 +831,6 @@ test_put_in_evict(const char *dir, enum vmemcache_replacement_policy policy,
 	stat_t max_evicts_stack = 500;
 
 	srand(seed);
-	printf("seed: %u\n", seed);
 
 	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
 		VMEMCACHE_MIN_EXTENT, policy);
@@ -891,7 +891,6 @@ test_vmemcache_get_stat(const char *dir)
 	vmemcache_delete(cache);
 }
 
-
 int
 main(int argc, char *argv[])
 {
@@ -907,6 +906,7 @@ main(int argc, char *argv[])
 			UT_FATAL("incorrect value of seed: %s", argv[2]);
 	} else {
 		seed = (unsigned)time(NULL);
+		printf("seed: %u\n", seed);
 	}
 
 	test_new_delete(dir, argv[0], VMEMCACHE_REPLACEMENT_NONE);
@@ -918,10 +918,10 @@ main(int argc, char *argv[])
 	test_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
 
 	/* '0' means: key size < 1kB */
-	test_memory_leaks(dir, 0, VMEMCACHE_REPLACEMENT_LRU);
+	test_memory_leaks(dir, 0, VMEMCACHE_REPLACEMENT_LRU, seed);
 
 	/* '1' means: key size > 1kB */
-	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU);
+	test_memory_leaks(dir, 1, VMEMCACHE_REPLACEMENT_LRU, seed);
 
 	test_merge_allocations(dir, VMEMCACHE_REPLACEMENT_NONE);
 	test_merge_allocations(dir, VMEMCACHE_REPLACEMENT_LRU);
