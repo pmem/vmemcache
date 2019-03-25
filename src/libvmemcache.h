@@ -82,8 +82,8 @@ typedef struct vmemcache VMEMcache;
 typedef struct vmemcache_config VMEMconfig;
 
 enum vmemcache_replacement_policy {
-	VMEMCACHE_REPLACEMENT_NONE,
 	VMEMCACHE_REPLACEMENT_LRU,
+	VMEMCACHE_REPLACEMENT_NONE,
 
 	VMEMCACHE_REPLACEMENT_NUM
 };
