@@ -390,7 +390,7 @@ vmemcache_populate_value(void *vbuf, size_t vbufsize, size_t offset,
 void
 vmemcache_entry_acquire(struct cache_entry *entry)
 {
-	uint64_t ret = util_fetch_and_add64(&entry->value.refcount, 1);
+	uint64_t ret = util_fetch_and_add32(&entry->value.refcount, 1);
 
 	ASSERTne(ret, 0);
 }
@@ -401,7 +401,7 @@ vmemcache_entry_acquire(struct cache_entry *entry)
 void
 vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 {
-	if (util_fetch_and_sub64(&entry->value.refcount, 1) != 1) {
+	if (util_fetch_and_sub32(&entry->value.refcount, 1) != 1) {
 		VALGRIND_ANNOTATE_HAPPENS_BEFORE(&entry->value.refcount);
 		return;
 	}
