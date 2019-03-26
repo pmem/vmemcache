@@ -184,6 +184,8 @@ respectively. The extra *arg* will be passed to your function.
     + **VMEMCACHE_STAT_HEAP_ENTRIES**
 	-- current number of heap entries
 
+Statistics are enabled by default. They can be disabled at the compile time
+of the libvmemcache library if the **STATS_ENABLED** CMake option is set to OFF.
 
 `const char *vmemcache_errormsg(void);`
 

@@ -30,3 +30,10 @@ $ cmake .. -DCMAKE_INSTALL_PREFIX=~/vmemcache-bin
 $ make
 $ make install
 ```
+
+# Statistics #
+
+Statistics are enabled by default. They can be disabled at the compile time
+of the libvmemcache library if the **STATS_ENABLED** CMake option is set to OFF.
+
+See the man page for more information about statistics.
