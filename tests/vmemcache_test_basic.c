@@ -891,6 +891,62 @@ test_vmemcache_get_stat(const char *dir)
 	vmemcache_delete(cache);
 }
 
+/*
+ * test_get_with_offset -- (internal) test _get() with offset != 0
+ */
+static void
+test_get_with_offset(const char *dir)
+{
+	VMEMcache *cache;
+
+	cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
+				VMEMCACHE_REPLACEMENT_LRU);
+	if (cache == NULL)
+		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+
+	char key[KSIZE];
+	char value[VSIZE + 1];
+
+	memset(key, 0, KSIZE);
+	for (int i = 0; i < VSIZE; i++)
+		value[i] = (char)i;
+
+	if (vmemcache_put(cache, key, KSIZE, value, VSIZE))
+		UT_FATAL("vmemcache_put: %s", vmemcache_errormsg());
+
+	verify_stat_entries(cache, 1);
+
+	char vbuf[VSIZE + 1]; /* user-provided buffer */
+	size_t vsize = 0; /* real size of the object */
+	ssize_t read;
+	size_t offset = '!';
+
+	/* insert '\0' at the end of both buffers */
+	value[VSIZE] = 0;
+	vbuf[VSIZE] = 0;
+
+	/* get the only one element */
+	read = vmemcache_get(cache, key, KSIZE, vbuf, VSIZE, offset, &vsize);
+	if (read < 0)
+		UT_FATAL("vmemcache_get: %s", vmemcache_errormsg());
+
+	if ((size_t)read != VSIZE - offset)
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %zu)",
+			read, VSIZE - offset);
+
+	if (vsize != VSIZE)
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %i)",
+			vsize, VSIZE);
+
+	if (memcmp(vbuf, value + offset, (unsigned long)read))
+		UT_FATAL("vmemcache_get: wrong value: %s (should be %s)",
+			vbuf, value + offset);
+
+	vmemcache_delete(cache);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -914,6 +970,8 @@ main(int argc, char *argv[])
 
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_NONE);
 	test_put_get_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
+
+	test_get_with_offset(dir);
 
 	test_evict(dir, VMEMCACHE_REPLACEMENT_LRU);
 
