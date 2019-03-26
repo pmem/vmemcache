@@ -129,8 +129,6 @@ alloc_node(struct critnib *c)
 	if (!n)
 		return NULL;
 	c->node_count++;
-	for (int i = 0; i < SLNODES; i++)
-		n->child[i] = NULL;
 	return n;
 }
 
