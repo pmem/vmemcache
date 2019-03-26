@@ -131,8 +131,6 @@ alloc_node(struct critnib *c)
 #ifdef STATS_ENABLED
 	c->node_count++;
 #endif
-	for (int i = 0; i < SLNODES; i++)
-		n->child[i] = NULL;
 	return n;
 }
 
