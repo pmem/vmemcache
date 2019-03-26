@@ -381,12 +381,13 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 int
 main(int argc, char *argv[])
 {
-	unsigned seed;
+	unsigned seed = 0;
 	int ret = -1;
 
 	if (argc < 2 || argc > 5) {
 		fprintf(stderr,
-			"usage: %s dir-name [threads] [ops_count] [seed]\n",
+			"usage: %s dir-name [threads] [ops_count] [seed]\n"
+			"\t seed == 0   - set seed from time()\n",
 			argv[0]);
 		exit(-1);
 	}
@@ -409,11 +410,12 @@ main(int argc, char *argv[])
 		UT_FATAL("incorrect value of ops_count: %s", argv[3]);
 
 	if (argc == 5) {
-		if (str_to_unsigned(argv[4], &seed) || seed < 1)
+		if (str_to_unsigned(argv[4], &seed))
 			UT_FATAL("incorrect value of seed: %s", argv[4]);
-	} else {
-		seed = (unsigned)time(NULL);
 	}
+
+	if (seed == 0)
+		seed = (unsigned)time(NULL);
 
 	printf("Multi-threaded test parameters:\n");
 	printf("   directory           : %s\n", dir);
