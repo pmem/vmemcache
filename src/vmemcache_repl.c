@@ -314,6 +314,12 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	if (!util_bool_compare_and_swap64(ptr_entry, entry, NULL))
 		return;
 
+	/*
+	 * This the "in the middle of being used" state.
+	 * In this state - after bool_compare_and_swap()
+	 * and before ringbuf_tryenqueue() - the entry cannot be evicted.
+	 */
+
 	while (ringbuf_tryenqueue(head->ringbuf, entry) != 0) {
 		util_mutex_lock(&head->lock);
 		dequeue_all(head);
@@ -372,10 +378,51 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	}
 
 	/* try to lock the entry the second time */
-	if (entry == NULL ||
-	    !util_bool_compare_and_swap64(ptr_entry, entry, NULL)) {
-		/* the entry was locked by another thread again */
+	if (entry != NULL && util_bool_compare_and_swap64(ptr_entry,
+								entry, NULL))
+		goto evict_found_entry;
+
+	/* the second try failed */
+
+	if (!is_LRU) {
+		/* the given entry is busy, give up */
 		errno = EAGAIN;
+		goto exit_unlock;
+	}
+
+	if (entry == NULL) {
+		/* no entries in the LRU queue, give up */
+		errno = ESRCH;
+		goto exit_unlock;
+	}
+
+	/* try to lock the next entries (repl_p_lru_evict can hardly fail) */
+	do {
+		entry = TAILQ_NEXT(entry, node);
+		if (entry == NULL)
+			break;
+
+		ptr_entry = entry->ptr_entry;
+	} while (!util_bool_compare_and_swap64(ptr_entry, entry, NULL));
+
+	if (entry != NULL)
+		goto evict_found_entry;
+
+	/*
+	 * All entries in the LRU queue are locked.
+	 * The last chance is to try to dequeue an entry.
+	 */
+	entry = ringbuf_trydequeue_s(head->ringbuf,
+					sizeof(struct repl_p_entry));
+	if (entry == NULL) {
+		/*
+		 * Cannot find any entry to evict.
+		 * It means that all entries are heavily used
+		 * and they have to be "in the middle of being used" state now
+		 * (see repl_p_lru_use()).
+		 * There is nothing we can do but fail.
+		 */
+		errno = ESRCH;
 		goto exit_unlock;
 	}
 
