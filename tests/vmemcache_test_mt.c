@@ -382,12 +382,14 @@ int
 main(int argc, char *argv[])
 {
 	unsigned seed = 0;
+	int skip = 0;
 	int ret = -1;
 
-	if (argc < 2 || argc > 5) {
+	if (argc < 2 || argc > 6) {
 		fprintf(stderr,
-			"usage: %s dir-name [threads] [ops_count] [seed]\n"
-			"\t seed == 0   - set seed from time()\n",
+			"usage: %s dir-name [threads] [ops_count] [seed] ['skip']\n"
+			"\t seed == 0   - set seed from time()\n"
+			"\t 'skip'      - skip tests that last very long under Valgrind\n",
 			argv[0]);
 		exit(-1);
 	}
@@ -409,9 +411,15 @@ main(int argc, char *argv[])
 	    (str_to_unsigned(argv[3], &ops_count) || ops_count < 1))
 		UT_FATAL("incorrect value of ops_count: %s", argv[3]);
 
-	if (argc == 5) {
-		if (str_to_unsigned(argv[4], &seed))
+	if (argc >= 5 &&
+	    (str_to_unsigned(argv[4], &seed)))
 			UT_FATAL("incorrect value of seed: %s", argv[4]);
+
+	if (argc == 6) {
+		if (strcmp(argv[5], "skip"))
+			UT_FATAL("incorrect value of the 'skip' option: %s",
+				argv[5]);
+		skip = 1;
 	}
 
 	if (seed == 0)
