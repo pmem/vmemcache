@@ -109,7 +109,7 @@ worker_thread_put(void *arg)
 }
 
 /*
- * worker_thread_put -- (internal) worker testing vmemcache_get()
+ * worker_thread_get -- (internal) worker testing vmemcache_get()
  */
 static void *
 worker_thread_get(void *arg)
@@ -382,15 +382,93 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	printf("%s: PASSED\n", __func__);
 }
 
+static int keep_running;
+
+/*
+ * worker_thread_test_evict_get -- (internal) worker testing vmemcache_get()
+ */
+static void *
+worker_thread_test_evict_get(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned long long n = ctx->thread_number;
+
+	char vbuf;
+
+	while (keep_running &&
+		vmemcache_get(ctx->cache, &n, sizeof(n),
+				&vbuf, sizeof(vbuf), 0, NULL) == sizeof(vbuf))
+		;
+
+	return NULL;
+}
+
+/*
+ * worker_thread_test_evict_evict -- (internal) worker testing vmemcache_get()
+ */
+static void *
+worker_thread_test_evict_evict(void *arg)
+{
+	struct context *ctx = arg;
+
+	/* at least one entry has to be evicted successfully */
+	if (vmemcache_evict(ctx->cache, NULL, 0))
+		UT_FATAL("vmemcache_evict: %s", vmemcache_errormsg());
+
+	/* try to evict all other entries */
+	while (vmemcache_evict(ctx->cache, NULL, 0) == 0)
+		;
+
+	keep_running = 0;
+
+	return NULL;
+}
+
+/*
+ * run_test_evict -- (internal) run test for vmemcache_evict()
+ */
+static void
+run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
+		unsigned ops_per_thread, struct context *ctx)
+{
+	free_cache(cache);
+
+	unsigned long long n;
+
+	for (n = 0; n < n_threads; ++n) {
+		if (vmemcache_put(ctx->cache, &n, sizeof(n), &n, sizeof(n)))
+			UT_FATAL("ERROR: vmemcache_put: %s",
+					vmemcache_errormsg());
+	}
+
+	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].thread_routine = worker_thread_test_evict_get;
+		ctx[i].ops_count = ops_per_thread;
+	}
+
+	/* overwrite the last routine */
+	ctx[n_threads - 1].thread_routine = worker_thread_test_evict_evict;
+
+	printf("%s: STARTED\n", __func__);
+
+	keep_running = 1;
+	run_threads(n_threads, threads, ctx);
+
+	printf("%s: PASSED\n", __func__);
+}
+
 int
 main(int argc, char *argv[])
 {
-	unsigned seed;
+	unsigned seed = 0;
+	int skip = 0;
 	int ret = -1;
 
-	if (argc < 2 || argc > 5) {
+	if (argc < 2 || argc > 6) {
 		fprintf(stderr,
-			"usage: %s dir-name [threads] [ops_count] [seed]\n",
+			"usage: %s dir-name [threads] [ops_count] [seed] ['skip']\n"
+			"\t seed == 0   - set seed from time()\n"
+			"\t 'skip'      - skip tests that last very long under Valgrind\n",
 			argv[0]);
 		exit(-1);
 	}
@@ -412,12 +490,19 @@ main(int argc, char *argv[])
 	    (str_to_unsigned(argv[3], &ops_count) || ops_count < 1))
 		UT_FATAL("incorrect value of ops_count: %s", argv[3]);
 
-	if (argc == 5) {
-		if (str_to_unsigned(argv[4], &seed) || seed < 1)
+	if (argc >= 5 &&
+	    (str_to_unsigned(argv[4], &seed)))
 			UT_FATAL("incorrect value of seed: %s", argv[4]);
-	} else {
-		seed = (unsigned)time(NULL);
+
+	if (argc == 6) {
+		if (strcmp(argv[5], "skip"))
+			UT_FATAL("incorrect value of the 'skip' option: %s",
+				argv[5]);
+		skip = 1;
 	}
+
+	if (seed == 0)
+		seed = (unsigned)time(NULL);
 
 	printf("Multi-threaded test parameters:\n");
 	printf("   directory           : %s\n", dir);
@@ -475,6 +560,9 @@ main(int argc, char *argv[])
 	run_test_put(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
+
+	if (!skip)
+		run_test_evict(cache, n_threads, threads, ops_per_thread, ctx);
 
 	ret = 0;
 

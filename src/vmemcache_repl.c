@@ -314,6 +314,12 @@ repl_p_lru_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	if (!util_bool_compare_and_swap64(ptr_entry, entry, NULL))
 		return;
 
+	/*
+	 * This the "in the middle of being used" state.
+	 * In this state - after bool_compare_and_swap()
+	 * and before ringbuf_tryenqueue() - the entry cannot be evicted.
+	 */
+
 	while (ringbuf_tryenqueue(head->ringbuf, entry) != 0) {
 		util_mutex_lock(&head->lock);
 		dequeue_all(head);
@@ -329,7 +335,8 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
 	struct repl_p_entry *entry;
 	void *data = NULL;
-	int is_LRU = 0;
+
+	int is_LRU = (ptr_entry == NULL);
 
 	util_mutex_lock(&head->lock);
 
@@ -338,44 +345,88 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 		goto exit_unlock;
 	}
 
-	if (ptr_entry == NULL) {
-		is_LRU = 1;
-		ptr_entry = TAILQ_FIRST(&head->first)->ptr_entry;
+	if (is_LRU) {
+		entry = TAILQ_FIRST(&head->first);
+		ptr_entry = entry->ptr_entry;
+	} else {
+		entry = *ptr_entry;
 	}
 
 	/*
 	 * Try to lock the entry by setting 'ptr_entry' to NULL,
 	 * so that it cannot be used nor evicted in other threads.
 	 */
-	entry = *ptr_entry;
-	if (entry == NULL ||
-	    !util_bool_compare_and_swap64(ptr_entry, entry, NULL)) {
+	if (entry != NULL && util_bool_compare_and_swap64(ptr_entry,
+								entry, NULL))
+		goto evict_found_entry;
 
-		/*
-		 * The first try failed. The entry can be locked
-		 * and enqueued in the ring buffer, so let's flush
-		 * the ring buffer and try again.
-		 */
-		dequeue_all(head);
+	/*
+	 * The first try failed. The entry could have been locked and enqueued
+	 * in the ring buffer, so let's flush the ring buffer and try again.
+	 */
+	dequeue_all(head);
 
-		/*
-		 * If the entry was assigned as the LRU entry,
-		 * let's assign it again, because the LRU entry
-		 * most likely has been changed in dequeue_all().
-		 */
-		if (is_LRU)
-			ptr_entry = TAILQ_FIRST(&head->first)->ptr_entry;
-
-		/* try to lock the entry again */
+	/*
+	 * If the entry was assigned as the LRU entry, let's assign it again,
+	 * because the LRU entry most likely has been changed in dequeue_all().
+	 */
+	if (is_LRU) {
+		entry = TAILQ_FIRST(&head->first);
+		ptr_entry = entry->ptr_entry;
+	} else {
 		entry = *ptr_entry;
-		if (entry == NULL ||
-		    !util_bool_compare_and_swap64(ptr_entry, entry, NULL)) {
-			/* the entry was locked by another thread again */
-			errno = EAGAIN;
-			goto exit_unlock;
-		}
 	}
 
+	/* try to lock the entry the second time */
+	if (entry != NULL && util_bool_compare_and_swap64(ptr_entry,
+								entry, NULL))
+		goto evict_found_entry;
+
+	/* the second try failed */
+
+	if (!is_LRU) {
+		/* the given entry is busy, give up */
+		errno = EAGAIN;
+		goto exit_unlock;
+	}
+
+	if (entry == NULL) {
+		/* no entries in the LRU queue, give up */
+		errno = ESRCH;
+		goto exit_unlock;
+	}
+
+	/* try to lock the next entries (repl_p_lru_evict can hardly fail) */
+	do {
+		entry = TAILQ_NEXT(entry, node);
+		if (entry == NULL)
+			break;
+
+		ptr_entry = entry->ptr_entry;
+	} while (!util_bool_compare_and_swap64(ptr_entry, entry, NULL));
+
+	if (entry != NULL)
+		goto evict_found_entry;
+
+	/*
+	 * All entries in the LRU queue are locked.
+	 * The last chance is to try to dequeue an entry.
+	 */
+	entry = ringbuf_trydequeue_s(head->ringbuf,
+					sizeof(struct repl_p_entry));
+	if (entry == NULL) {
+		/*
+		 * Cannot find any entry to evict.
+		 * It means that all entries are heavily used
+		 * and they have to be "in the middle of being used" state now
+		 * (see repl_p_lru_use()).
+		 * There is nothing we can do but fail.
+		 */
+		errno = ESRCH;
+		goto exit_unlock;
+	}
+
+evict_found_entry:
 	TAILQ_REMOVE(&head->first, entry, node);
 
 	data = entry->data;
