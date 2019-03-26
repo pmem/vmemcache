@@ -26,7 +26,29 @@ $ git clone https://github.com/pmem/vmemcache.git
 $ cd vmemcache
 $ mkdir build
 $ cd build
-$ cmake .. -DCMAKE_INSTALL_PREFIX=~/vmemcache-bin
+```
+
+And then:
+
+### On RPM-based Linux distros (Fedora, openSUSE, RHEL, SLES) ###
+
+```sh
+$ cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=rpm
+$ make package
+$ sudo rpm -i libvmemcache*.rpm
+```
+
+### On DEB-based Linux distros (Debian, Ubuntu) ###
+
+```sh
+$ cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=deb
+$ make package
+$ sudo dpkg -i libvmemcache*.deb
+```
+
+### On other Linux distros ###
+```sh
+$ cmake .. -DCMAKE_INSTALL_PREFIX=~/libvmemcache-bin
 $ make
 $ make install
 ```

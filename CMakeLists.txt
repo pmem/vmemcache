@@ -218,3 +218,7 @@ if (PANDOC)
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/doc/vmemcache.3
 		DESTINATION ${CMAKE_INSTALL_MANDIR}/man3)
 endif()
+
+if(NOT "${CPACK_GENERATOR}" STREQUAL "")
+	include(${CMAKE_SOURCE_DIR}/packages.cmake)
+endif()
