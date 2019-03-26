@@ -111,6 +111,9 @@ set(SOURCES_MT
 set(SOURCES_UTLIIZATION
 	vmemcache_test_utilization.c)
 
+set(SOURCES_HEAP_USAGE
+	vmemcache_test_heap_usage.c)
+
 set(SOURCES_EXAMPLE
 	example.c)
 
@@ -124,6 +127,10 @@ set(LIBS_MT
 set(LIBS_UTLIIZATION
 	vmemcache
 	m)
+
+set(LIBS_HEAP_USAGE
+	vmemcache
+	${CMAKE_DL_LIBS})
 
 set(LIBS_EXAMPLE
 	vmemcache)
@@ -144,6 +151,10 @@ add_link_executable(example
 		"${SOURCES_EXAMPLE}"
 		"${LIBS_EXAMPLE}")
 
+add_link_executable(vmemcache_test_heap_usage
+		"${SOURCES_HEAP_USAGE}"
+		"${LIBS_HEAP_USAGE}")
+
 if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-basic" test-basic none fs)
 	test("FS-test-basic-memcheck" test-basic memcheck fs)
@@ -158,6 +169,8 @@ if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-bench-simul-drd" test-bench-simul drd fs)
 	test("FS-test-utilization" test-utilization none fs)
 	test("FS-test-utilization-memcheck" test-utilization memcheck fs)
+	test("FS-test-heap-usage" test-heap-usage none fs)
+	test("FS-test-heap-usage-memcheck" test-heap-usage memcheck fs)
 endif()
 
 if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
@@ -174,6 +187,8 @@ if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
 	test("DDAX-test-bench-simul-drd" test-bench-simul drd ddax)
 	test("DDAX-test-utilization" test-utilization none ddax)
 	test("DDAX-test-utilization-memcheck" test-utilization memcheck ddax)
+	test("DDAX-test-heap-usage" test-heap-usage none ddax)
+	test("DDAX-test-heap-usage-memcheck" test-heap-usage memcheck ddax)
 endif()
 
 test("example" test-example none fs)
