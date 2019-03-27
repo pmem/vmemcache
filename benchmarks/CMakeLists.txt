@@ -1,5 +1,5 @@
 #
-# Copyright 2018, Intel Corporation
+# Copyright 2018-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -56,8 +56,13 @@ target_include_directories(bench_simul PRIVATE
 	${CMAKE_SOURCE_DIR}/src
 	${CMAKE_SOURCE_DIR}/tests)
 
-target_link_libraries(bench_simul PRIVATE vmemcache)
-target_link_libraries(bench_simul PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 if (HAVE_GETENTROPY)
 	target_compile_definitions(bench_simul PRIVATE HAVE_GETENTROPY)
 endif()
+
+if(STATS_ENABLED)
+	target_compile_definitions(vmemcache PRIVATE STATS_ENABLED=1)
+endif()
+
+target_link_libraries(bench_simul PRIVATE vmemcache)
+target_link_libraries(bench_simul PRIVATE ${CMAKE_THREAD_LIBS_INIT})
