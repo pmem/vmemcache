@@ -43,6 +43,9 @@
 #include "test_helpers.h"
 #include "os_thread.h"
 
+#define EVICT_BY_LRU 0
+#define EVICT_BY_KEY 1
+
 #define BUF_SIZE 256
 
 /* type of statistics */
@@ -444,17 +447,55 @@ worker_thread_test_evict_by_LRU(void *arg)
 }
 
 /*
+ * worker_thread_test_evict_by_key -- (internal) worker evicting by key
+ */
+static void *
+worker_thread_test_evict_by_key(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned n_threads = ctx->n_threads;
+
+	/*
+	 * Try to evict all entries by key first.
+	 * It is very likely that even all of these vmemcache_evict() calls
+	 * will fail, because the conditions are extremely difficult (all cache
+	 * entries are being constantly read (used) by separate threads),
+	 * but this is acceptable, because this test is dedicated
+	 * to test the failure path of vmemcache_evict()
+	 * and the success criteria of this test are checks done in free_cache()
+	 * at the end of the test.
+	 */
+	for (unsigned long long  n = 0; n < n_threads; ++n)
+		vmemcache_evict(ctx->cache, &n, sizeof(n));
+
+	/* try to evict by LRU all entries that were not evicted above */
+	while (vmemcache_evict(ctx->cache, NULL, 0) == 0)
+		;
+
+	__atomic_store_n(&keep_running, 0, __ATOMIC_SEQ_CST);
+
+	return NULL;
+}
+
+/*
  * run_test_evict -- (internal) run test for vmemcache_evict()
+ *
+ * This test is dedicated to test the failure path of vmemcache_evict().
+ * It simulates extremely difficult conditions for an eviction:
+ * all cache entries are being constantly read (used) by separate threads
+ * (only one thread tries to evict entries by key or by LRU),
+ * so it is very likely that most of vmemcache_evict() calls in this test
+ * will fail.
+ * The main success criteria of this test are checks done in free_cache()
+ * at the end of the test.
  */
 static void
 run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
-		unsigned ops_per_thread, struct context *ctx)
+		unsigned ops_per_thread, struct context *ctx, int by_key)
 {
 	free_cache(cache);
 
-	unsigned long long n;
-
-	for (n = 0; n < n_threads; ++n) {
+	for (unsigned long long n = 0; n < n_threads; ++n) {
 		if (vmemcache_put(ctx->cache, &n, sizeof(n), &n, sizeof(n)))
 			UT_FATAL("ERROR: vmemcache_put: %s",
 					vmemcache_errormsg());
@@ -466,14 +507,20 @@ run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	}
 
 	/* overwrite the last routine */
-	ctx[n_threads - 1].worker = worker_thread_test_evict_by_LRU;
+	if (by_key)
+		ctx[n_threads - 1].worker = worker_thread_test_evict_by_key;
+	else
+		ctx[n_threads - 1].worker = worker_thread_test_evict_by_LRU;
 
-	printf("%s: STARTED\n", __func__);
+	printf("%s%s: STARTED\n", __func__, by_key ? "_by_key" : "_by_LRU");
 
 	__atomic_store_n(&keep_running, 1, __ATOMIC_SEQ_CST);
 	run_threads(n_threads, threads, ctx);
 
-	printf("%s: PASSED\n", __func__);
+	/* success of this function is the main success criteria of this test */
+	free_cache(cache);
+
+	printf("%s%s: PASSED\n", __func__, by_key ? "_by_key" : "_by_LRU");
 }
 
 int
@@ -581,8 +628,12 @@ main(int argc, char *argv[])
 	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
 
-	if (!skip)
-		run_test_evict(cache, n_threads, threads, ops_per_thread, ctx);
+	if (!skip) {
+		run_test_evict(cache, n_threads, threads,
+					ops_per_thread, ctx, EVICT_BY_LRU);
+		run_test_evict(cache, n_threads, threads,
+					ops_per_thread, ctx, EVICT_BY_KEY);
+	}
 
 	ret = 0;
 
