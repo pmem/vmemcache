@@ -43,6 +43,9 @@
 #include "test_helpers.h"
 #include "os_thread.h"
 
+#define EVICT_BY_LRU 0
+#define EVICT_BY_KEY 1
+
 #define BUF_SIZE 256
 
 /* type of statistics */
@@ -55,6 +58,7 @@ struct buffers {
 
 struct context {
 	unsigned thread_number;
+	unsigned n_threads;
 	VMEMcache *cache;
 	struct buffers *buffs;
 	unsigned nbuffs;
@@ -404,7 +408,7 @@ worker_thread_test_evict_get(void *arg)
 }
 
 /*
- * worker_thread_test_evict_by_LRU -- (internal) worker testing vmemcache_get()
+ * worker_thread_test_evict_by_LRU -- (internal) worker evicting by LRU
  */
 static void *
 worker_thread_test_evict_by_LRU(void *arg)
@@ -425,13 +429,49 @@ worker_thread_test_evict_by_LRU(void *arg)
 }
 
 /*
+ * worker_thread_test_evict_by_key -- (internal) worker evicting by key
+ */
+static void *
+worker_thread_test_evict_by_key(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned n_threads = ctx->n_threads;
+	unsigned long long n;
+	int evicted = 0;
+
+	/* try to evict all entries by key */
+	for (n = 0; n < n_threads; ++n)
+		if (vmemcache_evict(ctx->cache, &n, sizeof(n)) == 0)
+			evicted = 1;
+
+	/* at least one entry has to be evicted successfully */
+	if (!evicted)
+		UT_FATAL("failed to evict any entry by key");
+
+	/* try to evict the rest of entries */
+	while (vmemcache_evict(ctx->cache, NULL, 0) == 0)
+		;
+
+	keep_running = 0;
+
+	return NULL;
+}
+
+/*
  * run_test_evict -- (internal) run test for vmemcache_evict()
  */
 static void
 run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
-		unsigned ops_per_thread, struct context *ctx)
+		unsigned ops_per_thread, struct context *ctx, int by_key)
 {
 	free_cache(cache);
+
+#ifdef STATS_ENABLED
+	stat_t dram;
+	get_stat(cache, &dram, VMEMCACHE_STAT_DRAM_SIZE_USED);
+	if (dram != 0)
+		UT_FATAL("some DRAM memory is not free: %llu bytes", dram);
+#endif /* STATS_ENABLED */
 
 	unsigned long long n;
 
@@ -447,12 +487,23 @@ run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	}
 
 	/* overwrite the last routine */
-	ctx[n_threads - 1].worker = worker_thread_test_evict_by_LRU;
+	if (by_key)
+		ctx[n_threads - 1].worker = worker_thread_test_evict_by_key;
+	else
+		ctx[n_threads - 1].worker = worker_thread_test_evict_by_LRU;
 
 	printf("%s: STARTED\n", __func__);
 
 	keep_running = 1;
 	run_threads(n_threads, threads, ctx);
+
+	free_cache(cache);
+
+#ifdef STATS_ENABLED
+	get_stat(cache, &dram, VMEMCACHE_STAT_DRAM_SIZE_USED);
+	if (dram != 0)
+		UT_FATAL("memory leak: %llu bytes (by_key = %i)", dram, by_key);
+#endif /* STATS_ENABLED */
 
 	printf("%s: PASSED\n", __func__);
 }
@@ -547,6 +598,7 @@ main(int argc, char *argv[])
 		UT_FATAL("out of memory");
 
 	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].n_threads = n_threads;
 		ctx[i].thread_number = i;
 		ctx[i].cache = cache;
 		ctx[i].buffs = buffs;
@@ -561,8 +613,12 @@ main(int argc, char *argv[])
 	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
 
-	if (!skip)
-		run_test_evict(cache, n_threads, threads, ops_per_thread, ctx);
+	if (!skip) {
+		run_test_evict(cache, n_threads, threads,
+					ops_per_thread, ctx, EVICT_BY_LRU);
+		run_test_evict(cache, n_threads, threads,
+					ops_per_thread, ctx, EVICT_BY_KEY);
+	}
 
 	ret = 0;
 
