@@ -219,7 +219,7 @@ vmcache_insert_heap_entry(struct heap *heap, struct heap_entry *he,
 	*first_extent = new_extent;
 
 	if (!is_allocated) {
-		util_fetch_and_add64(&heap->entries, 1);
+		STAT_ADD(&heap->entries, 1);
 	}
 
 	return 0;
@@ -252,7 +252,7 @@ vmcache_pop_heap_entry(struct heap *heap, struct heap_entry *he)
 
 	heap->first_extent = header->next;
 
-	util_fetch_and_sub64(&heap->entries, 1);
+	STAT_SUB(&heap->entries, 1);
 
 	return 0;
 }
@@ -332,7 +332,7 @@ vmcache_free_extent(struct heap *heap, ptr_ext_t *small_extent)
 	vmcache_heap_merge(heap, &ext, &he);
 	vmcache_insert_heap_entry(heap, &he, &heap->first_extent, IS_FREE);
 
-	util_fetch_and_sub64(&heap->size_used, ext.size);
+	STAT_SUB(&heap->size_used, ext.size);
 
 	return 0;
 }
@@ -440,7 +440,7 @@ vmcache_heap_remove(struct heap *heap, struct extent *ext)
 	if (heap->first_extent == ext->ptr)
 		heap->first_extent = header->next;
 
-	util_fetch_and_sub64(&heap->entries, 1);
+	STAT_SUB(&heap->entries, 1);
 }
 
 /*
