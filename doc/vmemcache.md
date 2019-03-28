@@ -100,12 +100,7 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
 
 Parameters:
 
-+ **size**: initial size of the cache; if non-zero yet **max_size** is not
-  set, the cache won't be growable. Rounded up towards page size (4KB on
-  x86).
-
-+ **max_size**: max size the cache is allowed to grow; defaults to infinity
-  (ie, whatever the backing device can handle) unless **size** is set.
++ **size**: size of the cache; not required for /dev/dax devices.
 
 + **extent_size** controls fragmentation of the cache. Increasing it
   improves performance at the cost of space utilization for small values.

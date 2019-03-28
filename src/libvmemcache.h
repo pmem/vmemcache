@@ -118,8 +118,8 @@ typedef void vmemcache_on_miss(VMEMcache *cache,
 
 struct vmemcache_config
 {
-	size_t size;			/* initial size of the cache */
-	size_t max_size;		/* never expand above this */
+	size_t size;			/* size of the cache */
+	size_t max_size;		/* UNUSED yet */
 	size_t extent_size;		/* allocation block size */
 	enum vmemcache_replacement_policy repl_p;
 
