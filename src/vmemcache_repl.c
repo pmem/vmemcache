@@ -167,6 +167,7 @@ static struct repl_p_entry *
 repl_p_none_insert(struct repl_p_head *head, void *element,
 			struct repl_p_entry **ptr_entry)
 {
+	vmemcache_entry_acquire(element);
 	return NULL;
 }
 
@@ -184,7 +185,7 @@ repl_p_none_use(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 static void *
 repl_p_none_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 {
-	return NULL;
+	return ptr_entry;
 }
 
 
@@ -342,6 +343,7 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 
 	if (TAILQ_EMPTY(&head->first)) {
 		errno = ESRCH;
+		ERR("LRU queue is empty");
 		goto exit_unlock;
 	}
 
@@ -387,12 +389,14 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 	if (!is_LRU) {
 		/* the given entry is busy, give up */
 		errno = EAGAIN;
+		ERR("entry is busy and cannot be evicted");
 		goto exit_unlock;
 	}
 
 	if (entry == NULL) {
 		/* no entries in the LRU queue, give up */
 		errno = ESRCH;
+		ERR("LRU queue is empty");
 		goto exit_unlock;
 	}
 
@@ -423,6 +427,7 @@ repl_p_lru_evict(struct repl_p_head *head, struct repl_p_entry **ptr_entry)
 		 * There is nothing we can do but fail.
 		 */
 		errno = ESRCH;
+		ERR("no entry eligible for eviction found");
 		goto exit_unlock;
 	}
 
