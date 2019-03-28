@@ -404,10 +404,10 @@ worker_thread_test_evict_get(void *arg)
 }
 
 /*
- * worker_thread_test_evict_evict -- (internal) worker testing vmemcache_get()
+ * worker_thread_test_evict_by_LRU -- (internal) worker evicting by LRU
  */
 static void *
-worker_thread_test_evict_evict(void *arg)
+worker_thread_test_evict_by_LRU(void *arg)
 {
 	struct context *ctx = arg;
 
@@ -447,7 +447,7 @@ run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	}
 
 	/* overwrite the last routine */
-	ctx[n_threads - 1].worker = worker_thread_test_evict_evict;
+	ctx[n_threads - 1].worker = worker_thread_test_evict_by_LRU;
 
 	printf("%s: STARTED\n", __func__);
 
