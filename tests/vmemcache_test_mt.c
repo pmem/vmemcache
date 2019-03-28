@@ -401,7 +401,7 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	printf("%s: PASSED\n", __func__);
 }
 
-static int keep_running;
+static uint32_t keep_running;
 
 /*
  * worker_thread_test_evict_get -- (internal) worker testing vmemcache_get()
@@ -414,7 +414,7 @@ worker_thread_test_evict_get(void *arg)
 
 	char vbuf;
 
-	while (keep_running &&
+	while (__atomic_load_n(&keep_running, __ATOMIC_SEQ_CST) &&
 		vmemcache_get(ctx->cache, &n, sizeof(n),
 				&vbuf, sizeof(vbuf), 0, NULL) == sizeof(vbuf))
 		;
@@ -438,7 +438,7 @@ worker_thread_test_evict_by_LRU(void *arg)
 	while (vmemcache_evict(ctx->cache, NULL, 0) == 0)
 		;
 
-	keep_running = 0;
+	__atomic_store_n(&keep_running, 0, __ATOMIC_SEQ_CST);
 
 	return NULL;
 }
@@ -470,7 +470,7 @@ run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 
 	printf("%s: STARTED\n", __func__);
 
-	keep_running = 1;
+	__atomic_store_n(&keep_running, 1, __ATOMIC_SEQ_CST);
 	run_threads(n_threads, threads, ctx);
 
 	printf("%s: PASSED\n", __func__);
