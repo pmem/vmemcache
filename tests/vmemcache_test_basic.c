@@ -931,6 +931,9 @@ on_evict_test_data_integrity(VMEMcache *cache, const void *key, size_t key_size,
 
 	ctx->evict_count++;
 
+	/*
+	 * First get - read the whole entry (offset == 0)
+	 */
 	ret = vmemcache_get(cache, key, key_size,
 				ctx->get_buffer, ctx->size_get_buffer,
 				0, &vsize);
@@ -954,7 +957,53 @@ on_evict_test_data_integrity(VMEMcache *cache, const void *key, size_t key_size,
 				ctx->values_buffer + value->header.offset,
 				value->header.size);
 	if (cmp_val)
-		UT_FATAL("vmemcache_get: wrong value");
+		UT_FATAL(
+			"vmemcache_get: wrong value for offset = 0 and size = %zu",
+			value->header.size);
+
+	/*
+	 * Second get - read a part of the entry (offset != 0)
+	 *
+	 * Offset and length are set to random values from the ranges:
+	 * - length: from VMEMCACHE_MIN_EXTENT to (value->header.size - 1)
+	 * - offset: from 1 to (value->header.size - length)
+	 */
+
+	size_t length;
+	size_t offset;
+
+	if (value->header.size > VMEMCACHE_MIN_EXTENT)
+		length = VMEMCACHE_MIN_EXTENT + (size_t)rand() %
+				(value->header.size - VMEMCACHE_MIN_EXTENT);
+	else
+		length = value->header.size - 1;
+
+	offset = 1 + (size_t)rand() % (value->header.size - length);
+
+	ret = vmemcache_get(cache, key, key_size,
+				value->buffer, length,
+				offset + HEADER_SIZE, &vsize);
+	if (ret < 0)
+		UT_FATAL("vmemcache_get: %s", vmemcache_errormsg());
+
+	if ((size_t)ret != length)
+		UT_FATAL(
+			"vmemcache_get: wrong return value: %zi (should be %zu)",
+			ret, length);
+
+	if (vsize != size)
+		UT_FATAL(
+			"vmemcache_get: wrong size of value: %zi (should be %zu)",
+			vsize, size);
+
+	cmp_val = memcmp(value->buffer,
+			ctx->values_buffer + value->header.offset + offset,
+			length);
+	if (cmp_val)
+		UT_FATAL(
+			"vmemcache_get: wrong value for offset = %zu and size = %zu",
+			offset, length);
+
 }
 
 /*
@@ -1029,8 +1078,15 @@ test_data_integrity(const char *dir, unsigned seed)
 		;
 
 	/* check statistics */
-	verify_stats(cache, n_puts, ctx.evict_count, ctx.evict_count, 0,
-			ctx.evict_count, 0, 0, 0);
+	verify_stats(cache,
+			n_puts,			/* puts */
+			2 * ctx.evict_count,	/* gets */
+			2 * ctx.evict_count,	/* hits */
+			0,			/* misses */
+			ctx.evict_count,	/* evicts */
+			0,			/* cache entries */
+			0,			/* DRAM memory used */
+			0);			/* pool memory used */
 
 	vmemcache_delete(cache);
 
