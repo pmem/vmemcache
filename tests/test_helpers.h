@@ -55,6 +55,9 @@
 			__FILE__, __LINE__, __func__);\
 	fprintf(stderr, __VA_ARGS__);\
 	fprintf(stderr, "\n");\
+	if (errno)\
+		fprintf(stderr, "ERRNO: %s (%i)\n",\
+			strerror(errno), errno);\
 	abort();\
 } while (/*CONSTCOND*/0)
 
