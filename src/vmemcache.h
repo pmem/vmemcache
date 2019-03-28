@@ -59,6 +59,7 @@ struct vmemcache {
 	size_t size;			/* mapping size */
 	struct heap *heap;		/* heap address */
 	struct index *index;		/* indexing structure */
+	enum vmemcache_repl_p repl_p;	/* replacement policy */
 	struct repl_p *repl;		/* replacement policy abstraction */
 	vmemcache_on_evict *on_evict;	/* callback on evict */
 	void *arg_evict;		/* argument for callback on evict */
