@@ -276,8 +276,6 @@ vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 		return -1;
 	}
 
-	STAT_ADD(&cache->size_DRAM, malloc_usable_size(entry));
-
 	entry->key.ksize = ksize;
 	memcpy(entry->key.key, key, ksize);
 
@@ -320,6 +318,7 @@ put_index:
 					&entry->value.p_entry);
 	}
 
+	STAT_ADD(&cache->size_DRAM, malloc_usable_size(entry));
 	STAT_ADD(&cache->put_count, 1);
 
 	return 0;
@@ -624,7 +623,10 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 		*val = cache->put_count - cache->evict_count;
 		break;
 	case VMEMCACHE_STAT_DRAM_SIZE_USED:
-		*val = cache->size_DRAM;
+		*val = cache->size_DRAM
+			+ vmemcache_index_internal_memory_usage(cache->index)
+			+ cache->repl->ops->dram_per_entry
+				* (cache->put_count - cache->evict_count);
 		break;
 	case VMEMCACHE_STAT_POOL_SIZE_USED:
 		*val = vmcache_get_heap_used_size(cache->heap);

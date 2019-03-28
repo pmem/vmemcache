@@ -36,10 +36,27 @@
 #include "vmemcache.h"
 #include "os_thread.h"
 
-struct critnib_node;
+/*
+ * SLICE may be 1, 2, 4 or 8.  1 or 8 could be further optimized (critbit
+ * and critbyte respectively); 4 (critnib) strikes a good balance between
+ * speed and memory use.
+ */
+#define SLICE 4
+#define SLNODES (1 << SLICE)
+
+typedef uint32_t byten_t;
+typedef unsigned char bitn_t;
+
+struct critnib_node {
+	struct critnib_node *child[SLNODES];
+	byten_t byte;
+	bitn_t bit;
+};
+
 struct critnib {
 	struct critnib_node *root;
 	os_rwlock_t lock;
+	size_t node_count; /* internal nodes only */
 };
 
 struct cache_entry;

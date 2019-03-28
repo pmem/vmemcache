@@ -69,6 +69,9 @@ struct repl_p_ops {
 	void
 		(*repl_p_use)(struct repl_p_head *head,
 					struct repl_p_entry **ptr_entry);
+
+	/* memory overhead per element */
+	size_t dram_per_entry;
 };
 
 struct repl_p {
