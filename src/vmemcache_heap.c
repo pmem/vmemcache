@@ -218,9 +218,10 @@ vmcache_insert_heap_entry(struct heap *heap, struct heap_entry *he,
 
 	*first_extent = new_extent;
 
-	if (!is_allocated) {
-		STAT_ADD(&heap->entries, 1);
-	}
+#ifdef STATS_ENABLED
+	if (!is_allocated)
+		heap->entries++;
+#endif
 
 	return 0;
 }
@@ -252,7 +253,9 @@ vmcache_pop_heap_entry(struct heap *heap, struct heap_entry *he)
 
 	heap->first_extent = header->next;
 
-	STAT_SUB(&heap->entries, 1);
+#ifdef STATS_ENABLED
+	heap->entries--;
+#endif
 
 	return 0;
 }
@@ -332,7 +335,9 @@ vmcache_free_extent(struct heap *heap, ptr_ext_t *small_extent)
 	vmcache_heap_merge(heap, &ext, &he);
 	vmcache_insert_heap_entry(heap, &he, &heap->first_extent, IS_FREE);
 
-	STAT_SUB(&heap->size_used, ext.size);
+#ifdef STATS_ENABLED
+	heap->size_used -= ext.size;
+#endif
 
 	return 0;
 }
@@ -403,7 +408,9 @@ vmcache_alloc(struct heap *heap, size_t size, ptr_ext_t **first_extent,
 
 	} while (to_allocate > 0);
 
-	STAT_ADD(&heap->size_used, allocated);
+#ifdef STATS_ENABLED
+	heap->size_used += allocated;
+#endif
 
 	util_mutex_unlock(&heap->lock);
 
@@ -440,7 +447,9 @@ vmcache_heap_remove(struct heap *heap, struct extent *ext)
 	if (heap->first_extent == ext->ptr)
 		heap->first_extent = header->next;
 
-	STAT_SUB(&heap->entries, 1);
+#ifdef STATS_ENABLED
+	heap->entries--;
+#endif
 }
 
 /*
@@ -512,7 +521,9 @@ vmcache_free(struct heap *heap, ptr_ext_t *first_extent)
 					&he, &heap->first_extent, IS_FREE);
 	}
 
-	STAT_SUB(&heap->size_used, freed);
+#ifdef STATS_ENABLED
+	heap->size_used -= freed;
+#endif
 
 	util_mutex_unlock(&heap->lock);
 }
