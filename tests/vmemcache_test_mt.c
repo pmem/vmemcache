@@ -59,7 +59,7 @@ struct context {
 	struct buffers *buffs;
 	unsigned nbuffs;
 	unsigned ops_count;
-	void *(*thread_routine)(void *);
+	void *(*worker)(void *);
 };
 
 /*
@@ -80,7 +80,7 @@ static void
 run_threads(unsigned n_threads, os_thread_t *threads, struct context *ctx)
 {
 	for (unsigned i = 0; i < n_threads; ++i)
-		os_thread_create(&threads[i], NULL, ctx[i].thread_routine,
+		os_thread_create(&threads[i], NULL, ctx[i].worker,
 					&ctx[i]);
 
 	for (unsigned i = 0; i < n_threads; ++i)
@@ -168,7 +168,7 @@ run_test_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	free_cache(cache);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_put;
+		ctx[i].worker = worker_thread_put;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
@@ -228,7 +228,7 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	}
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_get;
+		ctx[i].worker = worker_thread_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
 }
@@ -260,13 +260,13 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	init_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 
 	if (n_threads < 10) {
-		ctx[n_threads >> 1].thread_routine = worker_thread_put_in_gets;
+		ctx[n_threads >> 1].worker = worker_thread_put_in_gets;
 	} else {
 		/* 20% of threads (in the middle of their array) are puts */
 		unsigned n_puts = (2 * n_threads) / 10; /* 20% of threads */
 		unsigned start = (n_threads / 2) - (n_puts / 2);
 		for (unsigned i = start; i < start + n_puts; i++)
-			ctx[i].thread_routine = worker_thread_put_in_gets;
+			ctx[i].worker = worker_thread_put_in_gets;
 	}
 
 	printf("%s: STARTED\n", __func__);
@@ -348,7 +348,7 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	vmemcache_callback_on_miss(cache, on_miss_cb, ctx);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_get_unique_keys;
+		ctx[i].worker = worker_thread_get_unique_keys;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
@@ -442,12 +442,12 @@ run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	}
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_test_evict_get;
+		ctx[i].worker = worker_thread_test_evict_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
 	/* overwrite the last routine */
-	ctx[n_threads - 1].thread_routine = worker_thread_test_evict_evict;
+	ctx[n_threads - 1].worker = worker_thread_test_evict_evict;
 
 	printf("%s: STARTED\n", __func__);
 

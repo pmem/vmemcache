@@ -64,7 +64,7 @@ struct context {
 	unsigned nbuffs;
 	unsigned ops_count;
 	double secs;
-	void *(*thread_routine)(void *);
+	void *(*worker)(void *);
 };
 
 /*
@@ -160,7 +160,7 @@ static void
 run_threads(unsigned n_threads, os_thread_t *threads, struct context *ctx)
 {
 	for (unsigned i = 0; i < n_threads; ++i)
-		os_thread_create(&threads[i], NULL, ctx[i].thread_routine,
+		os_thread_create(&threads[i], NULL, ctx[i].worker,
 					&ctx[i]);
 
 	for (unsigned i = 0; i < n_threads; ++i)
@@ -207,7 +207,7 @@ run_bench_put(const char *path, size_t max_size, size_t extent_size,
 	unsigned ops_per_thread = ops_count / n_threads;
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_put;
+		ctx[i].worker = worker_thread_put;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
@@ -263,7 +263,7 @@ run_bench_get(const char *path, size_t max_size, size_t extent_size,
 	vmemcache_callback_on_evict(cache, NULL, NULL);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_get;
+		ctx[i].worker = worker_thread_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
