@@ -62,6 +62,20 @@ struct context {
 	void *(*worker)(void *);
 };
 
+#ifdef STATS_ENABLED
+/*
+ * get_stat -- (internal) get one statistic
+ */
+static void
+get_stat(VMEMcache *cache, stat_t *stat_val, enum vmemcache_statistic i_stat)
+{
+	int ret = vmemcache_get_stat(cache, i_stat,
+					stat_val, sizeof(*stat_val));
+	if (ret == -1)
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+}
+#endif /* STATS_ENABLED */
+
 /*
  * free_cache -- (internal) free the cache
  */
@@ -295,20 +309,6 @@ on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 	if (ret && errno != EEXIST)
 		UT_FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
 }
-
-#ifdef STATS_ENABLED
-/*
- * get_stat -- (internal) get one statistic
- */
-static void
-get_stat(VMEMcache *cache, stat_t *stat_val, enum vmemcache_statistic i_stat)
-{
-	int ret = vmemcache_get_stat(cache, i_stat,
-					stat_val, sizeof(*stat_val));
-	if (ret == -1)
-		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
-}
-#endif /* STATS_ENABLED */
 
 /*
  * worker_thread_get_unique_keys -- (internal) worker testing vmemcache_get()
