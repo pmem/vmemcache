@@ -55,6 +55,7 @@ struct buffers {
 
 struct context {
 	unsigned thread_number;
+	unsigned n_threads;
 	VMEMcache *cache;
 	struct buffers *buffs;
 	unsigned nbuffs;
@@ -565,6 +566,7 @@ main(int argc, char *argv[])
 		UT_FATAL("out of memory");
 
 	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].n_threads = n_threads;
 		ctx[i].thread_number = i;
 		ctx[i].cache = cache;
 		ctx[i].buffs = buffs;
