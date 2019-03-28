@@ -85,6 +85,24 @@ free_cache(VMEMcache *cache)
 	/* evict all entries from the cache */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
+
+#ifdef STATS_ENABLED
+	/* verify that all memory is freed */
+	stat_t entries, heap_entries, dram, pool_ued;
+	get_stat(cache, &entries, VMEMCACHE_STAT_ENTRIES);
+	get_stat(cache, &heap_entries, VMEMCACHE_STAT_HEAP_ENTRIES);
+	get_stat(cache, &dram, VMEMCACHE_STAT_DRAM_SIZE_USED);
+	get_stat(cache, &pool_ued, VMEMCACHE_STAT_POOL_SIZE_USED);
+
+	if (entries != 0)
+		UT_FATAL("%llu entries were not freed", entries);
+	if (dram != 0)
+		UT_FATAL("%llu bytes of DRAM memory were not freed", dram);
+	if (pool_ued != 0)
+		UT_FATAL("%llu bytes of pool memory were not freed", pool_ued);
+	if (heap_entries != 1)
+		UT_FATAL("%llu heap entries were not merged", heap_entries - 1);
+#endif /* STATS_ENABLED */
 }
 
 /*
