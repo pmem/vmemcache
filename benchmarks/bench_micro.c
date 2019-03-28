@@ -64,7 +64,7 @@ struct context {
 	unsigned nbuffs;
 	unsigned ops_count;
 	double secs;
-	void *(*thread_routine)(void *);
+	void *(*worker)(void *);
 };
 
 /*
@@ -72,7 +72,7 @@ struct context {
  */
 static VMEMcache *
 bench_init(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy,
+		enum vmemcache_repl_p replacement_policy,
 		unsigned n_threads, struct context *ctx)
 {
 	VMEMcache *cache = vmemcache_new(path, max_size, extent_size,
@@ -160,7 +160,7 @@ static void
 run_threads(unsigned n_threads, os_thread_t *threads, struct context *ctx)
 {
 	for (unsigned i = 0; i < n_threads; ++i)
-		os_thread_create(&threads[i], NULL, ctx[i].thread_routine,
+		os_thread_create(&threads[i], NULL, ctx[i].worker,
 					&ctx[i]);
 
 	for (unsigned i = 0; i < n_threads; ++i)
@@ -197,7 +197,7 @@ print_bench_results(const char *op_name, unsigned n_threads,
  */
 static void
 run_bench_put(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy,
+		enum vmemcache_repl_p replacement_policy,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
@@ -207,7 +207,7 @@ run_bench_put(const char *path, size_t max_size, size_t extent_size,
 	unsigned ops_per_thread = ops_count / n_threads;
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_put;
+		ctx[i].worker = worker_thread_put;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
@@ -238,7 +238,7 @@ on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
  */
 static void
 run_bench_get(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy,
+		enum vmemcache_repl_p replacement_policy,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
@@ -263,7 +263,7 @@ run_bench_get(const char *path, size_t max_size, size_t extent_size,
 	vmemcache_callback_on_evict(cache, NULL, NULL);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_get;
+		ctx[i].worker = worker_thread_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
 

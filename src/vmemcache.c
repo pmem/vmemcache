@@ -69,7 +69,7 @@ static inline
 #endif
 VMEMcache *
 vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	LOG(3, "dir %s max_size %zu extent_size %zu replacement_policy %d",
 		dir, max_size, extent_size, replacement_policy);
@@ -165,7 +165,8 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		goto error_destroy_heap;
 	}
 
-	cache->repl = repl_p_init(replacement_policy);
+	cache->repl_p = replacement_policy;
+	cache->repl = repl_p_init(cache->repl_p);
 	if (cache->repl == NULL) {
 		LOG(1, "replacement policy initialization failed");
 		goto error_destroy_index;
@@ -525,17 +526,26 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		}
 	}
 
-	STAT_ADD(&cache->evict_count, 1);
-
 	if (cache->on_evict != NULL)
 		(*cache->on_evict)(cache, key, ksize, cache->arg_evict);
 
 	if (!evicted_from_repl_p) {
 		if (cache->repl->ops->repl_p_evict(cache->repl->head,
-						&entry->value.p_entry)) {
-			/* release the reference from the replacement policy */
+					&entry->value.p_entry) == NULL) {
+			/*
+			 * The given entry is busy
+			 * and cannot be evicted right now.
+			 * Release the reference from vmcache_index_get().
+			 */
 			vmemcache_entry_release(cache, entry);
+
+			/* reset 'evicting' flag */
+			__sync_bool_compare_and_swap(&entry->value.evicting,
+									1, 0);
+			return -1;
 		}
+		/* release the reference from the replacement policy */
+		vmemcache_entry_release(cache, entry);
 	}
 
 	/* release the element */
@@ -545,6 +555,8 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		LOG(1, "removing from the index failed");
 		goto exit_release;
 	}
+
+	STAT_ADD(&cache->evict_count, 1);
 
 	return 0;
 
@@ -670,7 +682,7 @@ vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
  */
 VMEMcache *
 vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	return vmemcache_newU(path, max_size, extent_size,
 				replacement_policy);
@@ -681,7 +693,7 @@ vmemcache_new(const char *path, size_t max_size, size_t extent_size,
  */
 VMEMcache *
 vmemcache_newW(const wchar_t *path, size_t max_size, size_t extent_size,
-		enum vmemcache_replacement_policy replacement_policy)
+		enum vmemcache_repl_p replacement_policy)
 {
 	char *upath = util_toUTF8(path);
 	if (upath == NULL)

@@ -43,6 +43,9 @@
 #include "test_helpers.h"
 #include "os_thread.h"
 
+#define EVICT_BY_LRU 0
+#define EVICT_BY_KEY 1
+
 #define BUF_SIZE 256
 
 /* type of statistics */
@@ -55,12 +58,27 @@ struct buffers {
 
 struct context {
 	unsigned thread_number;
+	unsigned n_threads;
 	VMEMcache *cache;
 	struct buffers *buffs;
 	unsigned nbuffs;
 	unsigned ops_count;
-	void *(*thread_routine)(void *);
+	void *(*worker)(void *);
 };
+
+#ifdef STATS_ENABLED
+/*
+ * get_stat -- (internal) get one statistic
+ */
+static void
+get_stat(VMEMcache *cache, stat_t *stat_val, enum vmemcache_statistic i_stat)
+{
+	int ret = vmemcache_get_stat(cache, i_stat,
+					stat_val, sizeof(*stat_val));
+	if (ret == -1)
+		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
+}
+#endif /* STATS_ENABLED */
 
 /*
  * free_cache -- (internal) free the cache
@@ -71,6 +89,24 @@ free_cache(VMEMcache *cache)
 	/* evict all entries from the cache */
 	while (vmemcache_evict(cache, NULL, 0) == 0)
 		;
+
+#ifdef STATS_ENABLED
+	/* verify that all memory is freed */
+	stat_t entries, heap_entries, dram, pool_ued;
+	get_stat(cache, &entries, VMEMCACHE_STAT_ENTRIES);
+	get_stat(cache, &heap_entries, VMEMCACHE_STAT_HEAP_ENTRIES);
+	get_stat(cache, &dram, VMEMCACHE_STAT_DRAM_SIZE_USED);
+	get_stat(cache, &pool_ued, VMEMCACHE_STAT_POOL_SIZE_USED);
+
+	if (entries != 0)
+		UT_FATAL("%llu entries were not freed", entries);
+	if (dram != 0)
+		UT_FATAL("%llu bytes of DRAM memory were not freed", dram);
+	if (pool_ued != 0)
+		UT_FATAL("%llu bytes of pool memory were not freed", pool_ued);
+	if (heap_entries != 1)
+		UT_FATAL("%llu heap entries were not merged", heap_entries - 1);
+#endif /* STATS_ENABLED */
 }
 
 /*
@@ -80,7 +116,7 @@ static void
 run_threads(unsigned n_threads, os_thread_t *threads, struct context *ctx)
 {
 	for (unsigned i = 0; i < n_threads; ++i)
-		os_thread_create(&threads[i], NULL, ctx[i].thread_routine,
+		os_thread_create(&threads[i], NULL, ctx[i].worker,
 					&ctx[i]);
 
 	for (unsigned i = 0; i < n_threads; ++i)
@@ -168,7 +204,7 @@ run_test_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	free_cache(cache);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_put;
+		ctx[i].worker = worker_thread_put;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
@@ -228,7 +264,7 @@ init_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	}
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_get;
+		ctx[i].worker = worker_thread_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
 }
@@ -260,13 +296,13 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	init_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 
 	if (n_threads < 10) {
-		ctx[n_threads >> 1].thread_routine = worker_thread_put_in_gets;
+		ctx[n_threads >> 1].worker = worker_thread_put_in_gets;
 	} else {
 		/* 20% of threads (in the middle of their array) are puts */
 		unsigned n_puts = (2 * n_threads) / 10; /* 20% of threads */
 		unsigned start = (n_threads / 2) - (n_puts / 2);
 		for (unsigned i = start; i < start + n_puts; i++)
-			ctx[i].thread_routine = worker_thread_put_in_gets;
+			ctx[i].worker = worker_thread_put_in_gets;
 	}
 
 	printf("%s: STARTED\n", __func__);
@@ -295,20 +331,6 @@ on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
 	if (ret && errno != EEXIST)
 		UT_FATAL("ERROR: vmemcache_put: %s", vmemcache_errormsg());
 }
-
-#ifdef STATS_ENABLED
-/*
- * get_stat -- (internal) get one statistic
- */
-static void
-get_stat(VMEMcache *cache, stat_t *stat_val, enum vmemcache_statistic i_stat)
-{
-	int ret = vmemcache_get_stat(cache, i_stat,
-					stat_val, sizeof(*stat_val));
-	if (ret == -1)
-		UT_FATAL("vmemcache_get_stat: %s", vmemcache_errormsg());
-}
-#endif /* STATS_ENABLED */
 
 /*
  * worker_thread_get_unique_keys -- (internal) worker testing vmemcache_get()
@@ -348,7 +370,7 @@ run_test_get_on_miss(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	vmemcache_callback_on_miss(cache, on_miss_cb, ctx);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_get_unique_keys;
+		ctx[i].worker = worker_thread_get_unique_keys;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
@@ -404,10 +426,10 @@ worker_thread_test_evict_get(void *arg)
 }
 
 /*
- * worker_thread_test_evict_evict -- (internal) worker testing vmemcache_get()
+ * worker_thread_test_evict_by_LRU -- (internal) worker evicting by LRU
  */
 static void *
-worker_thread_test_evict_evict(void *arg)
+worker_thread_test_evict_by_LRU(void *arg)
 {
 	struct context *ctx = arg;
 
@@ -425,36 +447,80 @@ worker_thread_test_evict_evict(void *arg)
 }
 
 /*
+ * worker_thread_test_evict_by_key -- (internal) worker evicting by key
+ */
+static void *
+worker_thread_test_evict_by_key(void *arg)
+{
+	struct context *ctx = arg;
+	unsigned n_threads = ctx->n_threads;
+
+	/*
+	 * Try to evict all entries by key first.
+	 * It is very likely that even all of these vmemcache_evict() calls
+	 * will fail, because the conditions are extremely difficult (all cache
+	 * entries are being constantly read (used) by separate threads),
+	 * but this is acceptable, because this test is dedicated
+	 * to test the failure path of vmemcache_evict()
+	 * and the success criteria of this test are checks done in free_cache()
+	 * at the end of the test.
+	 */
+	for (unsigned long long  n = 0; n < n_threads; ++n)
+		vmemcache_evict(ctx->cache, &n, sizeof(n));
+
+	/* try to evict by LRU all entries that were not evicted above */
+	while (vmemcache_evict(ctx->cache, NULL, 0) == 0)
+		;
+
+	__atomic_store_n(&keep_running, 0, __ATOMIC_SEQ_CST);
+
+	return NULL;
+}
+
+/*
  * run_test_evict -- (internal) run test for vmemcache_evict()
+ *
+ * This test is dedicated to test the failure path of vmemcache_evict().
+ * It simulates extremely difficult conditions for an eviction:
+ * all cache entries are being constantly read (used) by separate threads
+ * (only one thread tries to evict entries by key or by LRU),
+ * so it is very likely that most of vmemcache_evict() calls in this test
+ * will fail.
+ * The main success criteria of this test are checks done in free_cache()
+ * at the end of the test.
  */
 static void
 run_test_evict(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
-		unsigned ops_per_thread, struct context *ctx)
+		unsigned ops_per_thread, struct context *ctx, int by_key)
 {
 	free_cache(cache);
 
-	unsigned long long n;
-
-	for (n = 0; n < n_threads; ++n) {
+	for (unsigned long long n = 0; n < n_threads; ++n) {
 		if (vmemcache_put(ctx->cache, &n, sizeof(n), &n, sizeof(n)))
 			UT_FATAL("ERROR: vmemcache_put: %s",
 					vmemcache_errormsg());
 	}
 
 	for (unsigned i = 0; i < n_threads; ++i) {
-		ctx[i].thread_routine = worker_thread_test_evict_get;
+		ctx[i].worker = worker_thread_test_evict_get;
 		ctx[i].ops_count = ops_per_thread;
 	}
 
 	/* overwrite the last routine */
-	ctx[n_threads - 1].thread_routine = worker_thread_test_evict_evict;
+	if (by_key)
+		ctx[n_threads - 1].worker = worker_thread_test_evict_by_key;
+	else
+		ctx[n_threads - 1].worker = worker_thread_test_evict_by_LRU;
 
-	printf("%s: STARTED\n", __func__);
+	printf("%s%s: STARTED\n", __func__, by_key ? "_by_key" : "_by_LRU");
 
 	__atomic_store_n(&keep_running, 1, __ATOMIC_SEQ_CST);
 	run_threads(n_threads, threads, ctx);
 
-	printf("%s: PASSED\n", __func__);
+	/* success of this function is the main success criteria of this test */
+	free_cache(cache);
+
+	printf("%s%s: PASSED\n", __func__, by_key ? "_by_key" : "_by_LRU");
 }
 
 int
@@ -547,6 +613,7 @@ main(int argc, char *argv[])
 		UT_FATAL("out of memory");
 
 	for (unsigned i = 0; i < n_threads; ++i) {
+		ctx[i].n_threads = n_threads;
 		ctx[i].thread_number = i;
 		ctx[i].cache = cache;
 		ctx[i].buffs = buffs;
@@ -561,8 +628,12 @@ main(int argc, char *argv[])
 	run_test_get(cache, n_threads, threads, ops_per_thread, ctx);
 	run_test_get_put(cache, n_threads, threads, ops_per_thread, ctx);
 
-	if (!skip)
-		run_test_evict(cache, n_threads, threads, ops_per_thread, ctx);
+	if (!skip) {
+		run_test_evict(cache, n_threads, threads,
+					ops_per_thread, ctx, EVICT_BY_LRU);
+		run_test_evict(cache, n_threads, threads,
+					ops_per_thread, ctx, EVICT_BY_KEY);
+	}
 
 	ret = 0;
 
