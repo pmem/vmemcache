@@ -46,11 +46,14 @@ else()
 endif()
 
 if (${TRACER} IN_LIST valgrind)
-	set(SKIP "skip") # skip tests that last very long under Valgrind
+	# skip tests that last very long under Valgrind
+	execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} ${N_THREADS} ${N_OPS} ${SEED} "skip")
 else()
-	set(SKIP "")
-endif()
+	execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} ${N_THREADS} ${N_OPS} ${SEED})
 
-execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} ${N_THREADS} ${N_OPS} ${SEED} ${SKIP})
+	# additional tests for number of threads == 1 and 2
+	execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} 1)
+	execute(0 ${TEST_DIR}/vmemcache_test_mt ${TEST_POOL_LOCATION} 2)
+endif()
 
 cleanup()
