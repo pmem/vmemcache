@@ -320,6 +320,11 @@ test_new_delete(const char *dir, const char *file, enum vmemcache_repl_p repl_p)
 	if (!vmemcache_add(cache, file))
 		UT_FATAL(
 			"vmemcache_new did not fail with a file instead of a directory");
+
+#define ERR_MSG_1 "open: Not a directory"
+	if (strcmp(vmemcache_errormsg(), ERR_MSG_1))
+		UT_FATAL("wrong error message: '%s' (should be '"ERR_MSG_1"')",
+			vmemcache_errormsg());
 	vmemcache_delete(cache);
 
 	/* TEST #11 - NULL directory path */
@@ -330,6 +335,11 @@ test_new_delete(const char *dir, const char *file, enum vmemcache_repl_p repl_p)
 	if (!vmemcache_add(cache, NULL))
 		UT_FATAL(
 			"vmemcache_new did not fail with a NULL directory path");
+
+#define ERR_MSG_2 "invalid (NULL) path"
+	if (strcmp(vmemcache_errormsg(), ERR_MSG_2))
+		UT_FATAL("wrong error message: '%s' (should be '"ERR_MSG_2"')",
+			vmemcache_errormsg());
 	vmemcache_delete(cache);
 
 	/* TEST #12 - nonexistent directory path */
