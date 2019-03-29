@@ -258,10 +258,13 @@ vmemcache_addU(VMEMcache *cache, const char *dir)
 
 error_destroy_index:
 	vmcache_index_delete(cache->index, vmemcache_delete_entry_cb);
+	cache->index = NULL;
 error_destroy_heap:
 	vmcache_heap_destroy(cache->heap);
+	cache->heap = NULL;
 error_unmap:
 	util_unmap(cache->addr, cache->size);
+	cache->addr = NULL;
 	return -1;
 }
 
