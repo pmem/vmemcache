@@ -70,12 +70,6 @@ struct vmemcache {
 	unsigned index_only:1;		/* bench: disable repl+alloc */
 	unsigned no_alloc:1;		/* bench: disable allocations */
 	unsigned no_memcpy:1;		/* bench: don't copy actual data */
-
-	/* statistics */
-	stat_t put_count;		/* total number of puts */
-	stat_t get_count;		/* total number of gets */
-	stat_t miss_count;		/* total number of misses */
-	stat_t evict_count;		/* total number of evicts */
 };
 
 struct cache_entry {

@@ -413,8 +413,6 @@ put_index:
 					&entry->value.p_entry);
 	}
 
-	STAT_ADD(&cache->put_count, 1);
-
 	return 0;
 
 error_exit:
@@ -522,15 +520,11 @@ vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 	struct cache_entry *entry;
 	size_t read = 0;
 
-	STAT_ADD(&cache->get_count, 1);
-
-	int ret = vmcache_index_get(cache->index, key, ksize, &entry);
+	int ret = vmcache_index_get(cache->index, key, ksize, &entry, 1);
 	if (ret < 0)
 		return -1;
 
 	if (entry == NULL) { /* cache miss */
-		STAT_ADD(&cache->miss_count, 1);
-
 		if (cache->on_miss) {
 			get_req.key = key;
 			get_req.ksize = ksize;
@@ -601,7 +595,8 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		} while (!__sync_bool_compare_and_swap(&entry->value.evicting,
 							0, 1));
 	} else {
-		int ret = vmcache_index_get(cache->index, key, ksize, &entry);
+		int ret = vmcache_index_get(cache->index, key, ksize, &entry,
+			0);
 		if (ret < 0)
 			return -1;
 
@@ -652,8 +647,6 @@ vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 		LOG(1, "removing from the index failed");
 		goto exit_release;
 	}
-
-	STAT_ADD(&cache->evict_count, 1);
 
 	return 0;
 
@@ -710,27 +703,24 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 
 	switch (stat) {
 	case VMEMCACHE_STAT_PUT:
-		*val = cache->put_count;
+	case VMEMCACHE_STAT_HIT:
+	case VMEMCACHE_STAT_MISS:
+	case VMEMCACHE_STAT_EVICT:
+	case VMEMCACHE_STAT_ENTRIES:
+		*val = vmemcache_index_get_stat(cache->index, stat);
 		break;
 	case VMEMCACHE_STAT_GET:
-		*val = cache->get_count;
-		break;
-	case VMEMCACHE_STAT_HIT:
-		*val = cache->get_count - cache->miss_count;
-		break;
-	case VMEMCACHE_STAT_MISS:
-		*val = cache->miss_count;
-		break;
-	case VMEMCACHE_STAT_EVICT:
-		*val = cache->evict_count;
-		break;
-	case VMEMCACHE_STAT_ENTRIES:
-		*val = vmemcache_entry_count(cache->index);
+		*val = vmemcache_index_get_stat(cache->index,
+			VMEMCACHE_STAT_HIT) +
+			vmemcache_index_get_stat(cache->index,
+			VMEMCACHE_STAT_MISS);
 		break;
 	case VMEMCACHE_STAT_DRAM_SIZE_USED:
-		*val = vmemcache_index_memory_usage(cache->index)
+		*val = vmemcache_index_get_stat(cache->index,
+			VMEMCACHE_STAT_DRAM_SIZE_USED)
 			+ cache->repl->ops->dram_per_entry
-				* (cache->put_count - cache->evict_count);
+			* vmemcache_index_get_stat(cache->index,
+				VMEMCACHE_STAT_ENTRIES);
 		break;
 	case VMEMCACHE_STAT_POOL_SIZE_USED:
 		*val = vmcache_get_heap_used_size(cache->heap);

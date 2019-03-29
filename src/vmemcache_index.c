@@ -44,6 +44,12 @@
 #include "critnib.h"
 #include "sys_util.h"
 
+#ifdef STATS_ENABLED
+#define STAT_ADD(ptr, add) util_fetch_and_add64(ptr, add)
+#else
+#define STAT_ADD(ptr, add) do {} while (0)
+#endif
+
 /* must be a power of 2 */
 #define NSHARDS 256
 
@@ -143,6 +149,7 @@ vmcache_index_insert(struct index *index, struct cache_entry *entry)
 
 #ifdef STATS_ENABLED
 	c->leaf_count++;
+	c->put_count++;
 	c->DRAM_usage += malloc_usable_size(entry);
 #endif
 
@@ -159,7 +166,7 @@ vmcache_index_insert(struct index *index, struct cache_entry *entry)
  */
 int
 vmcache_index_get(struct index *index, const void *key, size_t ksize,
-			struct cache_entry **entry)
+			struct cache_entry **entry, int bump_stat)
 {
 #define SIZE_1K 1024
 	struct critnib *c = shard(index, ksize, key);
@@ -188,10 +195,17 @@ vmcache_index_get(struct index *index, const void *key, size_t ksize,
 		Free(e);
 	if (v == NULL) {
 		util_rwlock_unlock(&c->lock);
+
+		if (bump_stat)
+			STAT_ADD(&c->miss_count, 1);
+
 		LOG(1,
 			"vmcache_index_get: cannot find an element with the given key in the index");
 		return 0;
 	}
+
+	if (bump_stat)
+		STAT_ADD(&c->hit_count, 1);
 
 	vmemcache_entry_acquire(v);
 	*entry = v;
@@ -223,6 +237,7 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 
 #ifdef STATS_ENABLED
 	c->leaf_count--;
+	c->evict_count++;
 	c->DRAM_usage -= malloc_usable_size(entry);
 #endif
 
@@ -234,32 +249,54 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 }
 
 /*
- * vmemcache_index_memory_usage -- query memory for index overhead
+ * vmemcache_index_get_stat -- query an index-held stat
  */
 size_t
-vmemcache_index_memory_usage(struct index *index)
+vmemcache_index_get_stat(struct index *index, enum vmemcache_statistic stat)
 {
-	size_t nodes = 0; /* count (to be multiplied by struct size *) */
-	size_t entries = 0; /* total size */
+	size_t total = 0;
 
-	for (int i = 0; i < NSHARDS; i++) {
-		nodes += index->bucket[i]->node_count;
-		entries += index->bucket[i]->DRAM_usage;
+	switch (stat) {
+	case VMEMCACHE_STAT_DRAM_SIZE_USED:
+	{
+		size_t nodes = 0;
+
+		for (int i = 0; i < NSHARDS; i++) {
+			nodes += index->bucket[i]->node_count;
+			total += index->bucket[i]->DRAM_usage;
+		}
+
+		return total + nodes * sizeof(struct critnib_node);
 	}
 
-	return entries + nodes * sizeof(struct critnib_node);
-}
+	case VMEMCACHE_STAT_PUT:
+		for (int i = 0; i < NSHARDS; i++)
+			total += index->bucket[i]->put_count;
+		break;
 
-/*
- * vmemcache_entry_count -- query the number of stored entries
- */
-size_t
-vmemcache_entry_count(struct index *index)
-{
-	size_t leaves = 0;
+	case VMEMCACHE_STAT_EVICT:
+		for (int i = 0; i < NSHARDS; i++)
+			total += index->bucket[i]->evict_count;
+		break;
 
-	for (int i = 0; i < NSHARDS; i++)
-		leaves += index->bucket[i]->leaf_count;
+	case VMEMCACHE_STAT_HIT:
+		for (int i = 0; i < NSHARDS; i++)
+			total += index->bucket[i]->hit_count;
+		break;
 
-	return leaves;
+	case VMEMCACHE_STAT_MISS:
+		for (int i = 0; i < NSHARDS; i++)
+			total += index->bucket[i]->miss_count;
+		break;
+
+	case VMEMCACHE_STAT_ENTRIES:
+		for (int i = 0; i < NSHARDS; i++)
+			total += index->bucket[i]->leaf_count;
+		break;
+
+	default:
+		FATAL("wrong stat type"); /* not callable from outside */
+	}
+
+	return total;
 }
