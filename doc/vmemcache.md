@@ -46,9 +46,13 @@ header: PMDK
 ```c
 #include <libvmemcache.h>
 
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-	enum vmemcache_repl_p replacement_policy);
+VMEMcache *vmemcache_new();
 void vmemcache_delete(VMEMcache *cache);
+int vmemcache_set_eviction_policy(VMEMcache *cache,
+        enum vmemcache_repl_p repl_p);
+int vmemcache_set_size(VMEMcache *cache, size_t size);
+int vmemcache_set_extent_size(VMEMcache *cache, size_t extent_size);
+int vmemcache_add(VMEMcache *cache, const char *path);
 
 void vmemcache_callback_on_evict(VMEMcache *cache,
 	vmemcache_on_evict *evict, void *arg);
@@ -81,27 +85,38 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
 
 ##### Creation #####
 
-`VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size, enum vmemcache_repl_p replacement_policy);`
+`VMEMcache *vmemcache_new();`
 
-:   The cache will be created in the given *path*, which may be:
+:   Creates an empty unconfigured vmemcache instance.
 
-    + a `/dev/dax` device
-    + a directory on a regular filesystem (which may or may not be mounted with
-      -o dax, either on persistent memory or any other backing)
+`int vmemcache_set_size(VMEMcache *cache, size_t size);`
 
-    Its size is given as *max_size*, although it is rounded **up** towards a
-    whole page size alignment (4KB on x86, 64KB on ppc, 4/16/64KB on arm64).
+:   Sets the size of the cache; it will be rounded **up** towards a whole page
+    size alignment (4KB on x86).
 
-    *extent_size* affects allowed fragmentation of the cache. Reducing it
-    improves cache space utilization, increasing it improves performance.
+`int vmemcache_set_extent_size(VMEMcache *cache, size_t extent_size);`
 
-    *replacement_policy* may be:
+:   Sets block size of the cache -- 256 bytes minimum, strongly recommended
+    to be a multiple of 64 bytes.  If the cache is backed by a non
+    byte-addressable medium, the extent size should be 4096 (or a multiple) or
+    performance will greatly suffer.
+
+`int vmemcache_set_eviction_policy(VMEMcache *cache, enum vmemcache_repl_p repl_p);`
+
+:   Sets what should happen on a put into a full cache.
 
     + **VMEMCACHE_REPLACEMENT_NONE**: manual eviction only - puts into a full
       cache will fail
     + **VMEMCACHE_REPLACEMENT_LRU**: least recently accessed entry will be evicted
       to make space when needed
 
+`int vmemcache_add(VMEMcache *cache, const char *path);`
+
+:   Associate the cache with a backing medium in the given *path*, which may be:
+
+    + a `/dev/dax` device
+    + a directory on a regular filesystem (which may or may not be mounted with
+      -o dax, either on persistent memory or any other backing)
 
 `void vmemcache_delete(VMEMcache *cache);`
 
