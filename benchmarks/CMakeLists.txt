@@ -61,7 +61,7 @@ if (HAVE_GETENTROPY)
 endif()
 
 if(STATS_ENABLED)
-	target_compile_definitions(vmemcache PRIVATE STATS_ENABLED=1)
+	target_compile_definitions(bench_simul PRIVATE STATS_ENABLED=1)
 endif()
 
 target_link_libraries(bench_simul PRIVATE vmemcache)
