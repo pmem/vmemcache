@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -317,6 +317,7 @@ typedef int (*Vsnprintf_func)(char *str, size_t size, const char *format,
 static Print_func Print = out_print_func;
 static Vsnprintf_func Vsnprintf = vsnprintf;
 
+#if 0
 /*
  * out_set_print_func -- allow override of print_func used by out module
  */
@@ -339,6 +340,7 @@ out_set_vsnprintf_func(int (*vsnprintf_func)(char *str, size_t size,
 
 	Vsnprintf = (vsnprintf_func == NULL) ? vsnprintf : vsnprintf_func;
 }
+#endif
 
 /*
  * out_snprintf -- (internal) custom snprintf implementation

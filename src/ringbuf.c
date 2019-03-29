@@ -45,12 +45,14 @@
 #include "os_thread.h"
 #include "sys_util.h"
 
+#if 0
 /*
  * This number defines by how much the relevant semaphore will be increased to
  * unlock waiting threads and thus defines how many threads can wait on the
  * ring buffer at the same time.
  */
 #define RINGBUF_MAX_CONSUMER_THREADS 1024
+#endif
 
 /* avoid false sharing by padding the variable */
 #define CACHELINE_PADDING(type, name)\
@@ -108,6 +110,7 @@ ringbuf_new(unsigned length)
 	return rbuf;
 }
 
+#if 0
 /*
  * ringbuf_length -- returns the length of the ring buffer
  */
@@ -139,6 +142,7 @@ ringbuf_stop(struct ringbuf *rbuf)
 	for (int64_t i = 0; i < RINGBUF_MAX_CONSUMER_THREADS; ++i)
 		util_semaphore_post(&rbuf->nused);
 }
+#endif
 
 /*
  * ringbuf_delete -- destroys an existing ring buffer instance
@@ -177,6 +181,7 @@ ringbuf_enqueue_atomic(struct ringbuf *rbuf, void *data)
 	VALGRIND_ANNOTATE_HAPPENS_BEFORE(&rbuf->data[w]);
 }
 
+#if 0
 /*
  * ringbuf_enqueue -- places a new value into the collection
  *
@@ -195,6 +200,7 @@ ringbuf_enqueue(struct ringbuf *rbuf, void *data)
 
 	return 0;
 }
+#endif
 
 /*
  * ringbuf_tryenqueue -- places a new value into the collection
@@ -241,6 +247,7 @@ ringbuf_dequeue_atomic(struct ringbuf *rbuf)
 	return data;
 }
 
+#if 0
 /*
  * ringbuf_dequeue -- retrieves one value from the collection
  *
@@ -262,6 +269,7 @@ ringbuf_dequeue(struct ringbuf *rbuf)
 
 	return data;
 }
+#endif
 
 /*
  * ringbuf_trydequeue -- retrieves one value from the collection
@@ -305,6 +313,7 @@ ringbuf_trydequeue_s(struct ringbuf *rbuf, size_t data_size)
 	return r;
 }
 
+#if 0
 /*
  * ringbuf_dequeue_s -- valgrind-safe variant of the dequeue function
  *
@@ -322,3 +331,4 @@ ringbuf_dequeue_s(struct ringbuf *rbuf, size_t data_size)
 
 	return r;
 }
+#endif

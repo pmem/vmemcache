@@ -450,8 +450,6 @@ util_readline(FILE *fh)
 	return buffer;
 }
 
-#endif
-
 /*
  * util_print_mem -- print a near-string piece of memory, escaping non-text
  */
@@ -479,6 +477,7 @@ util_print_mem(const char *s, size_t len)
 		}
 	}
 }
+#endif
 
 /*
  * env_yesno10 -- check an env var for 1/0/y/n, fatal if invalid
