@@ -166,6 +166,12 @@ vmemcache_addU(VMEMcache *cache, const char *dir)
 {
 	LOG(3, "cache %p dir %s", cache, dir);
 
+	if (cache->ready) {
+		ERR("the cache is already initialized");
+		errno = EBUSY;
+		return -1;
+	}
+
 	size_t size = cache->size;
 
 	if (size && cache->extent_size > size) {
