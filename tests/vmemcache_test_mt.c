@@ -588,10 +588,10 @@ main(int argc, char *argv[])
 
 	srand(seed);
 
-	VMEMcache *cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
-						VMEMCACHE_MIN_EXTENT,
-						VMEMCACHE_REPLACEMENT_LRU);
-	if (cache == NULL)
+	VMEMcache *cache = vmemcache_new();
+	vmemcache_set_size(cache, VMEMCACHE_MIN_POOL); /* limit the size */
+
+	if (vmemcache_add(cache, dir))
 		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
 
 	struct buffers *buffs = calloc(nbuffs, sizeof(*buffs));

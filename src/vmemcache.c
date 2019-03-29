@@ -62,38 +62,12 @@ static __thread struct {
 } get_req = { 0 };
 
 /*
- * vmemcache_newU -- (internal) create a vmemcache
+ * vmemcache_new -- create a vmemcache
  */
-#ifndef _WIN32
-static inline
-#endif
 VMEMcache *
-vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy)
+vmemcache_new()
 {
-	LOG(3, "dir %s max_size %zu extent_size %zu replacement_policy %d",
-		dir, max_size, extent_size, replacement_policy);
-
-	if (max_size < VMEMCACHE_MIN_POOL) {
-		ERR("size %zu smaller than %zu", max_size, VMEMCACHE_MIN_POOL);
-		errno = EINVAL;
-		return NULL;
-	}
-
-	if (extent_size < VMEMCACHE_MIN_EXTENT) {
-		ERR("extent size %zu smaller than %zu bytes",
-			extent_size, VMEMCACHE_MIN_EXTENT);
-		errno = EINVAL;
-		return NULL;
-	}
-
-	if (extent_size > max_size) {
-		ERR(
-			"extent size %zu larger than maximum file size: %zu bytes",
-			extent_size, max_size);
-		errno = EINVAL;
-		return NULL;
-	}
+	LOG(3, "new");
 
 	VMEMcache *cache = Zalloc(sizeof(VMEMcache));
 	if (cache == NULL) {
@@ -101,45 +75,160 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		return NULL;
 	}
 
+	cache->repl_p = VMEMCACHE_REPLACEMENT_LRU;
+	cache->extent_size = VMEMCACHE_MIN_EXTENT;
+
+	return cache;
+}
+
+/*
+ * vmemcache_set_eviction_policy
+ */
+int
+vmemcache_set_eviction_policy(VMEMcache *cache,
+	enum vmemcache_repl_p repl_p)
+{
+	LOG(3, "eviction policy %d", repl_p);
+
+	if (cache->ready) {
+		ERR("cache already in use");
+		errno =  EALREADY;
+		return -1;
+	}
+
+	cache->repl_p = repl_p;
+	return 0;
+}
+
+/*
+ * vmemcache_set_size
+ */
+int
+vmemcache_set_size(VMEMcache *cache, size_t size)
+{
+	LOG(3, "size %zu", size);
+
+	/* TODO: allow growing this way */
+	if (cache->ready) {
+		ERR("cache already in use");
+		errno =  EALREADY;
+		return -1;
+	}
+
+	if (size < VMEMCACHE_MIN_POOL) {
+		ERR("size %zu smaller than %zu", size, VMEMCACHE_MIN_POOL);
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (size >= (1ULL << 56)) {
+		ERR("implausible large size %zu", size);
+		errno = EINVAL;
+		return -1;
+	}
+
+	cache->size = size;
+	return 0;
+}
+
+/*
+ * vmemcache_set_extent_size
+ */
+int
+vmemcache_set_extent_size(VMEMcache *cache, size_t extent_size)
+{
+	LOG(3, "extent_size %zu", extent_size);
+
+	if (cache->ready) {
+		ERR("cache already in use");
+		errno =  EALREADY;
+		return -1;
+	}
+
+	if (extent_size < VMEMCACHE_MIN_EXTENT) {
+		ERR("extent size %zu smaller than %zu bytes",
+			extent_size, VMEMCACHE_MIN_EXTENT);
+		errno = EINVAL;
+		return -1;
+	}
+
+	cache->extent_size = extent_size;
+	return 0;
+}
+
+/*
+ * vmemcache_addU -- (internal) open the backing file
+ */
+#ifndef _WIN32
+static inline
+#endif
+int
+vmemcache_addU(VMEMcache *cache, const char *dir)
+{
+	LOG(3,
+		"dir %s size %zu extent_size %zu repl_p %d",
+		dir, cache->size, cache->extent_size, cache->repl_p);
+
+	size_t size = cache->size;
+
+	if (size && cache->extent_size > size) {
+		ERR(
+			"extent size %zu larger than cache size: %zu bytes",
+			cache->extent_size, size);
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (size && size < VMEMCACHE_MIN_POOL) {
+		ERR("cache size %zu smaller than %zu", size,
+			VMEMCACHE_MIN_POOL);
+		errno = EINVAL;
+		return -1;
+	}
+
 	enum file_type type = util_file_get_type(dir);
 	if (type == OTHER_ERROR) {
 		LOG(1, "checking file type failed");
-		goto error_free_cache;
+		return -1;
 	}
 
 	if (type == TYPE_DEVDAX) {
 		const char *devdax = dir;
-		ssize_t size = util_file_get_size(devdax);
-		if (size < 0) {
+		ssize_t dax_size = util_file_get_size(devdax);
+		if (dax_size < 0) {
 			LOG(1, "cannot determine file length \"%s\"", devdax);
-			goto error_free_cache;
+			return -1;
 		}
 
-		if (max_size != 0 && max_size > (size_t)size) {
+		if (size != 0 && size > (size_t)dax_size) {
 			ERR(
 				"error: maximum cache size (%zu) is bigger than the size of the DAX device (%zi)",
-				max_size, size);
+				size, dax_size);
 			errno = EINVAL;
-			goto error_free_cache;
+			return -1;
 		}
 
-		if (max_size == 0) {
-			cache->size = (size_t)size;
+		if (size == 0) {
+			cache->size = (size_t)dax_size;
 		} else {
-			cache->size = roundup(max_size, Mmap_align);
-			if (cache->size > (size_t)size)
-				cache->size = (size_t)size;
+			cache->size = roundup(size, Mmap_align);
+			if (cache->size > (size_t)dax_size)
+				cache->size = (size_t)dax_size;
 		}
 
 		cache->addr = util_file_map_whole(devdax);
 		if (cache->addr == NULL) {
 			LOG(1, "mapping of whole DAX device failed");
-			goto error_free_cache;
+			return -1;
 		}
 
 	} else {
 		/* silently enforce multiple of mapping alignment */
-		cache->size = roundup(max_size, Mmap_align);
+		cache->size = roundup(cache->size, Mmap_align);
+
+		/* if not set, start with the default */
+		if (!cache->size)
+			cache->size = VMEMCACHE_MIN_POOL;
 
 		/*
 		 * XXX: file should be mapped on-demand during allocation,
@@ -148,12 +237,12 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		cache->addr = util_map_tmpfile(dir, cache->size, 4 * MEGABYTE);
 		if (cache->addr == NULL) {
 			LOG(1, "mapping of a temporary file failed");
-			goto error_free_cache;
+			return -1;
 		}
 	}
 
 	cache->heap = vmcache_heap_create(cache->addr, cache->size,
-						extent_size);
+						cache->extent_size);
 	if (cache->heap == NULL) {
 		LOG(1, "heap initialization failed");
 		goto error_unmap;
@@ -165,14 +254,15 @@ vmemcache_newU(const char *dir, size_t max_size, size_t extent_size,
 		goto error_destroy_heap;
 	}
 
-	cache->repl_p = replacement_policy;
 	cache->repl = repl_p_init(cache->repl_p);
 	if (cache->repl == NULL) {
 		LOG(1, "replacement policy initialization failed");
 		goto error_destroy_index;
 	}
 
-	return cache;
+	cache->ready = 1;
+
+	return 0;
 
 error_destroy_index:
 	vmcache_index_delete(cache->index, vmemcache_delete_entry_cb);
@@ -180,9 +270,7 @@ error_destroy_heap:
 	vmcache_heap_destroy(cache->heap);
 error_unmap:
 	util_unmap(cache->addr, cache->size);
-error_free_cache:
-	Free(cache);
-	return NULL;
+	return -1;
 }
 
 /*
@@ -201,10 +289,12 @@ vmemcache_delete_entry_cb(struct cache_entry *entry)
 void
 vmemcache_delete(VMEMcache *cache)
 {
-	repl_p_destroy(cache->repl);
-	vmcache_index_delete(cache->index, vmemcache_delete_entry_cb);
-	vmcache_heap_destroy(cache->heap);
-	util_unmap(cache->addr, cache->size);
+	if (cache->ready) {
+		repl_p_destroy(cache->repl);
+		vmcache_index_delete(cache->index, vmemcache_delete_entry_cb);
+		vmcache_heap_destroy(cache->heap);
+		util_unmap(cache->addr, cache->size);
+	}
 	Free(cache);
 }
 
@@ -680,29 +770,25 @@ vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
 
 #ifndef _WIN32
 /*
- * vmemcache_new -- create a vmemcache
+ * vmemcache_add -- add a backing file to vmemcache
  */
-VMEMcache *
-vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy)
+int
+vmemcache_add(VMEMcache *cache, const char *path)
 {
-	return vmemcache_newU(path, max_size, extent_size,
-				replacement_policy);
+	return vmemcache_addU(cache, path);
 }
 #else
 /*
- * vmemcache_newW -- create a vmemcache
+ * vmemcache_addW -- add a backing file to vmemcache, wchar version
  */
-VMEMcache *
-vmemcache_newW(const wchar_t *path, size_t max_size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy)
+int
+vmemcache_addW(VMEMcache *cache, const wchar_t *path)
 {
 	char *upath = util_toUTF8(path);
 	if (upath == NULL)
-		return NULL;
+		return -1;
 
-	VMEMcache *ret = vmemcache_newU(upath, path, max_size, extent_size,
-					replacement_policy);
+	int ret = vmemcache_addU(cache, upath);
 
 	util_free_UTF8(upath);
 	return ret;

@@ -60,12 +60,11 @@ get(const char *key)
 int
 main()
 {
-	cache = vmemcache_new("/tmp", VMEMCACHE_MIN_POOL, VMEMCACHE_MIN_EXTENT,
-				VMEMCACHE_REPLACEMENT_LRU);
-	if (cache == NULL) {
-		fprintf(stderr, "error: vmemcache_new: %s\n",
+	cache = vmemcache_new();
+	if (vmemcache_add(cache, "/tmp")) {
+		fprintf(stderr, "error: vmemcache_add: %s\n",
 				vmemcache_errormsg());
-		return -1;
+		return 1;
 	}
 
 	/* Query a non-existent key. */

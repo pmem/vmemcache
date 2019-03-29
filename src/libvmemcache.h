@@ -115,16 +115,19 @@ typedef void vmemcache_on_evict(VMEMcache *cache,
 typedef void vmemcache_on_miss(VMEMcache *cache,
 	const void *key, size_t key_size, void *arg);
 
+VMEMcache *
+vmemcache_new(void);
+
+int vmemcache_set_eviction_policy(VMEMcache *cache,
+	enum vmemcache_repl_p repl_p);
+int vmemcache_set_size(VMEMcache *cache, size_t size);
+int vmemcache_set_extent_size(VMEMcache *cache, size_t extent_size);
+
 #ifndef _WIN32
-VMEMcache *vmemcache_new(const char *path, size_t max_size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy);
+int vmemcache_add(VMEMcache *cache, const char *path);
 #else
-VMEMcache *vmemcache_newU(const char *path, size_t max_size,
-		size_t extent_size,
-		enum vmemcache_repl_p replacement_policy);
-VMEMcache *vmemcache_newW(const wchar_t *path, size_t max_size,
-		size_t extent_size,
-		enum vmemcache_repl_p replacement_policy);
+int vmemcache_addU(VMEMcache *cache, const char *path);
+int vmemcache_addW(VMEMcache *cache, const wchar_t *path);
 #endif
 
 void vmemcache_delete(VMEMcache *cache);
