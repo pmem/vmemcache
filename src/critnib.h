@@ -59,6 +59,11 @@ struct critnib {
 	size_t leaf_count; /* entries */
 	size_t node_count; /* internal nodes only */
 	size_t DRAM_usage; /* ... of leaves (nodes are constant-sized) */
+	/* operation counts */
+	size_t put_count;
+	size_t evict_count;
+	size_t hit_count;
+	size_t miss_count;
 };
 
 struct cache_entry;
