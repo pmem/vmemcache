@@ -4,16 +4,29 @@ libvmemcache: buffer based LRU cache
 [![Build Status](https://travis-ci.org/pmem/vmemcache.svg?branch=master)](https://travis-ci.org/pmem/vmemcache)
 [![Coverage Status](https://codecov.io/github/pmem/vmemcache/coverage.svg?branch=master)](https://codecov.io/gh/pmem/vmemcache/branch/master)
 
-### WARNING ###
+**libvmemcache** is an embeddable and lightweight in-memory caching solution.
+It's designed to fully take advantage of large capacity memory, such as
+Persistent Memory with DAX, through memory mapping in an efficient
+and scalable way.
 
-This library is in a '**Work-In-Progress**' state,
-**API is not stable** and it **may change at any time**.
+The things that make it unique are:
+- Extent-based memory allocator which sidesteps the fragmentation
+problem that affects most in-memory databases and allows the cache
+to achieve very high space utilization for most workloads.
+- Buffered LRU, which combines a traditional LRU doubly-linked
+list with a non-blocking ring buffer to deliver high degree
+of scalability on modern multi-core CPUs.
+- Unique indexing structure, critnib, which delivers
+high-performance while being very space efficient.
+
+The cache is tuned to work optimally with relatively large value sizes. The
+smallest possible size is 256 bytes, but libvmemcache works best if the expected
+value sizes are above 1 kilobyte.
 
 # Building The Source #
 
 Requirements:
 - cmake >= 3.3
-- git
 
 Optional:
 - valgrind (for tests)

@@ -70,7 +70,7 @@ extern "C" {
  * version of the libvmemcache API as provided by this header file.
  */
 #define VMEMCACHE_MAJOR_VERSION 0
-#define VMEMCACHE_MINOR_VERSION 1
+#define VMEMCACHE_MINOR_VERSION 8
 
 #define VMEMCACHE_MIN_POOL ((size_t)(1024 * 1024)) /* minimum pool size: 1MB */
 #define VMEMCACHE_MIN_EXTENT ((size_t)256) /* minimum size of extent: 256B */

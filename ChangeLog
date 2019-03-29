@@ -1,0 +1,23 @@
+Fri Mar 29 2019 Piotr Balcer <piotr.balcer@intel.com>
+
+	* Version 0.8
+	This is the first official release of libvmemcache. It's an embeddable
+	and lightweight in-memory caching solution designed to fully take
+	advantage of large capacity memory, such as Persistent Memory with DAX,
+	through memory mapping in an efficient and scalable way.
+
+	Among other things, it includes:
+	- Extent-based memory allocator which sidesteps the fragmentation
+	problem that affects most in-memory databases and allows the cache
+	to achieve very high space utilization for most workloads.
+	- Buffered LRU, which combines a traditional LRU doubly-linked
+	list with a non-blocking ring buffer to deliver high degree
+	of scalability on modern multi-core CPUs.
+	- Unique indexing structure, critnib, which delivers
+	high-performance while being very space efficient.
+
+	The reason this release has version 0.8 is because we are still looking
+	for actual real world feedback before we stabilize the APIs and commit
+	to maintaining backward compatibility. It does not mean that the library
+	is unfinished or unstable. On the contrary, the cache is fully
+	functional and we are confident in its quality.
