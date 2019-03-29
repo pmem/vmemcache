@@ -53,7 +53,7 @@ int vmcache_index_insert(struct index *index,
 int vmcache_index_get(struct index *index, const void *key, size_t ksize,
 			struct cache_entry **entry);
 int vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry);
-size_t vmemcache_index_internal_memory_usage(struct index *index);
+size_t vmemcache_index_memory_usage(struct index *index);
 
 #ifdef __cplusplus
 }

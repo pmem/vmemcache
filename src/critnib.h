@@ -56,7 +56,9 @@ struct critnib_node {
 struct critnib {
 	struct critnib_node *root;
 	os_rwlock_t lock;
+	size_t leaf_count; /* entries */
 	size_t node_count; /* internal nodes only */
+	size_t DRAM_usage; /* ... of leaves (nodes are constant-sized) */
 };
 
 struct cache_entry;

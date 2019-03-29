@@ -74,7 +74,6 @@ struct vmemcache {
 	stat_t get_count;		/* total number of gets */
 	stat_t miss_count;		/* total number of misses */
 	stat_t evict_count;		/* total number of evicts */
-	stat_t size_DRAM;		/* current size of DRAM used for keys */
 };
 
 struct cache_entry {

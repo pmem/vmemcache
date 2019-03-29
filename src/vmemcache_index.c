@@ -37,6 +37,7 @@
 #include <alloca.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <malloc.h>
 
 #include "vmemcache.h"
 #include "vmemcache_index.h"
@@ -140,6 +141,11 @@ vmcache_index_insert(struct index *index, struct cache_entry *entry)
 		return -1;
 	}
 
+#ifdef STATS_ENABLED
+	c->leaf_count++;
+	c->DRAM_usage += malloc_usable_size(entry);
+#endif
+
 	/* this is the first and the only one reference now (in the index) */
 	entry->value.refcount = 1;
 
@@ -215,6 +221,11 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 		return -1;
 	}
 
+#ifdef STATS_ENABLED
+	c->leaf_count--;
+	c->DRAM_usage -= malloc_usable_size(entry);
+#endif
+
 	vmemcache_entry_release(cache, entry);
 
 	util_rwlock_unlock(&c->lock);
@@ -223,15 +234,18 @@ vmcache_index_remove(VMEMcache *cache, struct cache_entry *entry)
 }
 
 /*
- * vmemcache_index_internal_memory_usage -- query memory for index overhead
+ * vmemcache_index_memory_usage -- query memory for index overhead
  */
 size_t
-vmemcache_index_internal_memory_usage(struct index *index)
+vmemcache_index_memory_usage(struct index *index)
 {
-	size_t total = 0;
+	size_t nodes = 0; /* count (to be multiplied by struct size *) */
+	size_t entries = 0; /* total size */
 
-	for (int i = 0; i < NSHARDS; i++)
-		total += index->bucket[i]->node_count;
+	for (int i = 0; i < NSHARDS; i++) {
+		nodes += index->bucket[i]->node_count;
+		entries += index->bucket[i]->DRAM_usage;
+	}
 
-	return total * sizeof(struct critnib_node);
+	return entries + nodes * sizeof(struct critnib_node);
 }
