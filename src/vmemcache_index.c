@@ -249,3 +249,17 @@ vmemcache_index_memory_usage(struct index *index)
 
 	return entries + nodes * sizeof(struct critnib_node);
 }
+
+/*
+ * vmemcache_entry_count -- query the number of stored entries
+ */
+size_t
+vmemcache_entry_count(struct index *index)
+{
+	size_t leaves = 0;
+
+	for (int i = 0; i < NSHARDS; i++)
+		leaves += index->bucket[i]->leaf_count;
+
+	return leaves;
+}
