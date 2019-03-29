@@ -205,7 +205,10 @@ test_heap_usage(const char *dir, heap_usage *usage)
 
 	size_t key = 0;
 	size_t vsize = 32;
+
 	char *value = malloc(vsize);
+	if (value == NULL)
+		UT_FATAL("out of memory");
 	memset(value, 'a', vsize - 1);
 	value[vsize - 1] = '\0';
 
