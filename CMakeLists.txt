@@ -209,6 +209,10 @@ endif(DEVELOPER_MODE)
 option(TRACE_TESTS
  	"more verbose test outputs" OFF)
 
+configure_file(libvmemcache.pc.in libvmemcache.pc)
+install(FILES ${CMAKE_BINARY_DIR}/libvmemcache.pc
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 enable_testing()
 add_subdirectory(src)
 add_subdirectory(tests)
