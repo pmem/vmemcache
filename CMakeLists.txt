@@ -33,7 +33,7 @@ cmake_minimum_required(VERSION 3.3)
 project(vmemcache C)
 
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
+set(VERSION_MINOR 8)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
