@@ -36,7 +36,6 @@
 
 #include <sys/mman.h>
 #include <errno.h>
-#include <malloc.h>
 
 #include "out.h"
 #include "file.h"
@@ -414,7 +413,6 @@ put_index:
 					&entry->value.p_entry);
 	}
 
-	STAT_ADD(&cache->size_DRAM, malloc_usable_size(entry));
 	STAT_ADD(&cache->put_count, 1);
 
 	return 0;
@@ -505,8 +503,6 @@ vmemcache_entry_release(VMEMcache *cache, struct cache_entry *entry)
 	VALGRIND_ANNOTATE_HAPPENS_BEFORE_FORGET_ALL(&entry->value.refcount);
 
 	vmcache_free(cache->heap, entry->value.extents);
-
-	STAT_SUB(&cache->size_DRAM, malloc_usable_size(entry));
 
 	Free(entry);
 }
@@ -729,11 +725,10 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 		*val = cache->evict_count;
 		break;
 	case VMEMCACHE_STAT_ENTRIES:
-		*val = cache->put_count - cache->evict_count;
+		*val = vmemcache_entry_count(cache->index);
 		break;
 	case VMEMCACHE_STAT_DRAM_SIZE_USED:
-		*val = cache->size_DRAM
-			+ vmemcache_index_internal_memory_usage(cache->index)
+		*val = vmemcache_index_memory_usage(cache->index)
 			+ cache->repl->ops->dram_per_entry
 				* (cache->put_count - cache->evict_count);
 		break;
