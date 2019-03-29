@@ -157,7 +157,8 @@ worker_thread_get(void *arg)
 	size_t vbufsize = BUF_SIZE;	/* size of vbuf */
 	size_t vsize = 0;		/* real size of the object */
 
-	for (i = 0; i < ctx->ops_count; i++) {
+	/* starting from 1, because the entry #0 has been evicted */
+	for (i = 1; i < ctx->ops_count; i++) {
 		if (vmemcache_get(ctx->cache, &i, sizeof(i),
 					vbuf, vbufsize, 0, &vsize) == -1)
 			UT_FATAL("ERROR: vmemcache_get: %s",
@@ -285,6 +286,9 @@ run_test_get(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 	printf("%s: PASSED\n", __func__);
 }
 
+static void
+on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg);
+
 /*
  * run_test_get_put -- (internal) run test for vmemcache_get()
  *                      and vmemcache_put()
@@ -305,6 +309,8 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 			ctx[i].worker = worker_thread_put_in_gets;
 	}
 
+	vmemcache_callback_on_miss(cache, on_miss_cb, ctx);
+
 	printf("%s: STARTED\n", __func__);
 
 	run_threads(n_threads, threads, ctx);
@@ -314,6 +320,7 @@ run_test_get_put(VMEMcache *cache, unsigned n_threads, os_thread_t *threads,
 
 /*
  * on_miss_cb -- (internal) 'on miss' callback for run_test_get_on_miss
+ *                          and run_test_get_put
  */
 static void
 on_miss_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
