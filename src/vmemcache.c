@@ -36,7 +36,6 @@
 
 #include <sys/mman.h>
 #include <errno.h>
-#include <malloc.h>
 
 #include "out.h"
 #include "file.h"
@@ -635,7 +634,7 @@ vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 		*val = cache->evict_count;
 		break;
 	case VMEMCACHE_STAT_ENTRIES:
-		*val = cache->put_count - cache->evict_count;
+		*val = vmemcache_entry_count(cache->index);
 		break;
 	case VMEMCACHE_STAT_DRAM_SIZE_USED:
 		*val = vmemcache_index_memory_usage(cache->index)
