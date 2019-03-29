@@ -37,6 +37,8 @@
 #include "vmemcache_heap.h"
 #include "sys_util.h"
 
+#define GUARD_SIZE ((uintptr_t)0x40) /* 64 bytes */
+
 #define IS_ALLOCATED 1
 #define IS_FREE 0
 
@@ -51,8 +53,6 @@
 
 struct heap {
 	os_mutex_t lock;
-	void *addr;
-	size_t size;
 	size_t extent_size;
 	ptr_ext_t *first_extent;
 
@@ -261,12 +261,56 @@ vmcache_pop_heap_entry(struct heap *heap, struct heap_entry *he)
 }
 
 /*
+ * vmcache_heap_add_mapping -- add new memory mapping to vmemcache heap
+ */
+static void
+vmcache_heap_add_mapping(struct heap *heap, void *addr, size_t size)
+{
+	LOG(3, "heap %p addr %p size %zu", heap, addr, size);
+
+	void *new_addr;
+	size_t new_size;
+
+	/* reserve 64 bytes for a guard header */
+	new_addr = (void *)ALIGN_UP((uintptr_t)addr + GUARD_SIZE, GUARD_SIZE);
+	if (new_addr > addr)
+		size -= ((uintptr_t)new_addr - (uintptr_t)addr);
+
+	/* reserve 64 bytes for a guard footer */
+	new_size = ALIGN_DOWN(size - GUARD_SIZE, GUARD_SIZE);
+
+	util_mutex_lock(&heap->lock);
+
+	/* add new memory chunk to the heap */
+	struct heap_entry new_mem = {new_addr, new_size};
+	vmcache_insert_heap_entry(heap, &new_mem, &heap->first_extent, IS_FREE);
+
+	/* read the added extent */
+	struct extent ext;
+	ext.ptr = heap->first_extent;
+	ext.size = vmcache_extent_get_size(ext.ptr);
+
+	/* mark the guard header as allocated */
+	struct footer *prev_footer = vmcache_get_prev_footer(&ext);
+	uint64_t *size_flags = &prev_footer->size_flags;
+	*size_flags |= FLAG_ALLOCATED;
+
+	/* mark the guard footer as allocated */
+	ptr_ext_t *next_ptr = vmcache_get_next_ptr_ext(&ext);
+	struct header *header_next = vmcache_extent_get_header(next_ptr);
+	size_flags = &header_next->size_flags;
+	*size_flags |= FLAG_ALLOCATED;
+
+	util_mutex_unlock(&heap->lock);
+}
+
+/*
  * vmcache_heap_create -- create vmemcache heap
  */
 struct heap *
 vmcache_heap_create(void *addr, size_t size, size_t extent_size)
 {
-	LOG(3, "addr %p size %zu", addr, size);
+	LOG(3, "addr %p size %zu extent_size %zu", addr, size, extent_size);
 
 	struct heap *heap;
 
@@ -278,13 +322,9 @@ vmcache_heap_create(void *addr, size_t size, size_t extent_size)
 
 	util_mutex_init(&heap->lock);
 
-	heap->addr = addr;
-	heap->size = size;
 	heap->extent_size = extent_size;
 
-	struct heap_entry whole_heap = {addr, size};
-	vmcache_insert_heap_entry(heap,
-				&whole_heap, &heap->first_extent, IS_FREE);
+	vmcache_heap_add_mapping(heap, addr, size);
 
 	return heap;
 }
@@ -468,27 +508,21 @@ vmcache_heap_merge(struct heap *heap, struct extent *ext,
 
 	/* merge with the previous one (lower address) */
 	struct footer *prev_footer = vmcache_get_prev_footer(ext);
-	if ((uintptr_t)prev_footer >= (uintptr_t)heap->addr) {
-		prev.size = prev_footer->size_flags;
-		if ((prev.size & FLAG_ALLOCATED) == 0) {
-			prev.ptr = vmcache_get_prev_ptr_ext(prev_footer,
-								prev.size);
-			he->ptr = vmcache_extent_get_header(prev.ptr);
-			he->size += prev.size + HFER_SIZE;
-			vmcache_heap_remove(heap, &prev);
-		}
+	prev.size = prev_footer->size_flags;
+	if ((prev.size & FLAG_ALLOCATED) == 0) {
+		prev.ptr = vmcache_get_prev_ptr_ext(prev_footer, prev.size);
+		he->ptr = vmcache_extent_get_header(prev.ptr);
+		he->size += prev.size + HFER_SIZE;
+		vmcache_heap_remove(heap, &prev);
 	}
 
 	/* merge with the next one (higher address) */
 	next.ptr = vmcache_get_next_ptr_ext(ext);
-	if ((uintptr_t)next.ptr < (uintptr_t)heap->addr + heap->size) {
-		struct header *header_next =
-				vmcache_extent_get_header(next.ptr);
-		next.size = header_next->size_flags;
-		if ((next.size & FLAG_ALLOCATED) == 0) {
-			he->size += next.size + HFER_SIZE;
-			vmcache_heap_remove(heap, &next);
-		}
+	struct header *header_next = vmcache_extent_get_header(next.ptr);
+	next.size = header_next->size_flags;
+	if ((next.size & FLAG_ALLOCATED) == 0) {
+		he->size += next.size + HFER_SIZE;
+		vmcache_heap_remove(heap, &next);
 	}
 }
 
