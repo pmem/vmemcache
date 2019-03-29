@@ -201,6 +201,8 @@ vmemcache_delete_entry_cb(struct cache_entry *entry)
 void
 vmemcache_delete(VMEMcache *cache)
 {
+	LOG(3, "cache %p", cache);
+
 	repl_p_destroy(cache->repl);
 	vmcache_index_delete(cache->index, vmemcache_delete_entry_cb);
 	vmcache_heap_destroy(cache->heap);
@@ -259,6 +261,9 @@ int
 vmemcache_put(VMEMcache *cache, const void *key, size_t ksize,
 				const void *value, size_t value_size)
 {
+	LOG(3, "cache %p key %p ksize %zu value %p value_size %zu",
+		cache, key, ksize, value, value_size);
+
 	if (get_req.key)
 		vmemcache_put_satisfy_get(key, ksize, value, value_size);
 
@@ -423,6 +428,10 @@ ssize_t
 vmemcache_get(VMEMcache *cache, const void *key, size_t ksize, void *vbuf,
 		size_t vbufsize, size_t offset, size_t *vsize)
 {
+	LOG(3,
+		"cache %p key %p ksize %zu vbuf %p vbufsize %zu offset %zu vsize %p",
+		cache, key, ksize, vbuf, vbufsize, offset, vsize);
+
 	struct cache_entry *entry;
 	size_t read = 0;
 
@@ -483,6 +492,8 @@ get_index:
 int
 vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize)
 {
+	LOG(3, "cache %p key %p ksize %zu", cache, key, ksize);
+
 	struct cache_entry *entry = NULL;
 	int evicted_from_repl_p = 0;
 
@@ -572,6 +583,8 @@ void
 vmemcache_callback_on_evict(VMEMcache *cache, vmemcache_on_evict *evict,
 				void *arg)
 {
+	LOG(3, "cache %p evict %p arg %p", cache, evict, arg);
+
 	cache->on_evict = evict;
 	cache->arg_evict = arg;
 }
@@ -583,6 +596,8 @@ void
 vmemcache_callback_on_miss(VMEMcache *cache, vmemcache_on_miss *miss,
 				void *arg)
 {
+	LOG(3, "cache %p evict %p arg %p", cache, miss, arg);
+
 	cache->on_miss = miss;
 	cache->arg_miss = arg;
 }
@@ -594,6 +609,9 @@ int
 vmemcache_get_stat(VMEMcache *cache, enum vmemcache_statistic stat,
 			void *value, size_t value_size)
 {
+	LOG(3, "cache %p stat %d value %p value_size %zu",
+		cache, stat, value, value_size);
+
 	if (value_size != sizeof(stat_t)) {
 		ERR("wrong size of the value: %zu (should be: %zu)",
 			value_size, sizeof(stat_t));
@@ -660,9 +678,10 @@ prefault(VMEMcache *cache)
  * vmemcache_bench_set -- alter a benchmark parameter
  */
 void
-vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg,
-				size_t val)
+vmemcache_bench_set(VMEMcache *cache, enum vmemcache_bench_cfg cfg, size_t val)
 {
+	LOG(3, "cache %p cfg %d val %zu", cache, cfg, val);
+
 	switch (cfg) {
 	case VMEMCACHE_BENCH_INDEX_ONLY:
 		cache->index_only = !!val;
