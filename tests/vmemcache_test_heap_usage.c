@@ -196,10 +196,14 @@ test_heap_usage(const char *dir, heap_usage *usage)
 	int ret = 0;
 
 	VMEMcache *cache;
-	TRACE_HEAP(cache = vmemcache_new(dir, VMEMCACHE_MIN_POOL,
-		VMEMCACHE_MIN_EXTENT, VMEMCACHE_REPLACEMENT_LRU));
+	TRACE_HEAP(cache = vmemcache_new());
 	if (cache == NULL)
 		UT_FATAL("vmemcache_new: %s", vmemcache_errormsg());
+	vmemcache_set_size(cache, VMEMCACHE_MIN_POOL);
+	vmemcache_set_extent_size(cache, VMEMCACHE_MIN_EXTENT);
+	TRACE_HEAP(ret = vmemcache_add(cache, dir));
+	if (ret)
+		UT_FATAL("vmemcache_add: %s", vmemcache_errormsg());
 
 	TRACE_HEAP(vmemcache_callback_on_evict(cache, on_evict_cb, usage));
 
