@@ -47,7 +47,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define ALLOWED_RATIO 0.95
+#define ALLOWED_RATIO 0.87
 #define MAX_KEYSIZE 30
 
 typedef struct {
