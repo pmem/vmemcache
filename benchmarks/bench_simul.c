@@ -603,10 +603,13 @@ static void run_bench()
 	os_mutex_init(&ready.mutex);
 	ready.wanted = n_threads;
 
-	cache = vmemcache_new(dir, cache_size, cache_extent_size,
+	cache = vmemcache_new();
+	vmemcache_set_size(cache, cache_size);
+	vmemcache_set_extent_size(cache, cache_extent_size);
+	vmemcache_set_eviction_policy(cache,
 		(enum vmemcache_repl_p)repl_policy);
-	if (!cache)
-		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), dir);
+	if (vmemcache_add(cache, dir))
+		UT_FATAL("vmemcache_add: %s (%s)", vmemcache_errormsg(), dir);
 
 	if (latency_samples) {
 		latencies = malloc((ops_count * n_threads + 1) *

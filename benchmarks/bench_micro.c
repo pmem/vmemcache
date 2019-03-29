@@ -72,13 +72,14 @@ struct context {
  */
 static VMEMcache *
 bench_init(const char *path, size_t size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy,
+		enum vmemcache_repl_p repl_p,
 		unsigned n_threads, struct context *ctx)
 {
-	VMEMcache *cache = vmemcache_new(path, size, extent_size,
-						replacement_policy);
-	if (cache == NULL)
-		UT_FATAL("vmemcache_new: %s (%s)", vmemcache_errormsg(), path);
+	VMEMcache *cache = vmemcache_new();
+	vmemcache_set_size(cache, size);
+	vmemcache_set_eviction_policy(cache, repl_p);
+	if (vmemcache_add(cache, path))
+		UT_FATAL("vmemcache_add: %s (%s)", vmemcache_errormsg(), path);
 
 	for (unsigned i = 0; i < n_threads; ++i) {
 		ctx[i].cache = cache;
@@ -197,12 +198,12 @@ print_bench_results(const char *op_name, unsigned n_threads,
  */
 static void
 run_bench_put(const char *path, size_t size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy,
+		enum vmemcache_repl_p repl_p,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
 	VMEMcache *cache = bench_init(path, size, extent_size,
-					replacement_policy, n_threads, ctx);
+					repl_p, n_threads, ctx);
 
 	unsigned ops_per_thread = ops_count / n_threads;
 
@@ -238,12 +239,12 @@ on_evict_cb(VMEMcache *cache, const void *key, size_t key_size, void *arg)
  */
 static void
 run_bench_get(const char *path, size_t size, size_t extent_size,
-		enum vmemcache_repl_p replacement_policy,
+		enum vmemcache_repl_p repl_p,
 		unsigned n_threads, os_thread_t *threads,
 		unsigned ops_count, struct context *ctx)
 {
 	VMEMcache *cache = bench_init(path, size, extent_size,
-					replacement_policy, n_threads, ctx);
+					repl_p, n_threads, ctx);
 
 	int cache_is_full = 0;
 	vmemcache_callback_on_evict(cache, on_evict_cb, &cache_is_full);

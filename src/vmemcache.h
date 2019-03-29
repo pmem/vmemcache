@@ -57,6 +57,7 @@ struct repl_p;
 struct vmemcache {
 	void *addr;			/* mapping address */
 	size_t size;			/* mapping size */
+	size_t extent_size;		/* heap granularity */
 	struct heap *heap;		/* heap address */
 	struct index *index;		/* indexing structure */
 	enum vmemcache_repl_p repl_p;	/* replacement policy */
@@ -65,6 +66,7 @@ struct vmemcache {
 	void *arg_evict;		/* argument for callback on evict */
 	vmemcache_on_miss *on_miss;	/* callback on miss */
 	void *arg_miss;			/* argument for callback on miss */
+	unsigned inited:1;		/* is the cache ready for use? */
 	unsigned index_only:1;		/* bench: disable repl+alloc */
 	unsigned no_alloc:1;		/* bench: disable allocations */
 	unsigned no_memcpy:1;		/* bench: don't copy actual data */

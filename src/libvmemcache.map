@@ -36,6 +36,10 @@ LIBVMEMCACHE_1.0 {
 	global:
 		vmemcache_new;
 		vmemcache_delete;
+		vmemcache_set_eviction_policy;
+		vmemcache_set_size;
+		vmemcache_set_extent_size;
+		vmemcache_add;
 		vmemcache_put;
 		vmemcache_get;
 		vmemcache_evict;
