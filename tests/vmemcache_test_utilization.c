@@ -60,6 +60,7 @@ typedef struct {
 	size_t val_max;
 	char dir[PATH_MAX];
 	long seconds;
+	unsigned seed;
 } test_params;
 
 static const char *usage_str = "usage: %s "
@@ -70,8 +71,8 @@ static const char *usage_str = "usage: %s "
 	"[-t <timeout_seconds>] "
 	"[-m <timeout_minutes>] "
 	"[-o <timeout_hours>] "
+	"[-s <seed_for_rand>] "
 	"[-h]\n";
-
 
 /*
  * on_evict - (internal) on evict callback function
@@ -136,10 +137,11 @@ parse_args(int argc, char **argv)
 		.val_max = 0,
 		.dir = "",
 		.seconds = 0,
+		.seed = 0,
 	};
 	size_t val_max_factor = 70;
 
-	const char *optstr = "hp:e:v:t:m:o:d:";
+	const char *optstr = "hp:e:v:t:m:o:d:s:";
 	int opt;
 	long seconds = 0;
 	long minutes = 0;
@@ -170,6 +172,9 @@ parse_args(int argc, char **argv)
 		case 'o':
 			hours = parse_unsigned("hours", argv[0]);
 			break;
+		case 's':
+			p.seed = parse_unsigned("seed for rand()", argv[0]);
+			break;
 		case 'd':
 			if (*optarg == 0)
 				argerror("invalid dir argument\n", argv[0]);
@@ -189,6 +194,11 @@ parse_args(int argc, char **argv)
 		argerror("timeout must be greater than 0\n", argv[0]);
 
 	p.val_max = val_max_factor * p.extent_size;
+
+	if (p.seed == 0)
+		p.seed = (unsigned)time(NULL);
+	srand(p.seed);
+	printf("seed = %u\n", p.seed);
 
 	return p;
 }
@@ -212,9 +222,6 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 	float prev_ratio;
 	float ratio = 0.0f;
 	bool print_ratio = false;
-
-	long seed = time(NULL);
-	srand((unsigned)seed);
 
 	char *val = malloc(p->val_max);
 	if (val == NULL) {
@@ -279,8 +286,8 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 
 		if (info.evicted && ratio < ALLOWED_RATIO) {
 			fprintf(stderr,
-				"insufficient space utilization. ratio: %.3f: seed %ld\n",
-				ratio, seed);
+				"insufficient space utilization. ratio: %.3f: seed %u\n",
+				ratio, p->seed);
 			goto exit_free;
 		}
 
