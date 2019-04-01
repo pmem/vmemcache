@@ -34,9 +34,6 @@
  * libvmemcache.h -- definitions of libvmemcache entry points
  *
  * This library provides near-zero waste volatile caching.
- *
- * WARNING: this library is in a 'Work-In-Progress' state,
- *          API is not stable and it may change at any time.
  */
 
 #ifndef LIBVMEMCACHE_H
