@@ -106,7 +106,7 @@ endfunction()
 
 function(execute expectation name)
 
-	set(ENV{VMEMCACHE_FILE} "out.log")
+	set(ENV{VMEMCACHE_FILE} "${BIN_DIR}/out.log")
 	set(ENV{VMEMCACHE_LEVEL} "3")
 
 	if (${TRACER} STREQUAL "none")
