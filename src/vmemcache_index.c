@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <malloc.h>
+#include <endian.h>
 
 #include "vmemcache.h"
 #include "vmemcache_index.h"
@@ -59,15 +60,39 @@ struct index {
 };
 
 /*
+ * mix -- (internal) helper for the fast-hash mixing step
+ */
+static inline uint64_t
+mix(uint64_t h)
+{
+	h ^= h >> 23;
+	h *= 0x2127599bf4325c37ULL;
+	return h ^ h >> 47;
+}
+
+/*
  * shard_id -- (internal) hash the key and pick a shard bucket id
  */
 static int
 shard_id(size_t key_size, const char *key)
 {
-	/* Fowler–Noll–Vo hash */
-	uint64_t h = 0xcbf29ce484222325;
-	for (size_t i = 0; i < key_size; i++)
-		h = (h ^ (unsigned char)*key++) * 0x100000001b3;
+	/* fash-hash, 2012 Zilong Tan */
+	const uint64_t    m = 0x880355f21e6d1965ULL;
+	const uint64_t *pos = (const uint64_t *)key;
+	const uint64_t *end = pos + (key_size / 8);
+	uint64_t h = key_size * m;
+
+	while (pos != end)
+		h = (h ^ mix(*pos++)) * m;
+
+	if (key_size & 7) {
+		uint64_t shift = (key_size & 7) * 8;
+		uint64_t mask = (1ULL << shift) - 1;
+		uint64_t v = htole64(*pos) & mask;
+		h = (h ^ mix(v)) * m;
+	}
+
+	h = mix(h);
 
 	return h & (NSHARDS - 1);
 }
