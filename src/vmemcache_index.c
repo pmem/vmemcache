@@ -42,6 +42,7 @@
 #include "vmemcache.h"
 #include "vmemcache_index.h"
 #include "critnib.h"
+#include "fast-hash.h"
 #include "sys_util.h"
 
 #ifdef STATS_ENABLED
@@ -64,12 +65,7 @@ struct index {
 static int
 shard_id(size_t key_size, const char *key)
 {
-	/* Fowler–Noll–Vo hash */
-	uint64_t h = 0xcbf29ce484222325;
-	for (size_t i = 0; i < key_size; i++)
-		h = (h ^ (unsigned char)*key++) * 0x100000001b3;
-
-	return h & (NSHARDS - 1);
+	return (int)hash(key_size, key) & (NSHARDS - 1);
 }
 
 /*
