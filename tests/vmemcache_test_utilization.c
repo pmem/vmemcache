@@ -65,7 +65,7 @@ typedef struct {
 static const char *usage_str = "usage: %s "
 	"-d <dir> "
 	"[-p <pool_size>] "
-	"[-s <extent_size>] "
+	"[-e <extent_size>] "
 	"[-v <val_max_factor>] "
 	"[-t <timeout_seconds>] "
 	"[-m <timeout_minutes>] "
@@ -139,7 +139,7 @@ parse_args(int argc, char **argv)
 	};
 	size_t val_max_factor = 70;
 
-	const char *optstr = "hp:s:v:t:m:o:d:";
+	const char *optstr = "hp:e:v:t:m:o:d:";
 	int opt;
 	long seconds = 0;
 	long minutes = 0;
@@ -153,7 +153,7 @@ parse_args(int argc, char **argv)
 			p.pool_size =
 				(size_t)parse_ull("pool size", argv[0]);
 			break;
-		case 's':
+		case 'e':
 			p.extent_size =
 				(size_t)parse_ull("extent size", argv[0]);
 			break;
