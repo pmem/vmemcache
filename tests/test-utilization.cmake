@@ -36,6 +36,6 @@ set(TIMEOUT_SEC 2)
 setup()
 
 execute(0 ${TEST_DIR}/vmemcache_test_utilization -d ${TEST_POOL_LOCATION}
-		-t ${TIMEOUT_SEC})
+		-t ${TIMEOUT_SEC} -n)
 
 cleanup()

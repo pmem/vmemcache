@@ -61,6 +61,7 @@ typedef struct {
 	char dir[PATH_MAX];
 	long seconds;
 	unsigned seed;
+	int print_output;
 } test_params;
 
 static const char *usage_str = "usage: %s "
@@ -72,7 +73,9 @@ static const char *usage_str = "usage: %s "
 	"[-m <timeout_minutes>] "
 	"[-o <timeout_hours>] "
 	"[-s <seed_for_rand>] "
-	"[-h]\n";
+	"[-n] "
+	"[-h]\n"
+	"\t n  -  do not print out csv output (it is printed by default)\n";
 
 /*
  * on_evict - (internal) on evict callback function
@@ -138,10 +141,11 @@ parse_args(int argc, char **argv)
 		.dir = "",
 		.seconds = 0,
 		.seed = 0,
+		.print_output = 1,
 	};
 	size_t val_max_factor = 70;
 
-	const char *optstr = "hp:e:v:t:m:o:d:s:";
+	const char *optstr = "hp:e:v:t:m:o:d:s:n";
 	int opt;
 	long seconds = 0;
 	long minutes = 0;
@@ -179,6 +183,9 @@ parse_args(int argc, char **argv)
 			if (*optarg == 0)
 				argerror("invalid dir argument\n", argv[0]);
 			strcpy(p.dir, optarg);
+			break;
+		case 'n':
+			p.print_output = 0;
 			break;
 		default:
 			argerror("", argv[0]);
@@ -277,11 +284,13 @@ put_until_timeout(VMEMcache *vc, const test_params *p)
 		 * intent is to avoid unnecessary bloating of the csv output.
 		 */
 		ratio = (float)used_size / (float)p->pool_size;
-		print_ratio = keynum == 0 || lroundf(ratio * 100)
-			!= lroundf(prev_ratio * 100);
-		if (print_ratio) {
-			printf("%zu,%.3f\n", keynum, ratio);
-			prev_ratio = ratio;
+		if (p->print_output) {
+			print_ratio = keynum == 0 || lroundf(ratio * 100)
+				!= lroundf(prev_ratio * 100);
+			if (print_ratio) {
+				printf("%zu,%.3f\n", keynum, ratio);
+				prev_ratio = ratio;
+			}
 		}
 
 		if (info.evicted && ratio < ALLOWED_RATIO) {
