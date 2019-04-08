@@ -120,7 +120,7 @@ vmemcache_set_size(VMEMcache *cache, size_t size)
 		return -1;
 	}
 
-	if (size >= (1ULL << 56)) {
+	if (size >= ((sizeof(void *) > 4) ? (1ULL << 56) : -1UL)) {
 		ERR("implausible large size %zu", size);
 		errno = EINVAL;
 		return -1;
