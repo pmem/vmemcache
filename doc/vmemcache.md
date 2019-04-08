@@ -192,8 +192,7 @@ respectively. The extra *arg* will be passed to your function.
     + **VMEMCACHE_STAT_ENTRIES**
 	-- *current* number of cache entries
     + **VMEMCACHE_STAT_DRAM_SIZE_USED**
-	-- current amount of DRAM used for keys
-	CLARIFY/RENAME: doesn't include index, repl nor allocator
+	-- current amount of DRAM used
     + **VMEMCACHE_STAT_POOL_SIZE_USED**
 	-- current usage of data pool
     + **VMEMCACHE_STAT_HEAP_ENTRIES**
