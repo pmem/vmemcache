@@ -1,6 +1,6 @@
 #!/bin/sh -e
 #
-# Copyright 2016-2018, Intel Corporation
+# Copyright 2016-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,4 +33,4 @@
 
 # file-exceptions.sh - filter out files not checked for copyright and license
 
-grep -v -E -e '/queue.h$'
+grep -v -E -e '/queue.h$|fast-hash'

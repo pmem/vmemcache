@@ -43,6 +43,7 @@ set(SOURCES
 	util_posix.c
 	file.c
 	file_posix.c
+	fast-hash.c
 	mmap.c
 	mmap_posix.c
 	libvmemcache.c
