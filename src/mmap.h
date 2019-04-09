@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,8 +52,11 @@
 extern "C" {
 #endif
 
+#if 0
 extern int Mmap_no_random;
 extern void *Mmap_hint;
+#endif
+
 extern char *Mmap_mapfile;
 
 void *util_map_sync(void *addr, size_t len, int proto, int flags, int fd,
@@ -125,8 +128,10 @@ struct map_tracker {
 #endif
 };
 
+#if 0
 void util_mmap_init(void);
 void util_mmap_fini(void);
+#endif
 
 int util_range_ro(void *addr, size_t len);
 int util_range_rw(void *addr, size_t len);

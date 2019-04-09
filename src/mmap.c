@@ -47,6 +47,7 @@
 #include "sys_util.h"
 #include "os.h"
 
+#if 0
 int Mmap_no_random;
 void *Mmap_hint;
 static os_rwlock_t Mmap_list_lock;
@@ -100,6 +101,7 @@ util_mmap_fini(void)
 
 	util_rwlock_destroy(&Mmap_list_lock);
 }
+#endif
 
 /*
  * util_map -- memory map a file
