@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,8 +52,6 @@
 extern "C" {
 #endif
 
-extern int Mmap_no_random;
-extern void *Mmap_hint;
 extern char *Mmap_mapfile;
 
 void *util_map_sync(void *addr, size_t len, int proto, int flags, int fd,
@@ -125,13 +123,6 @@ struct map_tracker {
 #endif
 };
 
-void util_mmap_init(void);
-void util_mmap_fini(void);
-
-int util_range_ro(void *addr, size_t len);
-int util_range_rw(void *addr, size_t len);
-int util_range_none(void *addr, size_t len);
-
 char *util_map_hint_unused(void *minaddr, size_t len, size_t align);
 char *util_map_hint(size_t len, size_t req_align);
 
@@ -159,12 +150,6 @@ util_map_hint_align(size_t len, size_t req_align)
 
 	return align;
 }
-
-int util_range_register(const void *addr, size_t len, const char *path,
-		enum pmem_map_type type);
-int util_range_unregister(const void *addr, size_t len);
-struct map_tracker *util_range_find(uintptr_t addr, size_t len);
-int util_range_is_pmem(const void *addr, size_t len);
 
 #ifdef __cplusplus
 }
