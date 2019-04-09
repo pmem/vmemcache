@@ -3,7 +3,7 @@ layout: manual
 Content-Style: 'text/css'
 title: _MP(VMEMCACHE.3)
 collection: vmemcache
-header: PMDK
+header: VMEMCACHE
 ...
 
 [NAME](#name)<br />
@@ -79,8 +79,8 @@ const char *vmemcache_errormsg(void);
 # DESCRIPTION #
 
 **libvmemcache** is a volatile key-value store optimized for operating on
-NVDIMM based space, although it can work with any filesystem, be it stored
-in memory (tmpfs) or, less performant, on some kind of a disk.
+NVDIMM based space, although it can work with any filesystem,
+stored in memory (tmpfs) or, less performant, on some kind of a disk.
 
 
 ##### Creation #####
@@ -116,7 +116,7 @@ in memory (tmpfs) or, less performant, on some kind of a disk.
 
     + a `/dev/dax` device
     + a directory on a regular filesystem (which may or may not be mounted with
-      -o dax, either on persistent memory or any other backing)
+      -o dax, either on persistent memory or any other backing storage)
 
 `void vmemcache_delete(VMEMcache *cache);`
 
