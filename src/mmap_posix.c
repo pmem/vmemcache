@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -133,19 +133,11 @@ util_map_hint_unused(void *minaddr, size_t len, size_t align)
 /*
  * util_map_hint -- determine hint address for mmap()
  *
- * If PMEM_MMAP_HINT environment variable is not set, we let the system to pick
- * the randomized mapping address.  Otherwise, a user-defined hint address
- * is used.
- *
+ * The system picks the randomized mapping address.
  * ALSR in 64-bit Linux kernel uses 28-bit of randomness for mmap
  * (bit positions 12-39), which means the base mapping address is randomized
  * within [0..1024GB] range, with 4KB granularity.  Assuming additional
  * 1GB alignment, it results in 1024 possible locations.
- *
- * Configuring the hint address via PMEM_MMAP_HINT environment variable
- * disables address randomization.  In such case, the function will search for
- * the first unused, properly aligned region of given size, above the specified
- * address.
  */
 char *
 util_map_hint(size_t len, size_t req_align)
@@ -157,25 +149,21 @@ util_map_hint(size_t len, size_t req_align)
 	/* choose the desired alignment based on the requested length */
 	size_t align = util_map_hint_align(len, req_align);
 
-	if (Mmap_no_random) {
-		LOG(4, "user-defined hint %p", Mmap_hint);
-		hint_addr = util_map_hint_unused(Mmap_hint, len, align);
-	} else {
-		/*
-		 * Create dummy mapping to find an unused region of given size.
-		 * Request for increased size for later address alignment.
-		 * Use MAP_PRIVATE with read-only access to simulate
-		 * zero cost for overcommit accounting.  Note: MAP_NORESERVE
-		 * flag is ignored if overcommit is disabled (mode 2).
-		 */
-		char *addr = mmap(NULL, len + align, PROT_READ,
-					MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-		if (addr != MAP_FAILED) {
-			LOG(4, "system choice %p", addr);
-			hint_addr = (char *)roundup((uintptr_t)addr, align);
-			munmap(addr, len + align);
-		}
+	/*
+	 * Create dummy mapping to find an unused region of given size.
+	 * Request for increased size for later address alignment.
+	 * Use MAP_PRIVATE with read-only access to simulate
+	 * zero cost for overcommit accounting.  Note: MAP_NORESERVE
+	 * flag is ignored if overcommit is disabled (mode 2).
+	 */
+	char *addr = mmap(NULL, len + align, PROT_READ,
+				MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+	if (addr != MAP_FAILED) {
+		LOG(4, "system choice %p", addr);
+		hint_addr = (char *)roundup((uintptr_t)addr, align);
+		munmap(addr, len + align);
 	}
+
 	LOG(4, "hint %p", hint_addr);
 
 	return hint_addr;
