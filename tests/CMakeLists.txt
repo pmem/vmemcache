@@ -63,11 +63,6 @@ function(test name file tracer location)
 		endif()
 	endif()
 
-	if ((COVERAGE_BUILD) AND (${tracer} STREQUAL helgrind))
-		message(STATUS "This is the Coverage build, skipping Helgrind test: ${name}")
-		return()
-	endif()
-
 	if(${location} STREQUAL fs)
 		set(TEST_POOL_LOCATION ${TEST_DIR})
 	elseif(${location} STREQUAL ddax)
