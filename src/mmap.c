@@ -41,6 +41,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
 
 #include "file.h"
 #include "mmap.h"
@@ -111,6 +113,23 @@ util_unmap(void *addr, size_t len)
 }
 
 /*
+ * chattr -- (internal) set file attributes
+ */
+static int
+chattr(int fd, int set, int clear)
+{
+	int attr;
+
+	if (ioctl(fd, FS_IOC_GETFLAGS, &attr) < 0)
+		return -1;
+
+	attr |= set;
+	attr &= ~clear;
+
+	return (ioctl(fd, FS_IOC_SETFLAGS, &attr) < 0) ? -1 : 0;
+}
+
+/*
  * util_map_tmpfile -- reserve space in an unlinked file and memory-map it
  *
  * size must be multiple of page size.
@@ -131,6 +150,8 @@ util_map_tmpfile(const char *dir, size_t size, size_t req_align)
 		LOG(2, "cannot create temporary file in dir %s", dir);
 		goto err;
 	}
+
+	chattr(fd, FS_NOCOW_FL, 0);
 
 	if ((errno = os_posix_fallocate(fd, 0, (os_off_t)size)) != 0) {
 		ERR("!posix_fallocate");
