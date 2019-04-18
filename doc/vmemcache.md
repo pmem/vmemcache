@@ -156,7 +156,15 @@ stored in memory (tmpfs) or, less performant, on some kind of a disk.
 
 You can register a hook to be called during eviction or after a cache miss,
 using **vmemcache_callback_on_evict()** or **vmemcache_callback_on_miss()**,
-respectively. The extra *arg* will be passed to your function.
+respectively:
+
+`void vmemcache_callback_on_evict(VMEMcache *cache, vmemcache_on_evict *evict, void *arg);`
+
+`void vmemcache_callback_on_miss(VMEMcache *cache, vmemcache_on_miss *miss, void *arg);`
+
+The extra *arg* will be passed to your function.
+
+A hook to be called during eviction has to have the following signature:
 
 `void vmemcache_on_evict(VMEMcache *cache, const void *key, size_t key_size, void *arg);`
 
@@ -165,6 +173,7 @@ respectively. The extra *arg* will be passed to your function.
     for queries. The thread that triggered the eviction is blocked in the
     meantime.
 
+A hook to be called after a cache miss has to have the following signature:
 
 `void vmemcache_on_miss(VMEMcache *cache, const void *key, size_t key_size, void *arg);`
 
