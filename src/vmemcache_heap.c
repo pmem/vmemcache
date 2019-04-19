@@ -43,7 +43,7 @@
 #define IS_FREE 0
 
 /* flag: this extent is allocated */
-#define FLAG_ALLOCATED ((uint64_t)1 << 63)
+#define FLAG_ALLOCATED ((sizeof(void *) > 4) ? (1ULL << 63) : (1UL << 31))
 
 /* mask of all flags */
 #define MASK_FLAGS (~FLAG_ALLOCATED)
