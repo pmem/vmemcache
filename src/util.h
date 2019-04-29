@@ -251,14 +251,22 @@ typedef enum {
 #define util_bool_compare_and_swap64 __sync_bool_compare_and_swap
 #define util_val_compare_and_swap32 __sync_val_compare_and_swap
 #define util_val_compare_and_swap64 __sync_val_compare_and_swap
-#define util_fetch_and_add32 __sync_fetch_and_add
-#define util_fetch_and_add64 __sync_fetch_and_add
-#define util_fetch_and_sub32 __sync_fetch_and_sub
-#define util_fetch_and_sub64 __sync_fetch_and_sub
-#define util_fetch_and_and32 __sync_fetch_and_and
-#define util_fetch_and_and64 __sync_fetch_and_and
-#define util_fetch_and_or32 __sync_fetch_and_or
-#define util_fetch_and_or64 __sync_fetch_and_or
+#define util_fetch_and_add32(ptr, val) __atomic_fetch_add(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_add64(ptr, val) __atomic_fetch_add(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_sub32(ptr, val) __atomic_fetch_sub(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_sub64(ptr, val) __atomic_fetch_sub(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_and32(ptr, val) __atomic_fetch_and(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_and64(ptr, val) __atomic_fetch_and(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_or32(ptr, val) __atomic_fetch_or(ptr, val, \
+	__ATOMIC_SEQ_CST)
+#define util_fetch_and_or64(ptr, val) __atomic_fetch_or(ptr, val, \
+	__ATOMIC_SEQ_CST)
 #define util_synchronize __sync_synchronize
 #define util_popcount(value) ((unsigned char)__builtin_popcount(value))
 #define util_popcount64(value) ((unsigned char)__builtin_popcountll(value))
