@@ -115,6 +115,9 @@ set(SOURCES_HEAP_USAGE
 set(SOURCES_EXAMPLE
 	example.c)
 
+set(SOURCES_TWOLEVEL
+	twolevel.c)
+
 set(LIBS_BASIC
 	vmemcache)
 
@@ -131,6 +134,9 @@ set(LIBS_HEAP_USAGE
 	${CMAKE_DL_LIBS})
 
 set(LIBS_EXAMPLE
+	vmemcache)
+
+set(LIBS_TWOLEVEL
 	vmemcache)
 
 add_link_executable(vmemcache_test_basic
@@ -152,6 +158,10 @@ add_link_executable(example
 add_link_executable(vmemcache_test_heap_usage
 		"${SOURCES_HEAP_USAGE}"
 		"${LIBS_HEAP_USAGE}")
+
+add_link_executable(twolevel
+		"${SOURCES_TWOLEVEL}"
+		"${LIBS_TWOLEVEL}")
 
 if(NOT "${TEST_DIR}" STREQUAL "")
 	test("FS-test-basic" test-basic none fs)
@@ -190,3 +200,4 @@ if(NOT "${DEVICE_DAX_PATH}" STREQUAL "")
 endif()
 
 test("example" test-example none fs)
+test("twolevel" test-twolevel none fs)
