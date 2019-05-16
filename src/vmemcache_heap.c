@@ -37,7 +37,7 @@
 #include "vmemcache_heap.h"
 #include "sys_util.h"
 
-#define GUARD_SIZE ((uintptr_t)0x40) /* 64 bytes */
+#define GUARD_SIZE ((uintptr_t)0x1000) /* 4096 bytes */
 
 #define IS_ALLOCATED 1
 #define IS_FREE 0
