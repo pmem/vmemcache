@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018, Intel Corporation
+ * Copyright 2014-2019, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,16 +51,14 @@ extern "C" {
  * Suppress errors which are after appropriate ASSERT* macro for nondebug
  * builds.
  */
-#if !defined(DEBUG) && (defined(__clang_analyzer__) || defined(__COVERITY__) ||\
-		defined(__KLOCWORK__))
+#if !defined(DEBUG) && (defined(__clang_analyzer__) || defined(__KLOCWORK__))
 #define OUT_FATAL_DISCARD_NORETURN __attribute__((noreturn))
 #else
 #define OUT_FATAL_DISCARD_NORETURN
 #endif
 
 #ifndef EVALUATE_DBG_EXPRESSIONS
-#if defined(DEBUG) || defined(__clang_analyzer__) || defined(__COVERITY__) ||\
-	defined(__KLOCWORK__)
+#if defined(DEBUG) || defined(__clang_analyzer__) || defined(__KLOCWORK__)
 #define EVALUATE_DBG_EXPRESSIONS 1
 #else
 #define EVALUATE_DBG_EXPRESSIONS 0
