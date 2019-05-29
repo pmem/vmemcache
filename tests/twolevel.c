@@ -162,8 +162,8 @@ main(int argc, const char **argv)
 		- 1;
 
 	for (int i = 0; i < cap; i++) {
-		char buf[8];
-		sprintf(buf, "%d", i);
+		char buf[12];
+		snprintf(buf, sizeof(buf), "%d", i);
 		PUT(buf);
 	}
 	/* "first" and "second" should have been dropped, "third" is still in */
