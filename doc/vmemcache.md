@@ -199,13 +199,14 @@ A hook to be called after a cache miss has to have the following signature:
     + **VMEMCACHE_STAT_EVICT**
 	-- count of evictions
     + **VMEMCACHE_STAT_ENTRIES**
-	-- *current* number of cache entries
+	-- *current* number of cache entries (key:value pairs)
     + **VMEMCACHE_STAT_DRAM_SIZE_USED**
 	-- current amount of DRAM used
     + **VMEMCACHE_STAT_POOL_SIZE_USED**
 	-- current usage of data pool
     + **VMEMCACHE_STAT_HEAP_ENTRIES**
-	-- current number of heap entries
+	-- current number of discontiguous unused regions (ie, free space
+	fragmentation)
 
 Statistics are enabled by default. They can be disabled at the compile time
 of the vmemcache library if the **STATS_ENABLED** CMake option is set to OFF.
