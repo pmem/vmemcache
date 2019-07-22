@@ -60,8 +60,8 @@ void
 benchmark_time_diff(benchmark_time_t *d, benchmark_time_t *t1,
 		    benchmark_time_t *t2)
 {
-	long long nsecs = (t2->tv_sec - t1->tv_sec) * NSECPSEC + t2->tv_nsec -
-		t1->tv_nsec;
+	long long nsecs = ((long long)t2->tv_sec - t1->tv_sec) * NSECPSEC
+		+ t2->tv_nsec - t1->tv_nsec;
 	assert(nsecs >= 0);
 	d->tv_sec = nsecs / NSECPSEC;
 	d->tv_nsec = nsecs % NSECPSEC;
