@@ -143,6 +143,9 @@ vmemcache_get(VMEMcache *cache,
 	size_t offset, /* offset inside of value from which to begin copying */
 	size_t *vsize /* real size of the object */);
 
+int vmemcache_exists(VMEMcache *cache,
+	const void *key, size_t key_size);
+
 int vmemcache_put(VMEMcache *cache,
 	const void *key, size_t key_size,
 	const void *value, size_t value_size);

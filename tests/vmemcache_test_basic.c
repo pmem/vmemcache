@@ -385,6 +385,9 @@ test_put_get_evict(const char *dir, enum vmemcache_repl_p repl_p)
 	size_t vsize = 0; /* real size of the object */
 	ssize_t ret;
 
+	ret = vmemcache_exists(cache, key, key_size);
+	UT_ASSERTeq(ret, 1);
+
 	/* get the only one element */
 	ret = vmemcache_get(cache, key, key_size, vbuf, vbufsize, 0, &vsize);
 	if (ret < 0)
@@ -424,6 +427,9 @@ test_put_get_evict(const char *dir, enum vmemcache_repl_p repl_p)
 	ret = vmemcache_get(cache, key, key_size, vbuf, vbufsize, 0, &vsize);
 	if (ret != -1 || errno != ENOENT)
 		UT_FATAL("vmemcache_get did not return -1 (no such element)");
+
+	ret = vmemcache_exists(cache, key, key_size);
+	UT_ASSERTeq(ret, 0);
 
 	vmemcache_delete(cache);
 }

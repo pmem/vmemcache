@@ -67,6 +67,9 @@ int vmemcache_put(VMEMcache *cache,
 	const void *key, size_t key_size,
 	const void *value, size_t value_size);
 
+int vmemcache_exists(VMEMcache *cache,
+	const void *key, size_t key_size);
+
 int vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize);
 
 int vmemcache_get_stat(VMEMcache *cache,
@@ -144,6 +147,11 @@ stored in memory (tmpfs) or, less performant, on some kind of a disk.
 :   Inserts the given key:value pair into the cache. Returns 0 on success,
     -1 on error. Inserting a key that already exists will fail with EEXIST.
 
+`int vmemcache_exists(VMEMcache *cache, const void *key, size_t key_size);`
+
+:   Searches for an entry with the given *key*, and returns 1 if found,
+    0 if not found, and -1 if search couldn't be performed.
+    This function does not impact the replacement policy or statistics.
 
 `int vmemcache_evict(VMEMcache *cache, const void *key, size_t ksize);`
 

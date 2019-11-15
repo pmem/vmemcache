@@ -400,7 +400,6 @@ run_ops(uint64_t ops, rng_t *rng, uint64_t *lat, void *get_buffer)
 			uint64_t size = min_size
 				+ (uint64_t)((double)(max_size - min_size + 1)
 				* rndlength(hash64(obj ^ vsize_seed)));
-			UT_ASSERTin(size, min_size, max_size);
 
 			if (vmemcache_put(cache, key, key_size, lotta_zeroes,
 				size) && errno != EEXIST) {
