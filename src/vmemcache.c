@@ -574,6 +574,29 @@ get_index:
 }
 
 /*
+ * vmemcache_exists -- checks, without side-effects, if a key exists
+ */
+int
+vmemcache_exists(VMEMcache *cache, const void *key, size_t key_size)
+{
+	LOG(3, "cache %p key %p key_size %zu", cache, key, key_size);
+
+	struct cache_entry *entry;
+
+	int ret = vmcache_index_get(cache->index, key, key_size, &entry, 0);
+	if (ret < 0)
+		return -1;
+
+	if (entry == NULL)
+		return 0;
+
+	vmemcache_entry_release(cache, entry);
+
+	return 1;
+}
+
+
+/*
  * vmemcache_evict -- evict an element from the vmemcache
  */
 int
