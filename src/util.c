@@ -56,8 +56,10 @@ unsigned long long Mmap_align;
  * Zalloc -- allocate zeroed memory
  */
 void *
+__attribute__((optimize(0)))
 Zalloc(size_t sz)
 {
+	/* gcc likes to replace this function as calloc() if optimizing */
 	void *ret = Malloc(sz);
 	if (!ret)
 		return NULL;
