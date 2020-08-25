@@ -53,14 +53,6 @@ unsigned long long Pagesize;
 unsigned long long Mmap_align;
 
 /*
- * our versions of malloc & friends start off pointing to the libc versions
- */
-Malloc_func Malloc = malloc;
-Free_func Free = free;
-Realloc_func Realloc = realloc;
-Strdup_func Strdup = strdup;
-
-/*
  * Zalloc -- allocate zeroed memory
  */
 void *
@@ -222,21 +214,6 @@ util_checksum_seq(const void *addr, size_t len, uint64_t csum)
 		hi32 += lo32;
 	}
 	return (uint64_t)hi32 << 32 | lo32;
-}
-
-/*
- * util_set_alloc_funcs -- allow one to override malloc, etc.
- */
-void
-util_set_alloc_funcs(void *(*malloc_func)(size_t size),
-		void (*free_func)(void *ptr),
-		void *(*realloc_func)(void *ptr, size_t size),
-		char *(*strdup_func)(const char *s))
-{
-	Malloc = (malloc_func == NULL) ? malloc : malloc_func;
-	Free = (free_func == NULL) ? free : free_func;
-	Realloc = (realloc_func == NULL) ? realloc : realloc_func;
-	Strdup = (strdup_func == NULL) ? strdup : strdup_func;
 }
 
 /*

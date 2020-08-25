@@ -76,15 +76,10 @@ extern unsigned long long Mmap_align;
 /*
  * overridable names for malloc & friends used by this library
  */
-typedef void *(*Malloc_func)(size_t size);
-typedef void (*Free_func)(void *ptr);
-typedef void *(*Realloc_func)(void *ptr, size_t size);
-typedef char *(*Strdup_func)(const char *s);
-
-extern Malloc_func Malloc;
-extern Free_func Free;
-extern Realloc_func Realloc;
-extern Strdup_func Strdup;
+#define Malloc malloc
+#define Free free
+#define Realloc realloc
+#define Strdup strdup
 extern void *Zalloc(size_t sz);
 
 void util_init(void);
@@ -117,12 +112,6 @@ int util_toUTF8_buff(const wchar_t *in, char *out, size_t out_size);
 
 #define UTIL_MAX_ERR_MSG 128
 void util_strerror(int errnum, char *buff, size_t bufflen);
-
-void util_set_alloc_funcs(
-		void *(*malloc_func)(size_t size),
-		void (*free_func)(void *ptr),
-		void *(*realloc_func)(void *ptr, size_t size),
-		char *(*strdup_func)(const char *s));
 
 /*
  * Macro calculates number of elements in given table
