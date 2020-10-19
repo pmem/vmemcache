@@ -120,8 +120,6 @@ configure_file(
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-add_executable(check_license EXCLUDE_FROM_ALL utils/check_license/check-license.c)
-
 function(add_cstyle name)
 	if(${ARGC} EQUAL 1)
 		add_custom_target(cstyle-${name}
@@ -165,16 +163,8 @@ add_custom_target(check-whitespace)
 add_custom_target(check-license
 	COMMAND ${CMAKE_SOURCE_DIR}/utils/check_license/check-headers.sh
 	${CMAKE_SOURCE_DIR}
-	${CMAKE_BINARY_DIR}/check_license
-	${CMAKE_SOURCE_DIR}/LICENSE
-	-a)
+	BSD-3-Clause)
 
-add_dependencies(check-license check_license)
-
-add_cstyle(check_license
-	${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
-add_check_whitespace(check_license
-	${CMAKE_SOURCE_DIR}/utils/check_license/*.c)
 add_check_whitespace(other
 	${CMAKE_SOURCE_DIR}/utils/check_license/*.sh
 	${CMAKE_SOURCE_DIR}/README.md)
@@ -186,7 +176,6 @@ if(DEVELOPER_MODE)
 	add_c_flag(-Werror)
 	add_dependencies(checkers cstyle)
 	add_dependencies(checkers check-whitespace)
-	add_dependencies(checkers check-license)
 endif(DEVELOPER_MODE)
 
 option(TRACE_TESTS
