@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019, Intel Corporation
+ * Copyright 2018-2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -211,7 +211,8 @@ critnib_set(struct critnib *c, struct cache_entry *e)
 
 	/* Calculate the divergence point within the single byte. */
 	char at = nkey[diff] ^ key[diff];
-	bitn_t sh = util_mssb_index((uint32_t)at) & (bitn_t)~(SLICE - 1);
+	bitn_t sh = util_mssb_index((uint32_t)(uint8_t)at)
+		& (bitn_t)~(SLICE - 1);
 
 	/* Descend into the tree again. */
 	n = c->root;
