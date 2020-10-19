@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019, Intel Corporation
+ * Copyright 2014-2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,11 +52,17 @@ unsigned long long Pagesize;
 /* allocation/mmap granularity */
 unsigned long long Mmap_align;
 
+#define GCC_VERSION (__GNUC__ * 10000 \
+		+ __GNUC_MINOR__ * 100 \
+		+ __GNUC_PATCHLEVEL__)
+
 /*
  * Zalloc -- allocate zeroed memory
  */
 void *
+#if GCC_VERSION >= 40400
 __attribute__((optimize(0)))
+#endif
 Zalloc(size_t sz)
 {
 	/* gcc likes to replace this function as calloc() if optimizing */
