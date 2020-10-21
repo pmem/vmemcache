@@ -1,3 +1,20 @@
+Wed Oct 21 2020 Piotr Balcer <piotr.balcer@intel.com>
+
+	* Version 0.8.1
+	
+	This is a minor patch release that includes a couple minor maintance
+	changes, plus a couple of small performance improvements.
+	
+	* Use fast-hash for sharding.
+	* Fix comparison of bytes with 8th bit set in the index radix tree.
+	* Use chattr for the cache's file to enable nocow.
+	* Fix some issues on 32-bit platforms.
+	* Migrate from obsolete __sync_fetch API to __atomic_fetch.
+	* Increase guard size to 4096 bytes.
+	* Various documentation and test improvements.
+	* add vmemcache_exists() to check entry existence without side-effects
+	* Regression fixes for recent compilers
+
 Fri Mar 29 2019 Piotr Balcer <piotr.balcer@intel.com>
 
 	* Version 0.8
